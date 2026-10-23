@@ -141,9 +141,9 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **iPhone:** Formatierungsleiste über der Tastatur: Überschrift, fett, kursiv, Liste, Checkliste, Tag, Tastatur ausblenden. Der Knopf für Bilder folgt in Etappe 4.
 - **Mac:** Knöpfe in der Fensterleiste mit Tastenkürzeln: Überschrift ⇧⌘H, fett ⌘B, kursiv ⌘I, Liste ⇧⌘8, Checkliste ⇧⌘L
 - **Überschrift-Knopf:** wechselt reihum keine → `#` → `##` → `###` → keine
-- **Listen:** Return setzt Liste bzw. Checkliste fort. Return in einem leeren Punkt beendet die Liste.
+- **Listen:** Liste und Checkliste lassen sich auch auf einer leeren Zeile beginnen. Return setzt sie fort, Return in einem leeren Punkt beendet sie.
 - **Checklisten:** ein Tipp bzw. Klick auf `[ ]` hakt ab, erledigte Punkte erscheinen durchgestrichen
-- **Tags:** Nach `#` erscheinen passende Tags aus dem ganzen hirni-Ordner, die häufigsten zuerst. Auf dem iPhone in der Leiste, am Mac unter dem Text, dort übernimmt Tab den ersten Vorschlag. Tags dürfen Buchstaben (auch Umlaute), Ziffern, `_`, `-` und `/` enthalten, aber nicht nur aus Ziffern bestehen (wie bei Obsidian).
+- **Tags:** Nach `#` erscheinen passende Tags aus dem ganzen hirni-Ordner (die häufigsten zuerst) und aus der offenen Notiz, auch eben erst getippte. Auf dem iPhone in der Leiste, am Mac unter dem Text, dort übernimmt Tab den ersten Vorschlag. Tags dürfen Buchstaben (auch Umlaute), Ziffern, `_`, `-` und `/` enthalten, aber nicht nur aus Ziffern bestehen (wie bei Obsidian).
 - **Bilder und PDFs:** einfügen aus Fotos, Kamera (iPhone), Dateien oder per Drag'n'Drop. Bilder werden in der Notiz als Bild angezeigt.
 - **Speichern:** automatisch, ohne Speichern-Knopf
 

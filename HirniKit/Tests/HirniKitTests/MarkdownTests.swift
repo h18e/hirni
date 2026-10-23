@@ -98,6 +98,19 @@ struct MarkdownEditingTests {
         #expect(back.applied(to: result) == "Milch\n\nBrot\nKäse")
     }
 
+    @Test func checklistStartsOnEmptyLine() {
+        // Leere Notiz
+        let empty = MarkdownEditing.toggleLineStyle(.checkbox, in: "", selection: NSRange(location: 0, length: 0))
+        #expect(empty.applied(to: "") == "- [ ] ")
+        #expect(empty.selection == NSRange(location: 6, length: 0))
+
+        // Leere Zeile mitten im Text
+        let text = "Einkauf\n\nEnde"
+        let middle = MarkdownEditing.toggleLineStyle(.bullet, in: text, selection: NSRange(location: 8, length: 0))
+        #expect(middle.applied(to: text) == "Einkauf\n- \nEnde")
+        #expect(middle.selection == NSRange(location: 10, length: 0))
+    }
+
     @Test func toggleBulletMovesCaret() {
         let edit = MarkdownEditing.toggleLineStyle(.bullet, in: "  Punkt", selection: NSRange(location: 4, length: 0))
         #expect(edit.applied(to: "  Punkt") == "  - Punkt")

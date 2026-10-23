@@ -137,8 +137,19 @@ final class VaultStore {
     /// Liefert das neue Änderungsdatum der Datei, oder `nil` bei einem Fehler.
     func write(_ text: String, to url: URL) async -> Date? {
         let modified = await perform { try $0.writeNote(text, to: url) }
-        if modified != nil { await reload() } // Vorschau und Reihenfolge in der Liste
+        if modified != nil {
+            mergeTags(from: text)
+            await reload() // Vorschau und Reihenfolge in der Liste
+        }
         return modified
+    }
+
+    /// Neue Tags aus einer eben gespeicherten Notiz sofort bekannt machen,
+    /// ohne den ganzen Ordner neu zu lesen.
+    private func mergeTags(from text: String) {
+        let known = Set(tags.map { $0.lowercased() })
+        let new = MarkdownSyntax.tags(in: Frontmatter.split(text).body).filter { !known.contains($0.lowercased()) }
+        if !new.isEmpty { tags += new }
     }
 
     func modificationDate(of url: URL) async -> Date? {

@@ -2,10 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Macht den iCloud-Container als «iCloud Drive → hirni» in Finder und
-	     Dateien-App sichtbar. Damit können auch Claude und andere Programme
-	     auf die Notizen zugreifen. Nach Änderungen hier muss die Build-Nummer
-	     (CURRENT_PROJECT_VERSION) erhöht werden, sonst übernimmt iCloud sie nicht. -->
 	<key>NSUbiquitousContainers</key>
 	<dict>
 		<key>iCloud.ch.hebera.hirni</key>
@@ -18,18 +14,17 @@
 			<string>Any</string>
 		</dict>
 	</dict>
-	<!-- Eigener Datentyp für Drag'n'Drop innerhalb der App (siehe VaultItemTransfer.swift). -->
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
-			<key>UTTypeIdentifier</key>
-			<string>ch.hebera.hirni.item</string>
-			<key>UTTypeDescription</key>
-			<string>hirni-Notiz oder -Ordner</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
 			</array>
+			<key>UTTypeDescription</key>
+			<string>hirni-Notiz oder -Ordner</string>
+			<key>UTTypeIdentifier</key>
+			<string>ch.hebera.hirni.item</string>
 		</dict>
 	</array>
 </dict>

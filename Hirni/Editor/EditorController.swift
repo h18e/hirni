@@ -111,10 +111,22 @@ final class EditorController {
             return
         }
         let typed = query.query.lowercased()
-        let matches = knownTags
+        let matches = candidates(in: text, excluding: query.range)
             .filter { $0.lowercased().hasPrefix(typed) && $0.lowercased() != typed }
             .prefix(8)
         if suggestions != Array(matches) { suggestions = Array(matches) }
+    }
+
+    /// Bekannte Tags aus dem ganzen Ordner, ergänzt um die Tags dieser Notiz
+    /// (auch eben erst getippte). Der Tag, der gerade entsteht, zählt nicht mit.
+    private func candidates(in text: String, excluding typing: NSRange) -> [String] {
+        let rest = (text as NSString).replacingCharacters(in: typing, with: "")
+        var seen = Set(knownTags.map { $0.lowercased() })
+        var result = knownTags
+        for tag in MarkdownSyntax.tags(in: rest) where seen.insert(tag.lowercased()).inserted {
+            result.append(tag)
+        }
+        return result
     }
 
     #if os(iOS)

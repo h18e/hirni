@@ -77,9 +77,12 @@ public enum MarkdownEditing {
         let parsed = lines.text.components(separatedBy: "\n").map(LinePrefix.init)
         let nonEmpty = parsed.filter { !$0.rest.isEmpty || $0.marker != nil }
         let allHaveStyle = !nonEmpty.isEmpty && nonEmpty.allSatisfy { $0.style == style }
+        // Leerzeilen zwischen markierten Zeilen bleiben leer. Ist aber gar nichts
+        // ausser Leerzeilen da (Cursor in einer leeren Zeile), beginnt dort die Liste.
+        let keepEmptyLines = !nonEmpty.isEmpty
 
         let newLines = parsed.map { line -> String in
-            if line.rest.isEmpty && line.marker == nil { return line.original } // Leerzeilen bleiben leer
+            if keepEmptyLines && line.rest.isEmpty && line.marker == nil { return line.original }
             if allHaveStyle { return line.indent + line.rest }
             switch style {
             case .bullet: return line.indent + "- " + line.rest
