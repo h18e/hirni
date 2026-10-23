@@ -65,7 +65,9 @@ hirni/
 - Anpinnen ändert das Änderungsdatum der Datei nicht.
 - Checklisten: `- [ ] offen` / `- [x] erledigt`
 - Tags: `#tag` oder `#tag/untertag` irgendwo im Text
-- Bilder und Dateien: `![](_Anhänge/foto.jpg)`, abgelegt im Ordner `_Anhänge/` neben der Notiz
+- Bilder und PDFs: `![](_Anhänge/foto.jpg)`, abgelegt im Ordner `_Anhänge/` neben der Notiz. Standard-Markdown, damit auch Obsidian sie anzeigt. Dateinamen ohne Leerzeichen (`Foto-20261023-215259.jpg`, bei gleichem Namen `-2`, `-3` …). In Verweisen werden nur Leerzeichen, Klammern und `<>` kodiert, Umlaute bleiben lesbar.
+- Wird eine Notiz in einen anderen Ordner verschoben, wandern ihre Anhänge mit. Braucht eine andere Notiz im alten Ordner denselben Anhang, wird er kopiert statt verschoben. Ändert sich dabei ein Dateiname, wird der Verweis angepasst.
+- Wird eine Notiz gelöscht, bleiben ihre Anhänge liegen. So funktionieren sie nach dem Wiederherstellen weiter.
 
 ### Ordner
 
@@ -144,7 +146,10 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Listen:** Liste und Checkliste lassen sich auch auf einer leeren Zeile beginnen. Return setzt sie fort, Return in einem leeren Punkt beendet sie.
 - **Checklisten:** ein Tipp bzw. Klick auf `[ ]` hakt ab, erledigte Punkte erscheinen durchgestrichen
 - **Tags:** Nach `#` erscheinen passende Tags aus dem ganzen hirni-Ordner (die häufigsten zuerst) und aus der offenen Notiz, auch eben erst getippte. Auf dem iPhone in der Leiste, am Mac unter dem Text, dort übernimmt Tab den ersten Vorschlag. Tags dürfen Buchstaben (auch Umlaute), Ziffern, `_`, `-` und `/` enthalten, aber nicht nur aus Ziffern bestehen (wie bei Obsidian).
-- **Bilder und PDFs:** einfügen aus Fotos, Kamera (iPhone), Dateien oder per Drag'n'Drop. Bilder werden in der Notiz als Bild angezeigt.
+- **Bilder und PDFs einfügen:** iPhone über die Büroklammer in der Leiste (Foto-Mediathek, bis 10 Fotos auf einmal, Kamera, Datei). Mac über die Büroklammer in der Fensterleiste (⇧⌘A) oder per Drag'n'Drop einer Datei in den Text. Fotos werden als JPEG mit höchstens 3000 Pixeln gespeichert. Standortdaten und andere Metadaten werden dabei entfernt. HEIC-Dateien werden in JPEG umgewandelt.
+- **Anzeige:** Bilder und die erste PDF-Seite erscheinen direkt unter ihrer Zeile (Bilder höchstens 360 Punkte hoch, PDFs 260). Der Verweis selbst bleibt klein und grau sichtbar. Fehlt die Datei, erscheint ein Hinweis-Symbol. Antippen bzw. Klicken öffnet die Vorschau (QuickLook).
+- **Notizliste:** Anhänge erscheinen in der Vorschau als `[Bild]` bzw. `[PDF]`.
+- **Noch nicht:** Bild einfügen per Einsetzen (⌘V) und Drag'n'Drop auf dem iPhone.
 - **Speichern:** automatisch, ohne Speichern-Knopf
 
 ### Tags und Suche

@@ -152,6 +152,21 @@ final class VaultStore {
         if !new.isEmpty { tags += new }
     }
 
+    // MARK: - Anhänge
+
+    /// Kopiert eine Datei als Anhang zur Notiz. Liefert den Markdown-Text.
+    /// `source` darf ausserhalb der App liegen (Dateien-App, Finder): Der
+    /// Zugriff wird für die Dauer des Kopierens freigeschaltet.
+    func importAttachment(copying source: URL, for note: URL) async -> String? {
+        let access = source.startAccessingSecurityScopedResource()
+        defer { if access { source.stopAccessingSecurityScopedResource() } }
+        return await perform { try $0.importAttachment(copying: source, for: note) }
+    }
+
+    func importAttachment(data: Data, fileExtension: String, baseName: String, for note: URL) async -> String? {
+        await perform { try $0.importAttachment(data: data, fileExtension: fileExtension, baseName: baseName, for: note) }
+    }
+
     func modificationDate(of url: URL) async -> Date? {
         let vault = vault
         return await Task.detached { vault.modificationDate(of: url) }.value

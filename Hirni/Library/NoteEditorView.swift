@@ -58,6 +58,11 @@ struct NoteEditorView: View {
         #else
         .toolbar { formattingToolbar }
         #endif
+        .modifier(AttachmentPickers(
+            controller: controller,
+            importFiles: { await importFiles($0) },
+            importPhoto: { await importPhoto($0) }
+        ))
         .task(id: url) { await open(url) }
         .task { await store.refreshTags() }
         .onChange(of: store.tags, initial: true) { _, tags in
@@ -104,6 +109,9 @@ struct NoteEditorView: View {
             Button("Checkliste", systemImage: "checklist", action: controller.checklist)
                 .keyboardShortcut("l", modifiers: [.command, .shift])
                 .help("Checkliste (⇧⌘L)")
+            Button("Anhang", systemImage: "paperclip") { controller.attachmentRequest = .files }
+                .keyboardShortcut("a", modifiers: [.command, .shift])
+                .help("Bild oder PDF einfügen (⇧⌘A) – oder Datei in den Text ziehen")
         }
     }
     #endif
@@ -117,6 +125,9 @@ struct NoteEditorView: View {
         guard let content = await store.read(newURL) else { return }
         let modified = await store.modificationDate(of: newURL) ?? .now
         let (header, body) = Frontmatter.split(content)
+        // Zuerst anmelden: Die Hervorhebung braucht den Ordner der Notiz,
+        // um eingebettete Bilder zu finden.
+        register(for: newURL)
         self.header = header
         text = body
         controller.setText(body)
@@ -124,7 +135,6 @@ struct NoteEditorView: View {
         savedModified = modified
         title = Vault.title(of: newURL)
         fileURL = newURL
-        register()
 
         if store.justCreatedNote == newURL {
             store.justCreatedNote = nil
@@ -159,7 +169,7 @@ struct NoteEditorView: View {
             self.fileURL = newURL
             savedModified = await store.modificationDate(of: newURL) ?? savedModified
             store.selectedNote = newURL
-            register()
+            register(for: newURL)
         }
         title = Vault.title(of: self.fileURL ?? fileURL)
         isRenaming = false
@@ -185,14 +195,41 @@ struct NoteEditorView: View {
         savedModified = modified
     }
 
-    /// Meldet sich beim Store, damit er vor Dateioperationen speichern kann.
-    private func register() {
-        guard let fileURL else { return }
+    /// Meldet sich beim Store, damit er vor Dateioperationen speichern kann,
+    /// und sagt dem Editor, wo die Anhänge dieser Notiz liegen.
+    private func register(for fileURL: URL) {
+        let vault = store.vault
+        controller.overlays.resolve = { vault.resolveAttachment($0, for: fileURL) }
+        controller.onFileDrop = { urls in Task { await importFiles(urls) } }
         store.openEditor = EditorHandle(
             url: fileURL,
             flush: { await save() },
             reloadHeader: { await reloadHeader() }
         )
+    }
+
+    // MARK: - Anhänge
+
+    private func importFiles(_ urls: [URL]) async {
+        guard let fileURL else { return }
+        for url in urls {
+            if let markdown = await store.importAttachment(copying: url, for: fileURL) {
+                controller.insertBlock(markdown)
+            }
+        }
+    }
+
+    /// Fotos aus Mediathek oder Kamera: als JPEG, höchstens 3000 Pixel.
+    private func importPhoto(_ data: Data) async {
+        guard let fileURL else { return }
+        let jpeg = ImageEncoding.jpeg(from: data) ?? data
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        let name = "Foto-" + formatter.string(from: .now)
+        if let markdown = await store.importAttachment(data: jpeg, fileExtension: "jpg", baseName: name, for: fileURL) {
+            controller.insertBlock(markdown)
+        }
     }
 
     /// Liest nur den YAML-Kopf neu (nach Anpinnen), der Text bleibt unberührt.

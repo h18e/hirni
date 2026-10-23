@@ -24,7 +24,9 @@ enum MarkdownStyler {
     /// Überschriften 1–6, relativ zur normalen Schrift.
     private static let headingScale: [CGFloat] = [1.6, 1.35, 1.15, 1.05, 1, 1]
 
-    static func apply(to storage: NSTextStorage) {
+    /// `reservedHeight` liefert pro eingebettetem Anhang den Platz, der unter
+    /// seiner Zeile für das Bild frei bleiben soll (siehe `EmbedOverlays`).
+    static func apply(to storage: NSTextStorage, reservedHeight: (String) -> CGFloat = { _ in 0 }) {
         let text = storage.string
         let full = NSRange(location: 0, length: storage.length)
         let base = bodyFont
@@ -37,6 +39,16 @@ enum MarkdownStyler {
         for span in spans where span.kind.isLineLevel { style(span, in: storage, base: base) }
         for span in spans where !span.kind.isLineLevel && span.kind != .syntax { style(span, in: storage, base: base) }
         for span in spans where span.kind == .syntax { style(span, in: storage, base: base) }
+
+        for span in spans {
+            guard case .embed(let path) = span.kind else { continue }
+            let height = reservedHeight(path)
+            guard height > 0 else { continue }
+            let paragraph = (text as NSString).paragraphRange(for: span.range)
+            let style = NSMutableParagraphStyle()
+            style.paragraphSpacing = height
+            storage.addAttribute(.paragraphStyle, value: style, range: paragraph)
+        }
         storage.endEditing()
     }
 
@@ -91,6 +103,9 @@ enum MarkdownStyler {
             ], range: range)
         case .syntax:
             storage.addAttribute(.foregroundColor, value: Colors.syntax, range: range)
+        case .embed:
+            // Der Verweis selbst ist nur grau (über `.syntax`), das Bild kommt darunter.
+            storage.addAttribute(.font, value: PlatformFont.systemFont(ofSize: base.pointSize * 0.8), range: range)
         }
     }
 

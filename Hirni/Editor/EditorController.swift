@@ -16,6 +16,28 @@ final class EditorController {
     /// Passende Tags, während `#…` getippt wird.
     private(set) var suggestions: [String] = []
 
+    /// Anhang, der gerade in der Vorschau (QuickLook) offen ist.
+    var previewURL: URL?
+
+    /// Welche Auswahl für einen neuen Anhang geöffnet werden soll (iPhone-Leiste).
+    var attachmentRequest: AttachmentSource?
+
+    enum AttachmentSource: Identifiable {
+        case photos
+        case camera
+        case files
+        var id: Self { self }
+    }
+
+    /// Bilder unter ihren Zeilen anzeigen.
+    @ObservationIgnored let overlays = EmbedOverlays()
+    /// Mac: Dateien wurden in den Text gezogen.
+    @ObservationIgnored var onFileDrop: (([URL]) -> Void)?
+
+    init() {
+        overlays.onTap = { [weak self] url in self?.previewURL = url }
+    }
+
     /// Alle bekannten Tags im hirni-Ordner, die häufigsten zuerst.
     @ObservationIgnored var knownTags: [String] = []
     @ObservationIgnored weak var textView: PlatformTextView? {
@@ -61,6 +83,11 @@ final class EditorController {
     func heading() { perform { MarkdownEditing.cycleHeading(in: $0, selection: $1) } }
     func bulletList() { perform { MarkdownEditing.toggleLineStyle(.bullet, in: $0, selection: $1) } }
     func checklist() { perform { MarkdownEditing.toggleLineStyle(.checkbox, in: $0, selection: $1) } }
+
+    /// Fügt einen eingebetteten Anhang auf einer eigenen Zeile ein.
+    func insertBlock(_ markdown: String) {
+        perform { MarkdownEditing.insertBlock(markdown, in: $0, selection: $1) }
+    }
 
     func insertTag() {
         perform { text, selection in

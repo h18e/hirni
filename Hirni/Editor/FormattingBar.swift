@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 /// iPhone: Leiste über der Tastatur. Während `#…` getippt wird, zeigt sie
 /// passende Tags statt der Formatierungsknöpfe.
@@ -25,6 +28,20 @@ struct FormattingBar: View {
             button("Liste", "list.bullet", action: controller.bulletList)
             button("Checkliste", "checklist", action: controller.checklist)
             button("Tag", "number", action: controller.insertTag)
+            #if os(iOS)
+            Menu {
+                Button("Foto-Mediathek", systemImage: "photo.on.rectangle") { controller.attachmentRequest = .photos }
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    Button("Kamera", systemImage: "camera") { controller.attachmentRequest = .camera }
+                }
+                Button("Datei", systemImage: "folder") { controller.attachmentRequest = .files }
+            } label: {
+                Label("Anhang", systemImage: "paperclip")
+                    .labelStyle(.iconOnly)
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+            }
+            #endif
             Spacer()
             #if os(iOS)
             button("Tastatur ausblenden", "keyboard.chevron.compact.down", action: controller.dismissKeyboard)

@@ -10,8 +10,8 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ fertig
 | 0 | Fundament | Xcode-27-Projekt (iOS + macOS), Swift Package `HirniKit` mit Tests, iCloud-Container, Signing, `SETUP.md` | App startet auf beiden Geräten (leer) | ✅ |
 | 1 | Dateien & Ordner | iCloud-Ordner «hirni», Ordnerbaum, Inbox, Notizen anlegen/umbenennen/löschen, einfacher Texteditor, Zuletzt gelöscht, Sync zwischen Geräten | **Erste echte Nutzung:** Notizen schreiben und auf dem anderen Gerät sehen | ✅ |
 | 2 | Ordnen | Verschieben per Drag'n'Drop (Mac) und Wischen/Menü (iPhone), Anpinnen, Duplizieren | Notizen aus der Inbox einsortieren | ✅ |
-| 3 | Markdown-Editor | Hervorhebung, Formatierungsleiste iPhone, Tastenkürzel Mac, Checklisten abhaken, `#tags` mit Vorschlägen | Komfortables Schreiben | 🟡 gebaut, Test auf Mac + iPhone offen |
-| 4 | Anhänge | Bilder (Fotos, Kamera, Dateien, Drag'n'Drop) und PDFs, Anzeige in der Notiz | Fotos in Notizen | ⬜ |
+| 3 | Markdown-Editor | Hervorhebung, Formatierungsleiste iPhone, Tastenkürzel Mac, Checklisten abhaken, `#tags` mit Vorschlägen | Komfortables Schreiben | ✅ |
+| 4 | Anhänge | Bilder (Fotos, Kamera, Dateien, Drag'n'Drop) und PDFs, Anzeige in der Notiz | Fotos in Notizen | 🟡 gebaut, Test auf Mac + iPhone offen |
 | 5 | Suche & Tags | Lokaler Such-Index, Volltextsuche, Tag-Liste | Alles wiederfinden | ⬜ |
 | 6 | Konflikte & Robustheit | Konflikt-Hinweis und -Auflösung, Änderungen von Claude/Finder live übernehmen, Download-Fortschritt | Gleichzeitiges Bearbeiten ohne Datenverlust | ⬜ |
 | 7 | Datenbank: Grundlagen | Dateiformat festlegen, Felder (alle 7 Typen), Zeilen bearbeiten (Tabelle am Mac, Formular am iPhone) | Erste Datenbank erfassen | ⬜ |

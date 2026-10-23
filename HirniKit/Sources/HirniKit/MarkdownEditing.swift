@@ -165,6 +165,23 @@ public enum MarkdownEditing {
         )
     }
 
+    // MARK: - Anhänge
+
+    /// Fügt einen Block (z. B. `![](_Anhänge/foto.jpg)`) auf einer eigenen
+    /// Zeile ein. Der Cursor steht danach am Anfang der nächsten Zeile.
+    public static func insertBlock(_ block: String, in text: String, selection: NSRange) -> TextEdit {
+        let ns = text as NSString
+        let start = selection.location
+        let atLineStart = start == 0 || ns.character(at: start - 1) == 0x0A
+        let insertion = (atLineStart ? "" : "\n") + block + "\n"
+        let caret = start + (insertion as NSString).length
+        return TextEdit(
+            range: selection,
+            replacement: insertion,
+            selection: NSRange(location: caret, length: 0)
+        )
+    }
+
     // MARK: - Tags
 
     /// Steht der Cursor direkt hinter `#abc`, liefert dies den Bereich `#abc`

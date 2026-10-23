@@ -152,6 +152,16 @@ struct MarkdownEditingTests {
         #expect(MarkdownEditing.continueList(in: "Text", selection: NSRange(location: 4, length: 0)) == nil)
     }
 
+    @Test func insertBlockOnOwnLine() {
+        let block = "![](_Anhänge/a.jpg)"
+        let mid = MarkdownEditing.insertBlock(block, in: "Text", selection: NSRange(location: 4, length: 0))
+        #expect(mid.applied(to: "Text") == "Text\n![](_Anhänge/a.jpg)\n")
+        #expect(mid.selection.location == ("Text\n![](_Anhänge/a.jpg)\n" as NSString).length)
+
+        let start = MarkdownEditing.insertBlock(block, in: "Text", selection: NSRange(location: 0, length: 0))
+        #expect(start.applied(to: "Text") == "![](_Anhänge/a.jpg)\nText")
+    }
+
     @Test func tagQueryAndCompletion() {
         let text = "Heute #fer"
         let query = try! #require(MarkdownEditing.tagQuery(in: text, caret: 10))

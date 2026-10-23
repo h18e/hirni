@@ -22,16 +22,17 @@ public enum FileNaming {
 
     /// Liefert `folder/baseName.ext`, oder `baseName 2.ext`, `baseName 3.ext` …,
     /// falls der Name schon belegt ist. `excluding` wird nicht als belegt gezählt
-    /// (beim Umbenennen die Datei selbst).
+    /// (beim Umbenennen die Datei selbst). Anhänge verwenden `-` als Trennzeichen.
     public static func uniqueURL(
         in folder: URL,
         baseName: String,
         pathExtension: String?,
+        separator: String = " ",
         excluding: URL? = nil,
         fileManager: FileManager = .default
     ) -> URL {
         func candidate(_ number: Int) -> URL {
-            let name = number == 1 ? baseName : "\(baseName) \(number)"
+            let name = number == 1 ? baseName : "\(baseName)\(separator)\(number)"
             let file = pathExtension.map { "\(name).\($0)" } ?? name
             return folder.appending(path: file, directoryHint: pathExtension == nil ? .isDirectory : .notDirectory)
         }

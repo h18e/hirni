@@ -22,6 +22,8 @@ public struct MarkdownSpan: Equatable, Sendable {
         case doneItem
         case link
         case tag(String)
+        /// Eingebetteter Anhang `![](pfad)`, Pfad relativ zur Notiz.
+        case embed(path: String)
     }
 
     public let kind: Kind
@@ -121,6 +123,14 @@ public enum MarkdownSyntax {
         }
         func isFree(_ r: NSRange) -> Bool {
             !protected.contains { NSIntersectionRange($0, r).length > 0 }
+        }
+
+        // Eingebettete Anhänge: ganz grau, das Bild erscheint darunter.
+        for m in AttachmentLinks.pattern.matches(in: text, range: range) where isFree(m.range) {
+            protected.append(m.range)
+            let path = AttachmentLinks.embeds(in: (text as NSString).substring(with: m.range)).first?.path ?? ""
+            spans.append(MarkdownSpan(.embed(path: path), m.range))
+            spans.append(MarkdownSpan(.syntax, m.range))
         }
 
         var boldMarkers: [NSRange] = []

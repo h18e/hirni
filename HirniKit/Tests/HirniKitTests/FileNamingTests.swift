@@ -56,6 +56,10 @@ struct NotePreviewTests {
         #expect(NotePreview.make(from: "- [ ] Milch\n- [x] Brot") == "Milch Brot")
     }
 
+    @Test func showsAttachmentsAsWords() {
+        #expect(NotePreview.make(from: "Ferien\n![](_Anhänge/a.jpg)\n![](_Anhänge/b.pdf)") == "Ferien [Bild] [PDF]")
+    }
+
     @Test func truncatesLongText() {
         let preview = NotePreview.make(from: String(repeating: "a", count: 500))
         #expect(preview.count == NotePreview.maxLength + 1)

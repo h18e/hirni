@@ -22,12 +22,22 @@ extension Vault {
         if folder.isInside(url) { throw VaultError.cannotMoveIntoItself }
 
         let isFolder = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
-        let target = isFolder
-            ? FileNaming.uniqueURL(in: folder, baseName: url.lastPathComponent, pathExtension: nil)
-            : FileNaming.uniqueURL(
-                in: folder, baseName: url.deletingPathExtension().lastPathComponent, pathExtension: url.pathExtension
-            )
+        if isFolder {
+            // Ein Ordner nimmt seinen `_Anhänge`-Ordner automatisch mit.
+            let target = FileNaming.uniqueURL(in: folder, baseName: url.lastPathComponent, pathExtension: nil)
+            try Coordinated.move(from: url, to: target)
+            return target
+        }
+
+        let target = FileNaming.uniqueURL(
+            in: folder, baseName: url.deletingPathExtension().lastPathComponent, pathExtension: url.pathExtension
+        )
+        let text = Self.isNote(name: url.lastPathComponent) ? try? readNote(at: url) : nil
+        let updated = try text.map { try moveAttachments(ofNote: $0, from: url, toFolder: folder) }
         try Coordinated.move(from: url, to: target)
+        if let text, let updated, updated != text {
+            try writeNote(updated, to: target)
+        }
         return target
     }
 
