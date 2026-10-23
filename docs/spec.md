@@ -70,7 +70,8 @@ hirni/
 
 - Ordner sind echte Ordner und lassen sich beliebig tief verschachteln.
 - `Inbox/` ist ein normaler Ordner mit Sonderstellung: Er steht immer zuoberst und ist das Standardziel für neue Notizen.
-- Ordner, die mit `_` beginnen, sind Systemordner. Die App blendet sie in der Ordnerliste aus.
+- Ordner, die mit `_` oder `.` beginnen, sind Systemordner (z. B. `_Anhänge`, `.obsidian`). Die App blendet sie in der Ordnerliste aus. Eigene Ordner können deshalb nicht mit `_` beginnen.
+- Gleiche Namen im selben Ordner bekommen eine Nummer: «Neue Notiz», «Neue Notiz 2» … Die Zeichen `/` und `:` werden in Titeln durch `-` ersetzt.
 
 ### Datenbank
 
@@ -112,8 +113,10 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 
 ### Zuletzt gelöscht
 
-- Gelöschte Notizen und Datenbanken werden nach `_Zuletzt gelöscht/` verschoben und lassen sich von dort wiederherstellen.
-- Der ursprüngliche Pfad und das Löschdatum werden in einer Begleitinformation gespeichert.
+- Gelöschte Notizen, Ordner und Datenbanken werden nach `_Zuletzt gelöscht/` verschoben und lassen sich von dort wiederherstellen.
+- Jedes gelöschte Element bekommt eine eigene Hülle `_Zuletzt gelöscht/<Zeitstempel>-<Kennung>/`. Darin liegen das Element selbst und eine versteckte Datei `.hirni-geloescht.json` mit dem ursprünglichen Pfad (`originalPath`) und dem Löschdatum (`deletedAt`, ISO 8601). So kommen sich gleichnamige Notizen aus verschiedenen Ordnern nicht in die Quere.
+- Was ohne diese Begleitinfo im Papierkorb liegt (z. B. im Finder hineingezogen), wird beim Wiederherstellen in die Inbox gelegt, Ordner in die oberste Ebene.
+- Ist der ursprüngliche Name beim Wiederherstellen belegt, bekommt das Element eine Nummer («Einkauf 2»). Fehlt der ursprüngliche Ordner, wird er neu angelegt.
 - Nach 30 Tagen räumt hirni automatisch auf.
 
 ## Funktionale Anforderungen (Version 1)
@@ -121,7 +124,7 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 ### Navigation und Aufbau
 
 - **Mac:** drei Spalten (Ordner | Liste | Inhalt). In der Seitenleiste stehen Inbox, Ordnerbaum, Tags und «Zuletzt gelöscht».
-- **iPhone:** dieselbe Hierarchie zum Durchtippen. Ein **+**-Knopf ist immer erreichbar und legt eine neue Notiz in der Inbox an.
+- **iPhone:** dieselbe Hierarchie zum Durchtippen. Die App startet direkt in der Inbox. Der Knopf **Neue Notiz** (Stift oben rechts, am Mac auch ⌘N) legt die Notiz im gerade offenen Ordner an, also standardmässig in der Inbox.
 - **Notizliste:** sortiert nach «zuletzt geändert». Angepinnte Notizen stehen oben. Jede Zeile zeigt Titel, Vorschau und Datum.
 
 ### Ordner

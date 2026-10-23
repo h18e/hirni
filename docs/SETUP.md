@@ -54,6 +54,10 @@ Zeigt die App «iCloud nicht verfügbar»: iPhone ▸ Einstellungen ▸ (dein Na
 
 Es kann ein paar Minuten dauern, bis der Ordner zum ersten Mal erscheint.
 
+## Im Simulator testen
+
+Im iPhone-Simulator ist meist kein iCloud angemeldet. hirni verwendet dort deshalb automatisch einen lokalen Testordner in der App. Er wird **nicht** synchronisiert. Beim allerersten Start im Simulator kann die Tastatur ein paar Sekunden brauchen, bis sie erscheint.
+
 ## Häufige Stolpersteine
 
 | Meldung | Ursache / Lösung |

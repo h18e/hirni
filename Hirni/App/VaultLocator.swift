@@ -26,12 +26,20 @@ final class VaultLocator {
         // Apple verlangt, dass dieser Aufruf nicht auf dem Hauptthread passiert:
         // Beim ersten Mal kann er einige Sekunden dauern.
         let result: State = await Task.detached {
-            guard let container = FileManager.default.url(
+            let root: URL
+            if let container = FileManager.default.url(
                 forUbiquityContainerIdentifier: Self.containerIdentifier
-            ) else {
+            ) {
+                root = container.appending(path: "Documents", directoryHint: .isDirectory)
+            } else {
+                #if targetEnvironment(simulator)
+                // Im Simulator ist meist kein iCloud angemeldet. Damit sich die
+                // Oberfläche trotzdem testen lässt: lokaler Ordner in der App.
+                root = URL.documentsDirectory.appending(path: "hirni", directoryHint: .isDirectory)
+                #else
                 return .iCloudUnavailable
+                #endif
             }
-            let root = container.appending(path: "Documents", directoryHint: .isDirectory)
             do {
                 try VaultLayout.prepare(root: root)
                 return .ready(root)
