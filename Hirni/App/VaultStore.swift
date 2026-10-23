@@ -46,6 +46,11 @@ final class VaultStore {
 
     private var monitor: VaultMonitor?
 
+    /// Der gerade offene Editor. Vor jeder Operation, die seine Datei betrifft
+    /// (verschieben, löschen, Ordner umbenennen …), wird zuerst gespeichert.
+    /// Sonst würde ein später Speichervorgang die Datei am alten Ort neu anlegen.
+    @ObservationIgnored var openEditor: EditorHandle?
+
     init(vault: Vault) {
         self.vault = vault
     }
@@ -140,8 +145,35 @@ final class VaultStore {
     }
 
     func deleteNote(_ url: URL) async {
+        await closeEditor(ifAffectedBy: url)
         guard await perform({ try $0.moveToTrash(url) }) != nil else { return }
-        if selectedNote == url { selectedNote = nil }
+        await reload()
+    }
+
+    func duplicateNote(_ url: URL) async {
+        await openEditor?.flushIfShowing(url)
+        guard let copy = await perform({ try $0.duplicateNote(at: url) }) else { return }
+        await reload()
+        selectedNote = copy
+    }
+
+    func setPinned(_ pinned: Bool, note url: URL) async {
+        await openEditor?.flushIfShowing(url)
+        await perform { try $0.setPinned(pinned, note: url) }
+        // Das Änderungsdatum bleibt beim Anpinnen gleich. Der Editor bemerkt
+        // die Änderung darum nicht von selbst und muss den Kopf neu lesen.
+        if let editor = openEditor, editor.url == url { await editor.reloadHeader() }
+        await reload()
+    }
+
+    /// Verschiebt eine Notiz oder einen Ordner. Wird ein Ordner verschoben, der
+    /// gerade in der Seitenleiste gewählt ist, wandert die Auswahl mit.
+    func move(_ url: URL, to folder: URL) async {
+        guard vault.contains(url), vault.contains(folder) || folder == vault.root else { return }
+        guard url.deletingLastPathComponent().standardizedFileURL != folder.standardizedFileURL else { return }
+        await closeEditor(ifAffectedBy: url)
+        guard let newURL = await perform({ try $0.move(url, to: folder) }) else { return }
+        followSelection(from: url, to: newURL)
         await reload()
     }
 
@@ -155,15 +187,14 @@ final class VaultStore {
     }
 
     func renameFolder(_ url: URL, to name: String) async {
+        await closeEditor(ifAffectedBy: url)
         guard let newURL = await perform({ try $0.renameFolder(at: url, to: name) }) else { return }
-        if case .folder(let selected) = sidebarSelection, selected.isInside(url) {
-            let suffix = selected.pathComponents.dropFirst(url.pathComponents.count)
-            sidebarSelection = .folder(suffix.reduce(newURL) { $0.appending(path: $1, directoryHint: .isDirectory) })
-        }
+        followSelection(from: url, to: newURL)
         await reload()
     }
 
     func deleteFolder(_ url: URL) async {
+        await closeEditor(ifAffectedBy: url)
         guard await perform({ try $0.moveToTrash(url) }) != nil else { return }
         if case .folder(let selected) = sidebarSelection, selected.isInside(url) {
             sidebarSelection = .inbox
@@ -185,6 +216,27 @@ final class VaultStore {
 
     // MARK: - Hilfen
 
+    /// Speichert und schliesst den Editor, falls seine Datei `url` ist oder in
+    /// `url` liegt.
+    private func closeEditor(ifAffectedBy url: URL) async {
+        if let editor = openEditor, editor.url.isInside(url) {
+            await editor.flush()
+            openEditor = nil
+        }
+        if let selectedNote, selectedNote.isInside(url) {
+            self.selectedNote = nil
+        }
+    }
+
+    /// Wurde der gewählte Ordner (oder einer seiner Elternordner) verschoben
+    /// oder umbenannt, zeigt die Seitenleiste danach auf den neuen Ort.
+    private func followSelection(from oldURL: URL, to newURL: URL) {
+        guard case .folder(let selected) = sidebarSelection, selected.isInside(oldURL) else { return }
+        let suffix = selected.standardizedFileURL.pathComponents
+            .dropFirst(oldURL.standardizedFileURL.pathComponents.count)
+        sidebarSelection = .folder(suffix.reduce(newURL) { $0.appending(path: $1, directoryHint: .isDirectory) })
+    }
+
     /// Führt eine Dateioperation im Hintergrund aus. Fehler erscheinen als Hinweis.
     @discardableResult
     private func perform<T: Sendable>(_ work: @escaping @Sendable (Vault) throws -> T) async -> T? {
@@ -200,11 +252,14 @@ final class VaultStore {
     }
 }
 
-extension URL {
-    /// `true`, wenn diese URL gleich `folder` ist oder darin liegt.
-    func isInside(_ folder: URL) -> Bool {
-        let parts = standardizedFileURL.pathComponents
-        let folderParts = folder.standardizedFileURL.pathComponents
-        return parts.count >= folderParts.count && Array(parts.prefix(folderParts.count)) == folderParts
+/// Verbindung zum offenen Editor, damit der Store ihn vor Dateioperationen
+/// speichern lassen kann.
+struct EditorHandle {
+    let url: URL
+    let flush: () async -> Void
+    let reloadHeader: () async -> Void
+
+    func flushIfShowing(_ noteURL: URL) async {
+        if url == noteURL { await flush() }
     }
 }

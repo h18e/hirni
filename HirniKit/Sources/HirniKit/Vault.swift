@@ -35,20 +35,25 @@ public struct Vault: Sendable {
             .map { FolderNode(url: $0.url, name: $0.name, children: try subfolders(of: $0.url)) }
     }
 
-    /// Die Notizen direkt in `folder` (nicht in Unterordnern), neueste zuerst.
+    /// Die Notizen direkt in `folder` (nicht in Unterordnern): angepinnte
+    /// zuerst, sonst neueste zuerst.
     public func notes(in folder: URL) throws -> [NoteSummary] {
         try entries(in: folder)
             .filter { !$0.isDirectory && Self.isNote(name: $0.name) }
             .map { entry in
-                NoteSummary(
+                let head = entry.isDownloaded ? beginning(of: entry.url) : ""
+                return NoteSummary(
                     url: entry.url,
                     title: Self.title(of: entry.url),
                     modified: entry.modified,
-                    preview: entry.isDownloaded ? previewText(of: entry.url) : "",
-                    isDownloaded: entry.isDownloaded
+                    preview: NotePreview.make(from: head),
+                    isDownloaded: entry.isDownloaded,
+                    isPinned: Frontmatter.value(Frontmatter.pinnedKey, in: head) == "true"
                 )
             }
-            .sorted { $0.modified > $1.modified }
+            .sorted { a, b in
+                a.isPinned != b.isPinned ? a.isPinned : a.modified > b.modified
+            }
     }
 
     static func isNote(name: String) -> Bool {
@@ -60,14 +65,13 @@ public struct Vault: Sendable {
         noteURL.deletingPathExtension().lastPathComponent
     }
 
-    /// Liest nur den Anfang der Datei – für die Vorschau reicht das.
-    private func previewText(of url: URL) -> String {
+    /// Liest nur den Anfang der Datei – für Vorschau und YAML-Kopf reicht das.
+    private func beginning(of url: URL) -> String {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return "" }
         defer { try? handle.close() }
         let data = (try? handle.read(upToCount: 2048)) ?? Data()
-        // Ein abgeschnittenes Mehrbyte-Zeichen am Ende darf die Vorschau nicht verhindern.
-        let text = String(decoding: data, as: UTF8.self)
-        return NotePreview.make(from: text)
+        // Ein abgeschnittenes Mehrbyte-Zeichen am Ende darf nicht stören.
+        return String(decoding: data, as: UTF8.self)
     }
 
     struct Entry {
@@ -186,6 +190,11 @@ public struct Vault: Sendable {
         } else {
             try Coordinated.move(from: source, to: target)
         }
+    }
+
+    /// `true`, wenn `url` im hirni-Ordner liegt.
+    public func contains(_ url: URL) -> Bool {
+        relativePath(of: url) != nil
     }
 
     /// Pfad von `url` relativ zum hirni-Ordner, z. B. `Privat/Ferien/Packliste.md`.

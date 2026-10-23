@@ -18,5 +18,19 @@
 			<string>Any</string>
 		</dict>
 	</dict>
+	<!-- Eigener Datentyp für Drag'n'Drop innerhalb der App (siehe VaultItemTransfer.swift). -->
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>ch.hebera.hirni.item</string>
+			<key>UTTypeDescription</key>
+			<string>hirni-Notiz oder -Ordner</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

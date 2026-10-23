@@ -6,6 +6,7 @@ struct SidebarView: View {
 
     @State private var prompt: FolderPrompt?
     @State private var folderName = ""
+    @State private var moving: MovingItem?
 
     var body: some View {
         @Bindable var store = store
@@ -13,11 +14,20 @@ struct SidebarView: View {
         List(selection: $store.sidebarSelection) {
             Label(VaultLayout.inboxFolderName, systemImage: "tray")
                 .tag(SidebarItem.inbox)
+                .dropDestination(for: VaultItemTransfer.self) { items, _ in
+                    drop(items, into: store.vault.inboxURL)
+                }
 
             Section("Ordner") {
                 OutlineGroup(store.folders, children: \.childrenOrNil) { folder in
                     Label(folder.name, systemImage: "folder")
                         .tag(SidebarItem.folder(folder.url))
+                        .draggable(VaultItemTransfer(url: folder.url)) {
+                            Label(folder.name, systemImage: "folder")
+                        }
+                        .dropDestination(for: VaultItemTransfer.self) { items, _ in
+                            drop(items, into: folder.url)
+                        }
                         .contextMenu { folderMenu(for: folder) }
                 }
             }
@@ -36,6 +46,9 @@ struct SidebarView: View {
                 }
             }
         }
+        .sheet(item: $moving) { item in
+            FolderPickerView(item: item.url)
+        }
         .alert(prompt?.title ?? "", isPresented: promptIsPresented, presenting: prompt) { prompt in
             TextField("Name", text: $folderName)
             Button("Abbrechen", role: .cancel) {}
@@ -51,9 +64,21 @@ struct SidebarView: View {
         Button("Umbenennen", systemImage: "pencil") {
             ask(.rename(folder))
         }
+        Button("Verschieben nach …", systemImage: "folder") {
+            moving = MovingItem(url: folder.url)
+        }
         Divider()
         Button("Löschen", systemImage: "trash", role: .destructive) {
             Task { await store.deleteFolder(folder.url) }
+        }
+    }
+
+    /// Abgelegte Notizen oder Ordner in `folder` verschieben. Nur Elemente aus
+    /// dem hirni-Ordner werden angenommen.
+    private func drop(_ items: [VaultItemTransfer], into folder: URL) {
+        let urls = items.map(\.url).filter { store.vault.contains($0) && !folder.isInside($0) }
+        Task {
+            for url in urls { await store.move(url, to: folder) }
         }
     }
 

@@ -15,6 +15,9 @@ struct NoteEditorView: View {
     /// Die Datei, die dieser Editor gerade bearbeitet.
     @State private var fileURL: URL?
     @State private var title = ""
+    /// YAML-Kopf (z. B. `angepinnt: true`). Er wird im Editor nicht angezeigt,
+    /// aber beim Speichern wieder vor den Text gesetzt.
+    @State private var header: String?
     @State private var text = ""
     /// Stand der Datei auf der Festplatte. Weicht `text` davon ab, gibt es
     /// ungespeicherte Änderungen.
@@ -63,8 +66,9 @@ struct NoteEditorView: View {
             Task { await reloadIfChangedElsewhere() }
         }
         .onDisappear {
-            let snapshot = text
-            if let fileURL, snapshot != savedText {
+            if store.openEditor?.url == fileURL { store.openEditor = nil }
+            let snapshot = Frontmatter.join(header: header, body: text)
+            if let fileURL, text != savedText {
                 Task { [store] in _ = await store.write(snapshot, to: fileURL) }
             }
         }
@@ -78,11 +82,14 @@ struct NoteEditorView: View {
 
         guard let content = await store.read(newURL) else { return }
         let modified = await store.modificationDate(of: newURL) ?? .now
-        text = content
-        savedText = content
+        let (header, body) = Frontmatter.split(content)
+        self.header = header
+        text = body
+        savedText = body
         savedModified = modified
         title = Vault.title(of: newURL)
         fileURL = newURL
+        register()
 
         if store.justCreatedNote == newURL {
             store.justCreatedNote = nil
@@ -96,7 +103,7 @@ struct NoteEditorView: View {
     private func save() async {
         guard let fileURL, !isRenaming, hasUnsavedChanges else { return }
         let snapshot = text
-        if let modified = await store.write(snapshot, to: fileURL) {
+        if let modified = await store.write(Frontmatter.join(header: header, body: snapshot), to: fileURL) {
             savedText = snapshot
             savedModified = modified
         }
@@ -117,6 +124,7 @@ struct NoteEditorView: View {
             self.fileURL = newURL
             savedModified = await store.modificationDate(of: newURL) ?? savedModified
             store.selectedNote = newURL
+            register()
         }
         title = Vault.title(of: self.fileURL ?? fileURL)
         isRenaming = false
@@ -134,8 +142,26 @@ struct NoteEditorView: View {
               let content = await store.read(fileURL),
               !hasUnsavedChanges, fileURL == self.fileURL
         else { return }
-        text = content
-        savedText = content
+        let (header, body) = Frontmatter.split(content)
+        self.header = header
+        text = body
+        savedText = body
         savedModified = modified
+    }
+
+    /// Meldet sich beim Store, damit er vor Dateioperationen speichern kann.
+    private func register() {
+        guard let fileURL else { return }
+        store.openEditor = EditorHandle(
+            url: fileURL,
+            flush: { await save() },
+            reloadHeader: { await reloadHeader() }
+        )
+    }
+
+    /// Liest nur den YAML-Kopf neu (nach Anpinnen), der Text bleibt unberührt.
+    private func reloadHeader() async {
+        guard let fileURL, let content = await store.read(fileURL) else { return }
+        header = Frontmatter.split(content).header
     }
 }

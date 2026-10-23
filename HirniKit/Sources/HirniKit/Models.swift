@@ -26,13 +26,16 @@ public struct NoteSummary: Identifiable, Hashable, Sendable {
     public let preview: String
     /// `false`, solange iCloud nur einen Platzhalter auf diesem Gerät hat.
     public let isDownloaded: Bool
+    /// `angepinnt: true` im YAML-Kopf. Angepinnte Notizen stehen oben.
+    public let isPinned: Bool
 
-    public init(url: URL, title: String, modified: Date, preview: String, isDownloaded: Bool) {
+    public init(url: URL, title: String, modified: Date, preview: String, isDownloaded: Bool, isPinned: Bool = false) {
         self.url = url
         self.title = title
         self.modified = modified
         self.preview = preview
         self.isDownloaded = isDownloaded
+        self.isPinned = isPinned
     }
 }
 

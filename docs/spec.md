@@ -61,7 +61,8 @@ hirni/
 ### Notiz
 
 - Eine Notiz ist eine `.md`-Datei. **Dateiname = Titel**, also ändert ein neuer Titel auch den Dateinamen.
-- Optionaler YAML-Kopf (Frontmatter) für Metadaten, z. B. `erstellt`, `angepinnt`.
+- Optionaler YAML-Kopf (Frontmatter) für Metadaten, z. B. `angepinnt: true`. Der Editor blendet den Kopf aus und setzt ihn beim Speichern unverändert wieder davor. hirni liest und schreibt nur einfache `schlüssel: wert`-Zeilen, alles andere im Kopf bleibt stehen.
+- Anpinnen ändert das Änderungsdatum der Datei nicht.
 - Checklisten: `- [ ] offen` / `- [x] erledigt`
 - Tags: `#tag` oder `#tag/untertag` irgendwo im Text
 - Bilder und Dateien: `![](_Anhänge/foto.jpg)`, abgelegt im Ordner `_Anhänge/` neben der Notiz
@@ -130,11 +131,12 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 ### Ordner
 
 - anlegen, umbenennen, löschen, verschachteln
-- **Verschieben:** am Mac per Drag'n'Drop (Notizen und Ordner). Auf dem iPhone per Wischen oder Kontextmenü → «Verschieben nach …» mit Ordnerauswahl, zusätzlich per Drag'n'Drop.
+- **Verschieben:** am Mac per Drag'n'Drop (Notizen und Ordner auf einen Ordner oder die Inbox in der Seitenleiste). Überall auch per Kontextmenü «Verschieben nach …» mit Ordnerauswahl, auf dem iPhone zusätzlich per Wischen nach rechts. Ein Ordner kann nicht in sich selbst verschoben werden. Ist der Name am Ziel belegt, gibt es eine Nummer.
+- Drag'n'Drop verwendet einen eigenen Datentyp (`ch.hebera.hirni.item`), keine Datei-URL. So kann man eine Notiz nicht aus Versehen auf den Schreibtisch und damit aus iCloud herausziehen.
 
 ### Notizen und Editor
 
-- **Grundfunktionen:** anlegen, umbenennen, löschen, anpinnen, duplizieren
+- **Grundfunktionen:** anlegen, umbenennen, löschen, anpinnen, duplizieren («Titel Kopie», nicht angepinnt)
 - **Markdown-Hervorhebung:** Die Syntax bleibt sichtbar, aber grau. Überschriften, fett, kursiv, Listen, Zitate, Code und Links werden gestaltet.
 - **iPhone:** Formatierungsleiste über der Tastatur (Überschrift, fett, kursiv, Liste, Checkliste, Bild, Tag)
 - **Mac:** übliche Tastenkürzel (⌘B, ⌘I …)
