@@ -154,8 +154,9 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 
 ### Tags und Suche
 
-- **Tags:** Die Tag-Liste in der Seitenleiste zeigt alle Tags. Ein Tipp listet alle Notizen mit diesem Tag.
-- **Volltextsuche:** über Notizen und Datenbank-Inhalte. Treffer werden hervorgehoben, filterbar nach Ordner.
+- **Tags:** Die Seitenleiste zeigt unter «Tags» alle Tags mit der Anzahl Notizen, die häufigsten zuerst. Ein Tipp listet alle Notizen mit diesem Tag aus allen Ordnern, `#ferien` zeigt dabei auch `#ferien/2026`. Eine neue Notiz aus der Tag-Ansicht landet in der Inbox und hat den Tag schon drin.
+- **Volltextsuche:** Suchfeld über der Notizliste (auf dem iPhone unten). Jedes Wort muss vorkommen, auch als Wortanfang («ferie» findet «Ferien»). Gross/klein und Akzente spielen keine Rolle («uber» findet «Über»). Titeltreffer stehen zuerst. Bereich: «Überall» oder «In ‹Ordner›» (samt Unterordnern). Treffer zeigen Ordner und einen Textausschnitt mit fett markierten Wörtern. Datenbank-Inhalte kommen mit Etappe 7 dazu.
+- **Such-Index:** SQLite mit FTS5 im Cache-Ordner des Geräts (`hirni-suche.sqlite`). Er wird bei jedem Neueinlesen nachgeführt, gelesen werden nur geänderte Dateien. Fehlt er, baut ihn hirni beim nächsten Start neu auf.
 
 ### Datenbanken
 

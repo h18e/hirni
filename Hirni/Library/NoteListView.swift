@@ -6,48 +6,54 @@ struct NoteListView: View {
     /// Notiz, für die gerade «Verschieben nach …» offen ist.
     @State private var moving: MovingItem?
 
+    @State private var query = ""
+    @State private var scope = SearchScope.everywhere
+    @State private var hits: [SearchHit] = []
+
+    enum SearchScope: Hashable {
+        case everywhere
+        case currentFolder
+    }
+
+    private var isSearching: Bool {
+        !query.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
     var body: some View {
         @Bindable var store = store
 
         List(selection: $store.selectedNote) {
-            ForEach(store.notes) { note in
-                NoteRow(note: note)
-                    .tag(note.url)
-                    .draggable(VaultItemTransfer(url: note.url)) {
-                        Label(note.title, systemImage: "note.text")
-                    }
-                    .swipeActions(edge: .leading) {
-                        Button("Verschieben", systemImage: "folder") {
-                            moving = MovingItem(url: note.url)
-                        }
-                        .tint(.indigo)
-                        pinButton(for: note)
-                            .tint(.orange)
-                    }
-                    .swipeActions(edge: .trailing) {
-                        Button("Löschen", systemImage: "trash", role: .destructive) {
-                            Task { await store.deleteNote(note.url) }
-                        }
-                    }
-                    .contextMenu { menu(for: note) }
+            if isSearching {
+                ForEach(hits) { hit in
+                    SearchResultRow(hit: hit)
+                        .tag(hit.url)
+                }
+            } else {
+                noteRows
             }
         }
         #if os(macOS)
         .onDeleteCommand {
-            if let url = store.selectedNote { Task { await store.deleteNote(url) } }
+            if let url = store.selectedNote, !isSearching { Task { await store.deleteNote(url) } }
         }
         .navigationSplitViewColumnWidth(min: 220, ideal: 280)
         #endif
-        .overlay {
-            if store.notes.isEmpty {
-                ContentUnavailableView(
-                    "Keine Notizen",
-                    systemImage: "note.text",
-                    description: Text("Mit dem Stift oben eine neue Notiz anlegen.")
-                )
+        .overlay { emptyState }
+        .navigationTitle(store.currentTitle)
+        .searchable(text: $query, prompt: "Suchen")
+        .searchScopes($scope, activation: .onSearchPresentation) {
+            Text("Überall").tag(SearchScope.everywhere)
+            if store.currentFolderURL != nil {
+                Text("In «\(store.currentTitle)»").tag(SearchScope.currentFolder)
             }
         }
-        .navigationTitle(store.currentTitle)
+        // Kurz warten, bis fertig getippt ist, dann suchen.
+        .task(id: SearchRequest(query: query, scope: scope, revision: store.revision)) {
+            guard isSearching else { return hits = [] }
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled else { return }
+            hits = await store.search(query, inCurrentFolder: scope == .currentFolder)
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Neue Notiz", systemImage: "square.and.pencil") {
@@ -59,6 +65,45 @@ struct NoteListView: View {
         .refreshable { await store.reload() }
         .sheet(item: $moving) { item in
             FolderPickerView(item: item.url)
+        }
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        if isSearching {
+            if hits.isEmpty {
+                ContentUnavailableView.search(text: query)
+            }
+        } else if store.notes.isEmpty {
+            ContentUnavailableView(
+                "Keine Notizen",
+                systemImage: "note.text",
+                description: Text("Mit dem Stift oben eine neue Notiz anlegen.")
+            )
+        }
+    }
+
+    private var noteRows: some View {
+        ForEach(store.notes) { note in
+            NoteRow(note: note)
+                .tag(note.url)
+                .draggable(VaultItemTransfer(url: note.url)) {
+                    Label(note.title, systemImage: "note.text")
+                }
+                .swipeActions(edge: .leading) {
+                    Button("Verschieben", systemImage: "folder") {
+                        moving = MovingItem(url: note.url)
+                    }
+                    .tint(.indigo)
+                    pinButton(for: note)
+                        .tint(.orange)
+                }
+                .swipeActions(edge: .trailing) {
+                    Button("Löschen", systemImage: "trash", role: .destructive) {
+                        Task { await store.deleteNote(note.url) }
+                    }
+                }
+                .contextMenu { menu(for: note) }
         }
     }
 
@@ -85,6 +130,13 @@ struct NoteListView: View {
             Task { await store.setPinned(!note.isPinned, note: note.url) }
         }
     }
+}
+
+/// Löst eine neue Suche aus, wenn sich Eingabe, Bereich oder Dateien ändern.
+private struct SearchRequest: Equatable {
+    let query: String
+    let scope: NoteListView.SearchScope
+    let revision: Int
 }
 
 /// Für `.sheet(item:)`: eine URL, die verschoben werden soll.

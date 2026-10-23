@@ -56,6 +56,24 @@ public struct Vault: Sendable {
             }
     }
 
+    /// Listeneinträge für einzelne Notizen aus verschiedenen Ordnern
+    /// (Tag-Ansicht), neueste zuerst.
+    public func summaries(for urls: [URL]) -> [NoteSummary] {
+        urls.compactMap { url -> NoteSummary? in
+            guard let modified = modificationDate(of: url) else { return nil }
+            let head = beginning(of: url)
+            return NoteSummary(
+                url: url,
+                title: Self.title(of: url),
+                modified: modified,
+                preview: NotePreview.make(from: head),
+                isDownloaded: true,
+                isPinned: Frontmatter.value(Frontmatter.pinnedKey, in: head) == "true"
+            )
+        }
+        .sorted { $0.modified > $1.modified }
+    }
+
     static func isNote(name: String) -> Bool {
         name.lowercased().hasSuffix(".\(VaultLayout.noteExtension)")
             && !name.lowercased().hasSuffix(VaultLayout.databaseSuffix)

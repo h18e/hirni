@@ -32,6 +32,16 @@ struct SidebarView: View {
                 }
             }
 
+            if !store.tagCounts.isEmpty {
+                Section("Tags") {
+                    ForEach(store.tagCounts) { tag in
+                        Label(tag.name, systemImage: "number")
+                            .badge(tag.count)
+                            .tag(SidebarItem.tag(tag.name))
+                    }
+                }
+            }
+
             Label("Zuletzt gelöscht", systemImage: "trash")
                 .tag(SidebarItem.trash)
         }

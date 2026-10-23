@@ -9,7 +9,15 @@ let vaultLog = Logger(subsystem: "ch.hebera.hirni", category: "vault")
 enum SidebarItem: Hashable {
     case inbox
     case folder(URL)
+    case tag(String)
     case trash
+}
+
+/// Ein Tag mit der Anzahl Notizen, für die Seitenleiste.
+struct TagCount: Identifiable, Hashable {
+    let name: String
+    let count: Int
+    var id: String { name.lowercased() }
 }
 
 /// Zentraler Zustand der App: Ordnerbaum, Notizliste, Auswahl.
@@ -26,6 +34,8 @@ final class VaultStore {
     private(set) var trash: [TrashEntry] = []
     /// Alle Tags im hirni-Ordner, die häufigsten zuerst (für Vorschläge).
     private(set) var tags: [String] = []
+    /// Dieselben Tags mit Anzahl Notizen (für die Seitenleiste).
+    private(set) var tagCounts: [TagCount] = []
 
     var sidebarSelection: SidebarItem? = .inbox {
         didSet {
@@ -48,6 +58,10 @@ final class VaultStore {
 
     private var monitor: VaultMonitor?
 
+    /// Such-Index im Cache-Ordner dieses Geräts. `nil`, falls er sich nicht
+    /// öffnen liess. Dann gibt es keine Suche, alles andere funktioniert.
+    private var index: SearchIndex?
+
     /// Der gerade offene Editor. Vor jeder Operation, die seine Datei betrifft
     /// (verschieben, löschen, Ordner umbenennen …), wird zuerst gespeichert.
     /// Sonst würde ein später Speichervorgang die Datei am alten Ort neu anlegen.
@@ -61,7 +75,7 @@ final class VaultStore {
         switch sidebarSelection {
         case .inbox, nil: vault.inboxURL
         case .folder(let url): url
-        case .trash: nil
+        case .tag, .trash: nil
         }
     }
 
@@ -69,6 +83,7 @@ final class VaultStore {
         switch sidebarSelection {
         case .inbox, nil: VaultLayout.inboxFolderName
         case .folder(let url): url.lastPathComponent
+        case .tag(let tag): "#\(tag)"
         case .trash: "Zuletzt gelöscht"
         }
     }
@@ -80,16 +95,40 @@ final class VaultStore {
         }
         monitor.start()
         self.monitor = monitor
+        do {
+            index = try SearchIndex(fileURL: URL.cachesDirectory.appending(path: "hirni-suche.sqlite"))
+        } catch {
+            vaultLog.error("Such-Index nicht verfügbar: \(error.localizedDescription, privacy: .public)")
+        }
         await perform { try $0.purgeTrash() }
         await reload()
     }
 
-    /// Liest alle Notizen nach Tags durch. Läuft im Hintergrund und nur bei
-    /// Bedarf (beim Öffnen eines Editors), nicht bei jedem Speichern.
+    /// Tags aus dem Such-Index übernehmen (ohne Index: alle Notizen lesen).
     func refreshTags() async {
         let vault = vault
-        let names = await Task.detached { vault.allTags().map(\.name) }.value
+        let counts: [TagCount]
+        if let index, let fromIndex = try? await index.tags() {
+            counts = fromIndex.map { TagCount(name: $0.name, count: $0.count) }
+        } else {
+            counts = await Task.detached { vault.allTags().map { TagCount(name: $0.name, count: $0.count) } }.value
+        }
+        if counts != tagCounts { tagCounts = counts }
+        let names = counts.map(\.name)
         if names != tags { tags = names }
+    }
+
+    /// Volltextsuche. `inCurrentFolder` beschränkt auf den gewählten Ordner
+    /// (samt Unterordnern).
+    func search(_ text: String, inCurrentFolder: Bool) async -> [SearchHit] {
+        guard let index else { return [] }
+        let folder = inCurrentFolder ? currentFolderURL.flatMap(vault.relativePath(of:)) : nil
+        do {
+            return try await index.search(text, in: folder, vault: vault)
+        } catch {
+            vaultLog.error("Suche: \(String(describing: error), privacy: .public)")
+            return []
+        }
     }
 
     func reload() async {
@@ -98,6 +137,17 @@ final class VaultStore {
         let vault = vault
         let folderURL = currentFolderURL
         let showsTrash = sidebarSelection == .trash
+
+        // Zuerst den Such-Index nachführen: Die Tag-Ansicht braucht ihn.
+        if let index {
+            do {
+                try await index.update(from: vault)
+            } catch {
+                vaultLog.error("Index: \(String(describing: error), privacy: .public)")
+            }
+        }
+        await refreshTags()
+
         let result = await Task.detached {
             (
                 folders: Result { try vault.folderTree() },
@@ -110,7 +160,7 @@ final class VaultStore {
         if case .success(let trash) = result.trash { self.trash = trash }
         switch result.notes {
         case .success(let notes):
-            self.notes = notes
+            self.notes = sidebarSelection?.isTag == true ? await taggedNotes() : notes
         case .failure:
             // Der gewählte Ordner existiert nicht mehr (z. B. auf dem anderen
             // Gerät gelöscht oder umbenannt): zurück zur Inbox.
@@ -119,12 +169,22 @@ final class VaultStore {
         revision += 1
     }
 
+    private func taggedNotes() async -> [NoteSummary] {
+        guard case .tag(let tag) = sidebarSelection, let index,
+              let urls = try? await index.notes(withTag: tag, vault: vault)
+        else { return [] }
+        let vault = vault
+        return await Task.detached { vault.summaries(for: urls) }.value
+    }
+
     // MARK: - Notizen
 
     func newNote() async {
         if sidebarSelection == .trash { sidebarSelection = .inbox }
         let folder = currentFolderURL ?? vault.inboxURL
-        guard let url = await perform({ try $0.createNote(in: folder) }) else { return }
+        // In der Tag-Ansicht bekommt die neue Notiz (in der Inbox) gleich den Tag.
+        let text = if case .tag(let tag) = sidebarSelection { "#\(tag) " } else { "" }
+        guard let url = await perform({ try $0.createNote(in: folder, text: text) }) else { return }
         await reload()
         justCreatedNote = url
         selectedNote = url
@@ -297,5 +357,11 @@ struct EditorHandle {
 
     func flushIfShowing(_ noteURL: URL) async {
         if url == noteURL { await flush() }
+    }
+}
+
+extension SidebarItem {
+    var isTag: Bool {
+        if case .tag = self { true } else { false }
     }
 }
