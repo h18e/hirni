@@ -3,4 +3,6 @@ xcuserdata/
 DerivedData/
 .build/
 *.xcuserstate
-Local.xcconfig
+Config/Local.xcconfig
+.swiftpm/
+*.xcodeproj/project.xcworkspace/xcuserdata/

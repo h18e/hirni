@@ -7,7 +7,7 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ fertig
 
 | # | Etappe | Inhalt | Testbar danach | Status |
 |---|---|---|---|---|
-| 0 | Fundament | Xcode-27-Projekt (iOS + macOS), Swift Package `HirniKit` mit Tests, iCloud-Container, Signing, `SETUP.md` | App startet auf beiden Geräten (leer) | ⬜ |
+| 0 | Fundament | Xcode-27-Projekt (iOS + macOS), Swift Package `HirniKit` mit Tests, iCloud-Container, Signing, `SETUP.md` | App startet auf beiden Geräten (leer) | 🟡 Mac ✅, iPhone-Test offen |
 | 1 | Dateien & Ordner | iCloud-Ordner «hirni», Ordnerbaum, Inbox, Notizen anlegen/umbenennen/löschen, einfacher Texteditor, Zuletzt gelöscht, Sync zwischen Geräten | **Erste echte Nutzung:** Notizen schreiben und auf dem anderen Gerät sehen | ⬜ |
 | 2 | Ordnen | Verschieben per Drag'n'Drop (Mac) und Wischen/Menü (iPhone), Anpinnen, Duplizieren | Notizen aus der Inbox einsortieren | ⬜ |
 | 3 | Markdown-Editor | Hervorhebung, Formatierungsleiste iPhone, Tastenkürzel Mac, Checklisten abhaken, `#tags` mit Vorschlägen | Komfortables Schreiben | ⬜ |
