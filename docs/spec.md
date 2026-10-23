@@ -137,11 +137,13 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 ### Notizen und Editor
 
 - **Grundfunktionen:** anlegen, umbenennen, löschen, anpinnen, duplizieren («Titel Kopie», nicht angepinnt)
-- **Markdown-Hervorhebung:** Die Syntax bleibt sichtbar, aber grau. Überschriften, fett, kursiv, Listen, Zitate, Code und Links werden gestaltet.
-- **iPhone:** Formatierungsleiste über der Tastatur (Überschrift, fett, kursiv, Liste, Checkliste, Bild, Tag)
-- **Mac:** übliche Tastenkürzel (⌘B, ⌘I …)
-- **Checklisten:** ein Tipp auf die Checkbox hakt ab
-- **Tags:** werden beim Tippen von `#` vorgeschlagen
+- **Markdown-Hervorhebung:** Die Syntax bleibt sichtbar, aber grau. Überschriften (1–6), fett, kursiv, durchgestrichen, Listen, Checklisten, Zitate, Inline-Code, Codeblöcke, Links und Tags werden gestaltet. Gerade Anführungszeichen und Bindestriche bleiben erhalten (keine automatische Ersetzung).
+- **iPhone:** Formatierungsleiste über der Tastatur: Überschrift, fett, kursiv, Liste, Checkliste, Tag, Tastatur ausblenden. Der Knopf für Bilder folgt in Etappe 4.
+- **Mac:** Knöpfe in der Fensterleiste mit Tastenkürzeln: Überschrift ⇧⌘H, fett ⌘B, kursiv ⌘I, Liste ⇧⌘8, Checkliste ⇧⌘L
+- **Überschrift-Knopf:** wechselt reihum keine → `#` → `##` → `###` → keine
+- **Listen:** Return setzt Liste bzw. Checkliste fort. Return in einem leeren Punkt beendet die Liste.
+- **Checklisten:** ein Tipp bzw. Klick auf `[ ]` hakt ab, erledigte Punkte erscheinen durchgestrichen
+- **Tags:** Nach `#` erscheinen passende Tags aus dem ganzen hirni-Ordner, die häufigsten zuerst. Auf dem iPhone in der Leiste, am Mac unter dem Text, dort übernimmt Tab den ersten Vorschlag. Tags dürfen Buchstaben (auch Umlaute), Ziffern, `_`, `-` und `/` enthalten, aber nicht nur aus Ziffern bestehen (wie bei Obsidian).
 - **Bilder und PDFs:** einfügen aus Fotos, Kamera (iPhone), Dateien oder per Drag'n'Drop. Bilder werden in der Notiz als Bild angezeigt.
 - **Speichern:** automatisch, ohne Speichern-Knopf
 

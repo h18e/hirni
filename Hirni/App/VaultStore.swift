@@ -24,6 +24,8 @@ final class VaultStore {
     private(set) var folders: [FolderNode] = []
     private(set) var notes: [NoteSummary] = []
     private(set) var trash: [TrashEntry] = []
+    /// Alle Tags im hirni-Ordner, die häufigsten zuerst (für Vorschläge).
+    private(set) var tags: [String] = []
 
     var sidebarSelection: SidebarItem? = .inbox {
         didSet {
@@ -80,6 +82,14 @@ final class VaultStore {
         self.monitor = monitor
         await perform { try $0.purgeTrash() }
         await reload()
+    }
+
+    /// Liest alle Notizen nach Tags durch. Läuft im Hintergrund und nur bei
+    /// Bedarf (beim Öffnen eines Editors), nicht bei jedem Speichern.
+    func refreshTags() async {
+        let vault = vault
+        let names = await Task.detached { vault.allTags().map(\.name) }.value
+        if names != tags { tags = names }
     }
 
     func reload() async {

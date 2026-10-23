@@ -12,6 +12,7 @@ Notizen sind Markdown-Dateien, Datenbanken funktionieren wie in Notion, und Clau
 | Ordner | Inhalt |
 |---|---|
 | `Hirni/` | App für iOS und macOS (SwiftUI). Neue Dateien hier landen automatisch im Projekt. |
+| `Hirni/Editor/` | Markdown-Editor: Textansicht, Hervorhebung, Formatierungsleiste |
 | `HirniKit/` | Swift Package mit der gesamten Logik ohne Oberfläche, getestet mit `swift test` |
 | `Config/` | Info.plist, Berechtigungen (iCloud), Signierung |
 | `docs/` | Spezifikation, Roadmap, Einrichtung |
@@ -19,4 +20,4 @@ Notizen sind Markdown-Dateien, Datenbanken funktionieren wie in Notion, und Clau
 Die Notizen selbst liegen nicht hier, sondern in **iCloud Drive → hirni**
 (auf dem Mac: `~/Library/Mobile Documents/iCloud~ch~hebera~hirni/Documents/`).
 
-Status: Etappe 2 (Ordnen) gebaut, Test auf den Geräten offen.
+Status: Etappe 3 (Markdown-Editor) gebaut, Test auf den Geräten offen.

@@ -1,8 +1,7 @@
 import HirniKit
 import SwiftUI
 
-/// Einfacher Editor für Etappe 1: Titel (= Dateiname) und Text.
-/// Markdown-Hervorhebung und Formatierungsleiste folgen in Etappe 3.
+/// Editor für eine Notiz: Titel (= Dateiname) und Markdown-Text.
 ///
 /// Der Editor bleibt bestehen, wenn die Notiz umbenannt wird (die Adresse
 /// ändert sich dabei). So kann ein Speichervorgang nie unter dem alten Namen
@@ -24,6 +23,7 @@ struct NoteEditorView: View {
     @State private var savedText = ""
     @State private var savedModified: Date = .distantPast
     @State private var isRenaming = false
+    @State private var controller = EditorController()
     @FocusState private var titleIsFocused: Bool
 
     private var isLoaded: Bool { fileURL != nil }
@@ -40,10 +40,14 @@ struct NoteEditorView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 8)
 
-            TextEditor(text: $text)
-                .font(.body)
-                .scrollContentBackground(.hidden)
-                .padding(.horizontal, 15)
+            MarkdownTextView(text: $text, controller: controller)
+            #if os(macOS)
+            if !controller.suggestions.isEmpty {
+                TagSuggestions(controller: controller)
+                    .padding(.vertical, 6)
+                    .background(.bar)
+            }
+            #endif
         }
         .disabled(!isLoaded)
         .overlay {
@@ -51,8 +55,14 @@ struct NoteEditorView: View {
         }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #else
+        .toolbar { formattingToolbar }
         #endif
         .task(id: url) { await open(url) }
+        .task { await store.refreshTags() }
+        .onChange(of: store.tags, initial: true) { _, tags in
+            controller.knownTags = tags
+        }
         // Automatisch speichern, 1 Sekunde nach der letzten Eingabe.
         .task(id: text) {
             try? await Task.sleep(for: .seconds(1))
@@ -74,6 +84,30 @@ struct NoteEditorView: View {
         }
     }
 
+    #if os(macOS)
+    /// Formatieren am Mac: Knöpfe in der Fensterleiste, mit Tastenkürzeln.
+    @ToolbarContentBuilder
+    private var formattingToolbar: some ToolbarContent {
+        ToolbarItemGroup {
+            Button("Überschrift", systemImage: "textformat.size", action: controller.heading)
+                .keyboardShortcut("h", modifiers: [.command, .shift])
+                .help("Überschrift (⇧⌘H)")
+            Button("Fett", systemImage: "bold", action: controller.bold)
+                .keyboardShortcut("b")
+                .help("Fett (⌘B)")
+            Button("Kursiv", systemImage: "italic", action: controller.italic)
+                .keyboardShortcut("i")
+                .help("Kursiv (⌘I)")
+            Button("Liste", systemImage: "list.bullet", action: controller.bulletList)
+                .keyboardShortcut("8", modifiers: [.command, .shift])
+                .help("Liste (⇧⌘8)")
+            Button("Checkliste", systemImage: "checklist", action: controller.checklist)
+                .keyboardShortcut("l", modifiers: [.command, .shift])
+                .help("Checkliste (⇧⌘L)")
+        }
+    }
+    #endif
+
     /// Öffnet `newURL`. Nach einem Umbenennen ist das bereits die offene Datei,
     /// dann passiert nichts.
     private func open(_ newURL: URL) async {
@@ -85,6 +119,7 @@ struct NoteEditorView: View {
         let (header, body) = Frontmatter.split(content)
         self.header = header
         text = body
+        controller.setText(body)
         savedText = body
         savedModified = modified
         title = Vault.title(of: newURL)
@@ -145,6 +180,7 @@ struct NoteEditorView: View {
         let (header, body) = Frontmatter.split(content)
         self.header = header
         text = body
+        controller.setText(body)
         savedText = body
         savedModified = modified
     }
