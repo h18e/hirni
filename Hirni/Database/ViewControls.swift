@@ -161,36 +161,37 @@ private struct FilterEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                ForEach($rules) { $item in
+                ForEach(rules) { rule in
+                    let item = Binding.element(rule.id, in: $rules, fallback: rule)
                     Section {
                         Picker("Feld", selection: Binding(
-                            get: { item.rule.field },
+                            get: { item.wrappedValue.rule.field },
                             set: { name in
-                                item.rule.field = name
+                                item.wrappedValue.rule.field = name
                                 if let field = document.database.field(named: name),
-                                   !FilterCondition.available(for: field.type).contains(item.rule.condition) {
-                                    item.rule.condition = FilterCondition.available(for: field.type)[0]
-                                    item.rule.value = nil
+                                   !FilterCondition.available(for: field.type).contains(item.wrappedValue.rule.condition) {
+                                    item.wrappedValue.rule.condition = FilterCondition.available(for: field.type)[0]
+                                    item.wrappedValue.rule.value = nil
                                 }
                             }
                         )) {
                             ForEach(document.database.fields) { Text($0.name).tag($0.name) }
                         }
-                        if let field = document.database.field(named: item.rule.field) {
-                            Picker("Bedingung", selection: $item.rule.condition) {
+                        if let field = document.database.field(named: item.wrappedValue.rule.field) {
+                            Picker("Bedingung", selection: item.rule.condition) {
                                 ForEach(FilterCondition.available(for: field.type), id: \.self) { Text($0.label).tag($0) }
                             }
-                            if item.rule.condition.needsValue {
+                            if item.wrappedValue.rule.condition.needsValue {
                                 LabeledContent("Wert") {
                                     FilterValueEditor(field: field, value: Binding(
-                                        get: { item.rule.value ?? "" },
-                                        set: { item.rule.value = $0.isEmpty ? nil : $0 }
+                                        get: { item.wrappedValue.rule.value ?? "" },
+                                        set: { item.wrappedValue.rule.value = $0.isEmpty ? nil : $0 }
                                     ))
                                 }
                             }
                         }
                         Button("Filter entfernen", systemImage: "trash", role: .destructive) {
-                            rules.removeAll { $0.id == item.id }
+                            rules.removeAll { $0.id == rule.id }
                         }
                     }
                 }
@@ -267,22 +268,29 @@ private struct FilterValueEditor: View {
 private struct SortEditor: View {
     let document: DatabaseDocument
     @Environment(\.dismiss) private var dismiss
-    @State private var rules: [SortRule] = []
+    @State private var rules: [EditableSort] = []
+
+    struct EditableSort: Identifiable {
+        let id = UUID()
+        var rule: SortRule
+    }
 
     var body: some View {
         NavigationStack {
             Form {
-                ForEach(rules.indices, id: \.self) { index in
+                ForEach(rules) { item in
+                    let index = rules.firstIndex { $0.id == item.id } ?? 0
+                    let binding = Binding.element(item.id, in: $rules, fallback: item)
                     Section {
-                        Picker("Feld", selection: $rules[index].field) {
+                        Picker("Feld", selection: binding.rule.field) {
                             ForEach(document.database.fields) { Text($0.name).tag($0.name) }
                         }
-                        Picker("Richtung", selection: $rules[index].descending) {
+                        Picker("Richtung", selection: binding.rule.descending) {
                             Text("Aufsteigend (A → Z, 1 → 9, alt → neu)").tag(false)
                             Text("Absteigend (Z → A, 9 → 1, neu → alt)").tag(true)
                         }
                         Button("Sortierung entfernen", systemImage: "trash", role: .destructive) {
-                            rules.remove(at: index)
+                            rules.removeAll { $0.id == item.id }
                         }
                     } header: {
                         Text(index == 0 ? "Zuerst nach" : "Dann nach")
@@ -290,8 +298,10 @@ private struct SortEditor: View {
                 }
                 Section {
                     Button("Sortierung hinzufügen", systemImage: "plus") {
-                        let unused = document.database.fields.first { field in !rules.contains { $0.field == field.name } }
-                        if let field = unused ?? document.database.fields.first { rules.append(SortRule(field: field.name)) }
+                        let unused = document.database.fields.first { field in !rules.contains { $0.rule.field == field.name } }
+                        if let field = unused ?? document.database.fields.first {
+                            rules.append(EditableSort(rule: SortRule(field: field.name)))
+                        }
                     }
                 } footer: {
                     Text("Ohne Sortierung gilt die Reihenfolge in der Datei. Leere Werte stehen immer am Ende.")
@@ -306,12 +316,12 @@ private struct SortEditor: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Fertig") {
-                        document.updateView { $0.sorts = rules }
+                        document.updateView { $0.sorts = rules.map(\.rule) }
                         dismiss()
                     }
                 }
             }
-            .onAppear { rules = document.currentView.sorts ?? [] }
+            .onAppear { rules = (document.currentView.sorts ?? []).map { EditableSort(rule: $0) } }
         }
         #if os(macOS)
         .frame(minWidth: 440, minHeight: 380)

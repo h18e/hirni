@@ -13,8 +13,8 @@ struct FieldsEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                ForEach($edits) { $edit in
-                    FieldSection(edit: $edit) {
+                ForEach(edits) { edit in
+                    FieldSection(edit: .element(edit.id, in: $edits, fallback: edit)) {
                         edits.removeAll { $0.id == edit.id }
                     }
                 }
