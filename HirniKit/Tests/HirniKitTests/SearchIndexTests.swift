@@ -81,6 +81,22 @@ struct SearchIndexTests {
         #expect(exact.map(\.lastPathComponent) == ["B.md"])
     }
 
+    @Test func findsDatabaseEntries() async throws {
+        let test = try TestVault()
+        let url = try test.vault.createDatabase(in: test.vault.inboxURL, title: "Ausgaben")
+        var db = try test.vault.readDatabase(at: url)
+        db.fields.append(Field(name: "Betrag", type: .number, format: .chf))
+        db.rows = [Row(values: ["Name": "Pizza am See", "Betrag": "42.5"]), Row(values: ["Name": "Zug"])]
+        try test.vault.writeDatabase(db, to: url)
+
+        let index = try makeIndex()
+        try await index.update(from: test.vault)
+        let hit = try #require(try await index.search("pizza", vault: test.vault).first)
+        #expect(hit.title == "Ausgaben")
+        #expect(hit.url.lastPathComponent == "Ausgaben.hirnidb.md")
+        #expect(hit.snippet.contains("42.50"))
+    }
+
     @Test func oddInputIsSafe() async throws {
         let test = try TestVault()
         try test.write("Text", to: "Inbox/A.md")

@@ -19,6 +19,15 @@ extension Vault {
 
     /// Alle heruntergeladenen Notizen im hirni-Ordner, ohne Systemordner.
     func allNoteURLs() -> [URL] {
+        allFiles { Self.isNote(name: $0.lastPathComponent) }
+    }
+
+    /// Alle heruntergeladenen Datenbanken im hirni-Ordner, ohne Systemordner.
+    func allDatabaseURLs() -> [URL] {
+        allFiles(matching: Self.isDatabase)
+    }
+
+    private func allFiles(matching include: (URL) -> Bool) -> [URL] {
         guard let enumerator = FileManager.default.enumerator(
             at: root, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]
         ) else { return [] }
@@ -27,7 +36,7 @@ extension Vault {
             let isDirectory = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
             if isDirectory {
                 if VaultLayout.isSystemFolder(named: url.lastPathComponent) { enumerator.skipDescendants() }
-            } else if Self.isNote(name: url.lastPathComponent) {
+            } else if include(url) {
                 result.append(url)
             }
         }

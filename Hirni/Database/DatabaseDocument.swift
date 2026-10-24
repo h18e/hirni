@@ -19,6 +19,11 @@ final class DatabaseDocument {
     /// Hinweis nach einem Zusammenführen mit Konflikten.
     var mergeNotice: String?
 
+    /// Gewählte Ansicht (nur auf diesem Gerät, wird nicht gespeichert).
+    private(set) var selectedViewName: String?
+    /// Eben angelegte Zeilen bleiben sichtbar, auch wenn sie den Filter nicht erfüllen.
+    private(set) var recentlyAdded: Set<String> = []
+
     @ObservationIgnored private var saved: Database?
     @ObservationIgnored private var savedModified: Date = .distantPast
     @ObservationIgnored private var saveTask: Task<Void, Never>?
@@ -29,6 +34,81 @@ final class DatabaseDocument {
     }
 
     var title: String { Vault.title(of: url) }
+
+    // MARK: - Ansichten
+
+    /// Die gewählte Ansicht. Gibt es noch keine, eine ungespeicherte «Alle».
+    var currentView: SavedView {
+        database.views.first { $0.name == selectedViewName } ?? database.views.first ?? SavedView(name: "Alle")
+    }
+
+    var result: QueryResult {
+        DatabaseQuery.run(currentView, on: database, alwaysShowing: recentlyAdded)
+    }
+
+    var visibleFields: [Field] {
+        let hidden = Set(currentView.hiddenFields ?? [])
+        let fields = database.fields.filter { !hidden.contains($0.name) }
+        return fields.isEmpty ? Array(database.fields.prefix(1)) : fields
+    }
+
+    func selectView(_ name: String) {
+        selectedViewName = name
+        recentlyAdded = []
+    }
+
+    /// Ändert die gewählte Ansicht. Die ungespeicherte «Alle» wird dabei gespeichert.
+    func updateView(_ change: (inout SavedView) -> Void) {
+        var view = currentView
+        change(&view)
+        if let index = database.views.firstIndex(where: { $0.name == currentView.name }) {
+            database.views[index] = view
+        } else {
+            database.views.append(view)
+        }
+        selectedViewName = view.name
+        scheduleSave()
+    }
+
+    func addView() {
+        if database.views.isEmpty { database.views.append(currentView) } // «Alle» behalten
+        let view = SavedView(name: uniqueViewName("Ansicht"))
+        database.views.append(view)
+        selectView(view.name)
+        scheduleSave()
+    }
+
+    func duplicateView(_ name: String) {
+        guard var view = database.views.first(where: { $0.name == name }) ?? (name == currentView.name ? currentView : nil) else { return }
+        if database.views.isEmpty { database.views.append(view) }
+        view.name = uniqueViewName(name + " Kopie")
+        database.views.append(view)
+        selectView(view.name)
+        scheduleSave()
+    }
+
+    func renameView(_ name: String, to newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, trimmed != name, !database.views.contains(where: { $0.name == trimmed }) else { return }
+        if database.views.isEmpty { database.views.append(currentView) }
+        guard let index = database.views.firstIndex(where: { $0.name == name }) else { return }
+        database.views[index].name = trimmed
+        if selectedViewName == name || selectedViewName == nil { selectedViewName = trimmed }
+        scheduleSave()
+    }
+
+    func deleteView(_ name: String) {
+        database.views.removeAll { $0.name == name }
+        if selectedViewName == name { selectedViewName = database.views.first?.name }
+        scheduleSave()
+    }
+
+    private func uniqueViewName(_ base: String) -> String {
+        var number = 1
+        func name() -> String { number == 1 ? base : "\(base) \(number)" }
+        while database.views.contains(where: { $0.name == name() }) || name() == currentView.name { number += 1 }
+        return name()
+    }
     private var hasUnsavedChanges: Bool { saved != database }
 
     // MARK: - Laden
@@ -76,10 +156,27 @@ final class DatabaseDocument {
         scheduleSave()
     }
 
+    /// Neuer Eintrag. Werte aus einfachen Filtern der Ansicht werden
+    /// übernommen (z. B. Filter «Kategorie ist Essen» → Kategorie = Essen).
     @discardableResult
     func addRow() -> String {
-        let row = Row()
+        var row = Row()
+        for rule in currentView.filters ?? [] {
+            guard let field = database.field(named: rule.field), let value = rule.value, !value.isEmpty else {
+                if rule.condition == .checked { row[rule.field] = CellValue.raw(bool: true) }
+                continue
+            }
+            switch (field.type, rule.condition) {
+            case (.select, .equals), (.text, .equals), (.number, .equals), (.date, .equals), (.url, .equals):
+                row[field.name] = value
+            case (.multiSelect, .contains):
+                row[field.name] = CellValue.raw(list: CellValue.list(row[field.name]) + [value])
+            default:
+                break
+            }
+        }
         database.rows.append(row)
+        recentlyAdded.insert(row.id)
         scheduleSave()
         return row.id
     }
@@ -132,6 +229,14 @@ final class DatabaseDocument {
             }
         }
         result.fields = edits.map(\.field)
+        // Ansichten nachführen: umbenannte Felder in Regeln anpassen, gelöschte entfernen.
+        let renames = edits.compactMap { edit in edit.originalName.map { ($0, edit.field.name) } }
+        for index in result.views.indices {
+            for (old, new) in renames where old != new { result.views[index].renameField(old, to: new) }
+            for name in database.fields.map(\.name) where !keptOriginals.contains(name) {
+                result.views[index].renameField(name, to: nil)
+            }
+        }
         return (result, lost)
     }
 

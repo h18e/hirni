@@ -2,7 +2,8 @@ import HirniKit
 import SwiftUI
 
 /// Eine geöffnete Datenbank. Am Mac als Tabelle mit direkter Bearbeitung,
-/// auf dem iPhone als Liste, ein Tipp öffnet das Formular.
+/// auf dem iPhone als Liste, ein Tipp öffnet das Formular. Oben die
+/// Ansichten und ihre Einstellungen (Filter, Sortierung …).
 struct DatabaseView: View {
     @Environment(VaultStore.self) private var store
     let url: URL
@@ -61,7 +62,11 @@ struct DatabaseView: View {
                 .onSubmit { Task { await document.rename(to: title) } }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
-                .padding(.bottom, 8)
+                .padding(.bottom, 4)
+
+            ViewBar(document: document)
+            ViewOptions(document: document)
+            Divider()
 
             #if os(macOS)
             DatabaseTable(document: document, selection: $selection)
@@ -97,7 +102,7 @@ private struct EditingRow: Identifiable {
 }
 
 #if os(macOS)
-/// Mac: alle Felder als Spalten, Werte direkt in der Zelle bearbeiten.
+/// Mac: alle sichtbaren Felder als Spalten, Werte direkt in der Zelle bearbeiten.
 ///
 /// Bewusst ein eigenes Raster statt SwiftUIs `Table`: `Table` mit
 /// wechselnden Spalten (`TableColumnForEach`) stürzte beim Bearbeiten ab
@@ -109,14 +114,23 @@ private struct DatabaseTable: View {
     private let handleWidth: CGFloat = 36
 
     var body: some View {
+        let result = document.result
+        let fields = document.visibleFields
         ScrollView([.horizontal, .vertical]) {
-            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders, .sectionFooters]) {
                 Section {
-                    ForEach(Array(document.database.rows.enumerated()), id: \.element.id) { index, row in
-                        rowView(row, number: index + 1)
+                    ForEach(result.groups) { group in
+                        if let title = group.title {
+                            groupHeader(title, count: group.rows.count)
+                        }
+                        ForEach(Array(group.rows.enumerated()), id: \.element.id) { index, row in
+                            rowView(row, number: index + 1, fields: fields)
+                        }
                     }
                 } header: {
-                    header
+                    header(fields)
+                } footer: {
+                    footer(fields, rows: result.rows)
                 }
             }
             .padding(.bottom, 20)
@@ -124,6 +138,8 @@ private struct DatabaseTable: View {
         .overlay {
             if document.database.rows.isEmpty {
                 ContentUnavailableView("Noch keine Einträge", systemImage: "tablecells", description: Text("Mit + oben einen Eintrag hinzufügen (⇧⌘N)."))
+            } else if result.rows.isEmpty {
+                ContentUnavailableView("Keine passenden Einträge", systemImage: "line.3.horizontal.decrease", description: Text("Die Filter dieser Ansicht treffen auf keinen Eintrag zu."))
             }
         }
         .toolbar {
@@ -139,10 +155,10 @@ private struct DatabaseTable: View {
         }
     }
 
-    private var header: some View {
+    private func header(_ fields: [Field]) -> some View {
         HStack(spacing: 0) {
             Color.clear.frame(width: handleWidth)
-            ForEach(document.database.fields) { field in
+            ForEach(fields) { field in
                 Label(field.name, systemImage: field.type.systemImage)
                     .font(.caption.bold())
                     .foregroundStyle(.secondary)
@@ -157,7 +173,49 @@ private struct DatabaseTable: View {
         .overlay(alignment: .bottom) { Divider() }
     }
 
-    private func rowView(_ row: Row, number: Int) -> some View {
+    /// Berechnungen unter den Spalten, über alle sichtbaren Einträge.
+    @ViewBuilder
+    private func footer(_ fields: [Field], rows: [Row]) -> some View {
+        let aggregates = document.currentView.aggregates ?? [:]
+        if !aggregates.isEmpty {
+            HStack(spacing: 0) {
+                Color.clear.frame(width: handleWidth)
+                ForEach(fields) { field in
+                    Group {
+                        if let aggregate = aggregates[field.name] {
+                            HStack(spacing: 4) {
+                                Text(aggregate.label).foregroundStyle(.secondary)
+                                Text(DatabaseQuery.display(aggregate, field: field, rows: rows)).bold()
+                            }
+                        } else {
+                            Color.clear
+                        }
+                    }
+                    .font(.caption)
+                    .lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .frame(width: width(of: field), alignment: field.type == .number ? .trailing : .leading)
+                    Divider()
+                }
+            }
+            .frame(height: 28)
+            .background(.bar)
+            .overlay(alignment: .top) { Divider() }
+        }
+    }
+
+    private func groupHeader(_ title: String, count: Int) -> some View {
+        HStack(spacing: 6) {
+            Text(title).font(.subheadline.bold())
+            Text("\(count)").font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(.leading, handleWidth + 8)
+        .frame(height: 30)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primary.opacity(0.06))
+    }
+
+    private func rowView(_ row: Row, number: Int, fields: [Field]) -> some View {
         let isSelected = selection.contains(row.id)
         return HStack(spacing: 0) {
             // Zeilennummer: Klick wählt die Zeile (⌘-Klick: mehrere).
@@ -168,7 +226,7 @@ private struct DatabaseTable: View {
                 .background(isSelected ? Color.accentColor : .clear)
                 .contentShape(Rectangle())
                 .onTapGesture { toggle(row.id) }
-            ForEach(document.database.fields) { field in
+            ForEach(fields) { field in
                 CellEditor(field: field, raw: binding(row: row.id, field: field.name), compact: true)
                     .padding(.horizontal, 8)
                     .frame(width: width(of: field), height: 30, alignment: .leading)
@@ -214,29 +272,53 @@ private struct DatabaseTable: View {
 
 #if os(iOS)
 /// iPhone: eine Zeile pro Eintrag mit dem ersten Feld als Titel und den
-/// nächsten zwei Werten darunter.
+/// nächsten Werten darunter, gruppiert wie die Ansicht. Unten die Berechnungen.
 private struct DatabaseRowList: View {
     let document: DatabaseDocument
     let open: (String) -> Void
 
     var body: some View {
+        let result = document.result
+        let fields = document.visibleFields
         List {
-            ForEach(document.database.rows) { row in
-                Button { open(row.id) } label: {
-                    RowSummary(fields: document.database.fields, row: row)
-                }
-                .tint(.primary)
-                .swipeActions {
-                    Button("Löschen", systemImage: "trash", role: .destructive) {
-                        document.deleteRows([row.id])
+            ForEach(result.groups) { group in
+                Section {
+                    ForEach(group.rows) { row in
+                        Button { open(row.id) } label: {
+                            RowSummary(fields: fields, row: row)
+                        }
+                        .tint(.primary)
+                        .swipeActions {
+                            Button("Löschen", systemImage: "trash", role: .destructive) {
+                                document.deleteRows([row.id])
+                            }
+                        }
+                    }
+                } header: {
+                    if let title = group.title {
+                        Text("\(title) · \(group.rows.count)")
                     }
                 }
             }
-            .onMove { document.moveRows(from: $0, to: $1) }
+
+            let aggregates = document.currentView.aggregates ?? [:]
+            if !aggregates.isEmpty {
+                Section("Berechnungen") {
+                    ForEach(document.database.fields.filter { aggregates[$0.name] != nil }) { field in
+                        if let aggregate = aggregates[field.name] {
+                            LabeledContent("\(aggregate.label) \(field.name)") {
+                                Text(DatabaseQuery.display(aggregate, field: field, rows: result.rows)).bold()
+                            }
+                        }
+                    }
+                }
+            }
         }
         .overlay {
             if document.database.rows.isEmpty {
                 ContentUnavailableView("Noch keine Einträge", systemImage: "tablecells", description: Text("Mit + oben einen Eintrag hinzufügen."))
+            } else if result.rows.isEmpty {
+                ContentUnavailableView("Keine passenden Einträge", systemImage: "line.3.horizontal.decrease", description: Text("Die Filter dieser Ansicht treffen auf keinen Eintrag zu."))
             }
         }
     }

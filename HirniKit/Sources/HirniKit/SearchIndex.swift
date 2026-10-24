@@ -61,13 +61,18 @@ public actor SearchIndex {
         var changed = 0
         try Self.exec(db, "BEGIN")
         do {
-            for url in vault.allNoteURLs() {
+            for url in vault.allNoteURLs() + vault.allDatabaseURLs() {
                 guard let path = vault.relativePath(of: url) else { continue }
                 seen.insert(path)
                 let modified = vault.modificationDate(of: url)?.timeIntervalSinceReferenceDate ?? 0
                 if let old = known[path], abs(old - modified) < 0.001 { continue }
                 guard let text = try? String(contentsOf: url, encoding: .utf8) else { continue }
-                try store(path: path, title: Vault.title(of: url), text: text, modified: modified)
+                if Vault.isDatabase(url) {
+                    try store(path: path, title: Vault.title(of: url), body: Self.searchableText(ofDatabase: text), tags: [], modified: modified)
+                } else {
+                    let body = Frontmatter.split(text).body
+                    try store(path: path, title: Vault.title(of: url), body: body, tags: MarkdownSyntax.tags(in: body), modified: modified)
+                }
                 changed += 1
             }
             for path in known.keys where !seen.contains(path) {
@@ -82,12 +87,21 @@ public actor SearchIndex {
         return changed
     }
 
-    private func store(path: String, title: String, text: String, modified: Double) throws {
+    /// Eine Zeile pro Eintrag, die Werte durch « · » getrennt. So zeigt der
+    /// Textausschnitt eines Treffers den ganzen Eintrag.
+    static func searchableText(ofDatabase text: String) -> String {
+        guard let database = try? DatabaseFile.parse(text) else { return "" }
+        let rows = database.rows.map { row in
+            database.fields.map { CellValue.display(row[$0.name], for: $0) }.filter { !$0.isEmpty }.joined(separator: " · ")
+        }
+        return ([database.textBefore] + rows + [database.textAfter]).filter { !$0.isEmpty }.joined(separator: "\n")
+    }
+
+    private func store(path: String, title: String, body: String, tags: [String], modified: Double) throws {
         try remove(path: path)
-        let body = Frontmatter.split(text).body
         try run("INSERT INTO texts (path, title, body) VALUES (?, ?, ?)", path, title, body)
         try run("INSERT INTO files (path, modified) VALUES (?, ?)", path, modified)
-        for tag in MarkdownSyntax.tags(in: body) {
+        for tag in tags {
             try run("INSERT INTO tags (path, tag, lowered) VALUES (?, ?, ?)", path, tag, tag.lowercased())
         }
     }

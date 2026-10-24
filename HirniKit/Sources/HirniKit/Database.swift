@@ -25,6 +25,8 @@ import Foundation
 public struct Database: Equatable, Sendable {
     public var fields: [Field]
     public var rows: [Row]
+    /// Gespeicherte Ansichten (Filter, Sortierung …). Leer = nur die Standardansicht.
+    public var views: [SavedView] = []
     /// Zeilen im Kopf, die hirni nicht kennt (z. B. von Obsidian). Sie bleiben erhalten.
     public var otherHeaderLines: [String]
     /// Text vor bzw. nach der Tabelle. Bleibt erhalten.
@@ -174,30 +176,43 @@ public enum DatabaseFile {
         guard let header else { throw DatabaseFileError.notADatabase }
 
         var fields: [Field] = []
+        var views: [SavedView] = []
         var otherLines: [String] = []
         var isDatabase = false
-        var inFields = false
+        enum Block { case none, fields, views }
+        var block = Block.none
         for line in header.components(separatedBy: "\n") {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed.hasPrefix("hirni-datenbank:") {
                 isDatabase = true
-                inFields = false
+                block = .none
             } else if trimmed == "felder:" {
-                inFields = true
-            } else if inFields, trimmed.hasPrefix("- ") || trimmed == "-" {
-                let json = trimmed.dropFirst(2).trimmingCharacters(in: .whitespaces)
-                guard let data = json.data(using: .utf8),
-                      let field = try? JSONDecoder().decode(Field.self, from: data)
-                else { throw DatabaseFileError.invalidField(line: trimmed) }
-                fields.append(field)
+                block = .fields
+            } else if trimmed == "ansichten:" {
+                block = .views
+            } else if block != .none, trimmed.hasPrefix("- ") {
+                let data = Data(trimmed.dropFirst(2).trimmingCharacters(in: .whitespaces).utf8)
+                switch block {
+                case .fields:
+                    guard let field = try? JSONDecoder().decode(Field.self, from: data) else {
+                        throw DatabaseFileError.invalidField(line: trimmed)
+                    }
+                    fields.append(field)
+                case .views:
+                    // Eine kaputte Ansicht ist kein Grund, die Daten nicht zu zeigen.
+                    if let view = try? JSONDecoder().decode(SavedView.self, from: data) { views.append(view) }
+                case .none:
+                    break
+                }
             } else {
-                inFields = false
+                block = .none
                 otherLines.append(line)
             }
         }
         guard isDatabase else { throw DatabaseFileError.notADatabase }
 
         var database = Database(fields: fields, otherHeaderLines: otherLines)
+        database.views = views
         parseTable(body, into: &database)
         return database
     }
@@ -286,6 +301,13 @@ public enum DatabaseFile {
         for field in database.fields {
             let json = (try? encoder.encode(field)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
             header.append("  - \(json)")
+        }
+        if !database.views.isEmpty {
+            header.append("ansichten:")
+            for view in database.views {
+                let json = (try? encoder.encode(view)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+                header.append("  - \(json)")
+            }
         }
         header += database.otherHeaderLines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
 

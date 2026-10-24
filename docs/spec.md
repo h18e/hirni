@@ -100,6 +100,7 @@ hirni/
   - **Kopf:** `hirni-datenbank: 1` kennzeichnet die Datei. Unter `felder:` steht pro Feld eine Zeile mit einem JSON-Objekt. Das ist gültiges YAML und lässt sich leicht lesen und schreiben. Schlüssel: `name`, `typ` (`text`, `zahl`, `auswahl`, `mehrfachauswahl`, `datum`, `checkbox`, `url`), optional `format` (`normal`, `chf`, `eur`, `usd`, `prozent`), `optionen` (Liste) und `zeit` (Datum mit Uhrzeit). Weitere Kopfzeilen bleiben unverändert erhalten.
   - **Tabelle:** Die erste Spalte heisst `id` (8 Zeichen, zufällig). Die weiteren Spalten tragen die Feldnamen, ihre Reihenfolge ist egal. Ein `|` in einem Wert wird als `\|` geschrieben, ein Zeilenumbruch als `<br>`. Text vor und nach der Tabelle bleibt erhalten.
   - **Werte** (ohne Ländereinstellung): Zahl `42.5` (beim Lesen geht auch `42,50`, `CHF 1'200` oder `12 %`), Prozent als `12` für 12 %, Datum `2026-10-24` oder `2026-10-24 14:30`, Zeitraum `2026-10-24/2026-10-26` (beim Lesen auch `24.10.2026`), Checkbox `ja`/`nein`, Mehrfachauswahl `Ferien, Kinder` (Optionen ohne Komma).
+  - **Ansichten** stehen unter `ansichten:`, ebenfalls eine JSON-Zeile pro Ansicht: `name`, `typ` (`tabelle`, `kalender`, `diagramm`), optional `filter` (Liste aus `feld`, `bedingung`, `wert`), `sortierung` (Liste aus `feld`, `absteigend`), `gruppierung` (Feldname), `berechnungen` (Feldname → `anzahl`, `summe`, `durchschnitt`, `min`, `max`) und `ausgeblendet` (Feldnamen). Bedingungen: `ist`, `ist nicht`, `enthält`, `enthält nicht`, `ist leer`, `ist nicht leer`, `>`, `<`, `≥`, `≤`, `vor`, `nach`, `angehakt`, `nicht angehakt`. Eine unlesbare Ansicht wird übersprungen, die Daten bleiben sichtbar.
   - **Robust:** Werte, die nicht zum Feldtyp passen, bleiben unverändert stehen und werden so angezeigt. Spalten ohne Feld im Kopf (z. B. von Hand ergänzt) werden zu Textfeldern. Zeilen ohne oder mit doppelter `id` bekommen eine neue. Eine Datei mit unlesbarem Kopf wird angezeigt, aber nicht verändert.
 - **Zeilen-Seite:** Zu jeder Zeile lässt sich optional eine Notiz anlegen, im Ordner `Name/` neben der Datenbank. Im Frontmatter steht `hirni-zeile: <id>`.
 - **Eingebettete Ansicht in einer Notiz:** ein Codeblock, der in anderen Programmen lesbar bleibt:
@@ -174,7 +175,7 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 ### Tags und Suche
 
 - **Tags:** Die Seitenleiste zeigt unter «Tags» alle Tags mit der Anzahl Notizen, die häufigsten zuerst. Ein Tipp listet alle Notizen mit diesem Tag aus allen Ordnern, `#ferien` zeigt dabei auch `#ferien/2026`. Eine neue Notiz aus der Tag-Ansicht landet in der Inbox und hat den Tag schon drin.
-- **Volltextsuche:** Suchfeld über der Notizliste (auf dem iPhone unten). Jedes Wort muss vorkommen, auch als Wortanfang («ferie» findet «Ferien»). Gross/klein und Akzente spielen keine Rolle («uber» findet «Über»). Titeltreffer stehen zuerst. Bereich: «Überall» oder «In ‹Ordner›» (samt Unterordnern). Treffer zeigen Ordner und einen Textausschnitt mit fett markierten Wörtern. Datenbank-Inhalte kommen mit Etappe 7 dazu.
+- **Volltextsuche:** Suchfeld über der Notizliste (auf dem iPhone unten). Jedes Wort muss vorkommen, auch als Wortanfang («ferie» findet «Ferien»). Gross/klein und Akzente spielen keine Rolle («uber» findet «Über»). Titeltreffer stehen zuerst. Bereich: «Überall» oder «In ‹Ordner›» (samt Unterordnern). Treffer zeigen Ordner und einen Textausschnitt mit fett markierten Wörtern. Auch Einträge in Datenbanken werden gefunden.
 - **Such-Index:** SQLite mit FTS5 im Cache-Ordner des Geräts (`hirni-suche.sqlite`). Er wird bei jedem Neueinlesen nachgeführt, gelesen werden nur geänderte Dateien. Fehlt er, baut ihn hirni beim nächsten Start neu auf.
 
 ### Datenbanken
@@ -183,6 +184,15 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Felder** (Knopf mit Reglern): hinzufügen, umbenennen (die Werte wandern mit), Typ ändern, Zahlenformat, Datum mit Uhrzeit, Optionen für Auswahl/Mehrfachauswahl pflegen, löschen. Übernommen wird mit «Fertig». Gingen dabei Werte verloren (gelöschtes Feld, Wert passt nicht zum neuen Typ oder zu den Optionen), fragt hirni vorher nach und nennt die Anzahl.
 - **Einträge:** anlegen (+, am Mac ⇧⌘N), bearbeiten, löschen. Am Mac direkt in der Tabelle (eine Spalte pro Feld, löschen mit ⌫ oder Rechtsklick). Auf dem iPhone als Liste (erstes Feld als Titel, die nächsten Werte darunter), ein Tipp öffnet das Formular, Löschen per Wischen, Sortieren per Ziehen.
 - **Eingaben je Typ:** Text, Zahl (formatiert, z. B. «CHF 42.50»), Auswahl-Menü, Mehrfachauswahl mit Häkchen, Datum mit Kalender (optional Zeitraum), Schalter für Checkbox, URL mit Knopf zum Öffnen.
+- **Ansichten:** Leiste unter dem Titel. Antippen wechselt, + legt eine neue an, lange drücken bzw. Rechtsklick benennt um, dupliziert oder löscht. Solange es keine gespeicherte Ansicht gibt, heisst die Standardansicht «Alle». Sie wird gespeichert, sobald man etwas daran ändert. Welche Ansicht gewählt ist, merkt sich jedes Gerät nur für sich, das steht nicht in der Datei.
+- **Pro Ansicht:**
+  - **Filter:** mehrere Bedingungen, die alle zutreffen müssen. Die Bedingungen passen zum Feldtyp, der Wert wird je nach Typ als Auswahl, Datum oder Zahl eingegeben.
+  - **Sortieren:** mehrere Felder nacheinander, auf- oder absteigend. Leere Werte stehen immer am Ende. Bei Auswahl-Feldern gilt die Reihenfolge der Optionen.
+  - **Gruppieren:** nach einem Feld. Auswahl in der Reihenfolge der Optionen. Bei Mehrfachauswahl erscheint ein Eintrag in jeder seiner Gruppen. Checkbox: angehakt und nicht angehakt. Datum nach Monat.
+  - **Felder ausblenden.**
+  - **Berechnen:** pro Feld Anzahl, bei Zahlen auch Summe, Durchschnitt, Minimum und Maximum. Am Mac erscheinen die Ergebnisse unter den Spalten, auf dem iPhone unten in der Liste. Berechnet wird über alle sichtbaren Einträge.
+- **Neuer Eintrag in einer gefilterten Ansicht:** bleibt sichtbar, bis man die Ansicht wechselt. Werte aus einfachen Filtern werden vorausgefüllt (z. B. «Kategorie ist Essen»).
+- **Suche:** findet auch Einträge in Datenbanken. Der Treffer zeigt den Eintrag und öffnet die Datenbank.
 - **Gleichzeitige Änderungen** (anderes Gerät, Claude): werden Zelle für Zelle zusammengeführt. Haben beide Seiten dieselbe Zelle verschieden geändert, bleibt die Eingabe in der App, und ein Hinweis nennt die Anzahl.
 - Ansichten anlegen, umbenennen und wechseln, Filter, Sortierung und Gruppierung einstellen
 - Tabelle, Kalender und Diagramm wie im Datenmodell beschrieben

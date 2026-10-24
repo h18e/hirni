@@ -55,6 +55,7 @@ public enum DatabaseMerge {
         // Felder: wer sie geändert hat, gewinnt. Beide geändert → meine.
         var merged = mine
         if mine.fields == base.fields { merged.fields = theirs.fields }
+        if mine.views == base.views { merged.views = theirs.views }
         if mine.otherHeaderLines == base.otherHeaderLines { merged.otherHeaderLines = theirs.otherHeaderLines }
         if mine.textBefore == base.textBefore { merged.textBefore = theirs.textBefore }
         if mine.textAfter == base.textAfter { merged.textAfter = theirs.textAfter }
