@@ -36,6 +36,7 @@ struct ViewBar: View {
                 Menu {
                     Button("Tabelle", systemImage: ViewKind.table.systemImage) { document.addView(kind: .table) }
                     Button("Kalender", systemImage: ViewKind.calendar.systemImage) { document.addView(kind: .calendar) }
+                    Button("Diagramm", systemImage: ViewKind.chart.systemImage) { document.addView(kind: .chart) }
                 } label: {
                     Label("Neue Ansicht", systemImage: "plus")
                         .labelStyle(.iconOnly)
@@ -76,10 +77,10 @@ struct ViewOptions: View {
                 }
                 .tint(view.filters?.isEmpty == false ? .accentColor : .secondary)
 
-                if view.kind == .calendar {
-                    calendarOptions(view)
-                } else {
-                    tableOptions(view)
+                switch view.kind {
+                case .calendar: calendarOptions(view)
+                case .chart: ChartOptions(document: document)
+                case .table: tableOptions(view)
                 }
             }
             .labelStyle(.titleAndIcon)

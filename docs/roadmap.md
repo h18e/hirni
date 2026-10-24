@@ -16,8 +16,8 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ fertig
 | 6 | Konflikte & Robustheit | Konflikt-Hinweis und -Auflösung, Änderungen von Claude/Finder live übernehmen, Download-Fortschritt | Gleichzeitiges Bearbeiten ohne Datenverlust | ✅ |
 | 7 | Datenbank: Grundlagen | Dateiformat festlegen, Felder (alle 7 Typen), Zeilen bearbeiten (Tabelle am Mac, Formular am iPhone) | Erste Datenbank erfassen | ✅ |
 | 8 | Datenbank: Tabelle komplett | Mehrere Ansichten, Filter, Sortierung, Gruppierung, Berechnungen pro Spalte, Suche in Datenbanken | Auswertungen in Tabellen | ✅ |
-| 9 | Kalender-Ansicht | Monatskalender nach Datumsfeld, Farben nach Auswahlfeld | z. B. Kinder-Weekends | 🟡 gebaut, Test auf Mac + iPhone offen |
-| 10 | Diagramm-Ansicht | Balken/Linie, Gruppierung nach Feld oder Zeitraum, Summe/Anzahl/Durchschnitt | z. B. Ausgaben pro Monat | ⬜ |
+| 9 | Kalender-Ansicht | Monatskalender nach Datumsfeld, Farben nach Auswahlfeld | z. B. Kinder-Weekends | ✅ |
+| 10 | Diagramm-Ansicht | Balken/Linie, Gruppierung nach Feld oder Zeitraum, Summe/Anzahl/Durchschnitt | z. B. Ausgaben pro Monat | 🟡 gebaut, Test auf Mac + iPhone offen |
 | 11 | Zeilen-Seiten | Zu jeder Zeile eine Notiz anlegen/öffnen | Details zu einem Eintrag | ⬜ |
 | 12 | Eingebettete Datenbanken | `hirni-db`-Block in Notizen, interaktive Anzeige im Editor | Datenbank-Ansicht mitten in einer Notiz | ⬜ |
 

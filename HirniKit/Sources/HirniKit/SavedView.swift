@@ -24,6 +24,8 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
     public var dateField: String?
     /// Kalender: Einträge farbig nach diesem Auswahlfeld.
     public var colorField: String?
+    /// Diagramm: Achsen und Darstellung.
+    public var chart: ChartSettings?
 
     public init(name: String, kind: ViewKind = .table) {
         self.name = name
@@ -40,6 +42,7 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
         case hiddenFields = "ausgeblendet"
         case dateField = "datumsfeld"
         case colorField = "farbfeld"
+        case chart = "diagramm"
     }
 
     public init(from decoder: Decoder) throws {
@@ -53,6 +56,7 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
         hiddenFields = try container.decodeIfPresent([String].self, forKey: .hiddenFields)
         dateField = try container.decodeIfPresent(String.self, forKey: .dateField)
         colorField = try container.decodeIfPresent(String.self, forKey: .colorField)
+        chart = try? container.decodeIfPresent(ChartSettings.self, forKey: .chart)
     }
 
     /// Leere Listen nicht schreiben, damit die Datei kurz bleibt.
@@ -67,6 +71,7 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
         if let hiddenFields, !hiddenFields.isEmpty { try container.encode(hiddenFields, forKey: .hiddenFields) }
         try container.encodeIfPresent(dateField, forKey: .dateField)
         try container.encodeIfPresent(colorField, forKey: .colorField)
+        try container.encodeIfPresent(chart, forKey: .chart)
     }
 
     /// Feldnamen in Regeln anpassen, wenn ein Feld umbenannt oder gelöscht wurde.
@@ -86,6 +91,12 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
         if groupBy == old { groupBy = new }
         if dateField == old { dateField = new }
         if colorField == old { colorField = new }
+        if chart?.xField == old { chart?.xField = new }
+        if chart?.valueField == old {
+            chart?.valueField = new
+            if new == nil { chart?.measure = .count }
+        }
+        if chart?.splitField == old { chart?.splitField = new }
         if let value = aggregates?.removeValue(forKey: old), let new { aggregates?[new] = value }
         hiddenFields = hiddenFields?.compactMap { $0 == old ? new : $0 }
     }
@@ -215,5 +226,90 @@ public enum Aggregate: String, Codable, CaseIterable, Sendable {
 
     public static func available(for type: FieldType) -> [Aggregate] {
         type == .number ? allCases : [.count]
+    }
+}
+
+/// Einstellungen einer Diagramm-Ansicht.
+///
+/// In der Datei: `"diagramm": {"art": "balken", "x": "Datum", "zeitraster": "monat",
+/// "y": "summe", "wert": "Betrag", "aufteilen": "Kategorie"}`
+public struct ChartSettings: Codable, Equatable, Hashable, Sendable {
+    public var style: ChartStyle
+    /// Feld für die waagrechte Achse.
+    public var xField: String?
+    /// Bei einem Datumsfeld: wie fein die Achse ist.
+    public var interval: DateInterval
+    /// Was die Höhe bestimmt.
+    public var measure: ChartMeasure
+    /// Zahlenfeld für Summe/Durchschnitt.
+    public var valueField: String?
+    /// Balken bzw. Linien aufteilen nach diesem Feld (z. B. Kategorie).
+    public var splitField: String?
+
+    public init(style: ChartStyle = .bar, xField: String? = nil, interval: DateInterval = .month,
+                measure: ChartMeasure = .count, valueField: String? = nil, splitField: String? = nil) {
+        self.style = style
+        self.xField = xField
+        self.interval = interval
+        self.measure = measure
+        self.valueField = valueField
+        self.splitField = splitField
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case style = "art"
+        case xField = "x"
+        case interval = "zeitraster"
+        case measure = "y"
+        case valueField = "wert"
+        case splitField = "aufteilen"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        style = (try? container.decode(ChartStyle.self, forKey: .style)) ?? .bar
+        xField = try? container.decodeIfPresent(String.self, forKey: .xField)
+        interval = (try? container.decode(DateInterval.self, forKey: .interval)) ?? .month
+        measure = (try? container.decode(ChartMeasure.self, forKey: .measure)) ?? .count
+        valueField = try? container.decodeIfPresent(String.self, forKey: .valueField)
+        splitField = try? container.decodeIfPresent(String.self, forKey: .splitField)
+    }
+
+    public enum ChartStyle: String, Codable, CaseIterable, Sendable {
+        case bar = "balken"
+        case line = "linie"
+
+        public var label: String { self == .bar ? "Balken" : "Linie" }
+        public var systemImage: String { self == .bar ? "chart.bar" : "chart.xyaxis.line" }
+    }
+
+    public enum DateInterval: String, Codable, CaseIterable, Sendable {
+        case day = "tag"
+        case week = "woche"
+        case month = "monat"
+        case year = "jahr"
+
+        public var label: String {
+            switch self {
+            case .day: "Tag"
+            case .week: "Woche"
+            case .month: "Monat"
+            case .year: "Jahr"
+            }
+        }
+    }
+
+    public enum ChartMeasure: String, Codable, CaseIterable, Sendable {
+        case count = "anzahl"
+        case sum = "summe"
+        case average = "durchschnitt"
+
+        public var label: String {
+            switch self {
+            case .count: "Anzahl"
+            case .sum: "Summe"
+            case .average: "Durchschnitt"
+            }
+        }
     }
 }

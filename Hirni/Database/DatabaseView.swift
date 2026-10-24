@@ -78,7 +78,9 @@ struct DatabaseView: View {
                         editingRow = EditingRow(id: id)
                     }
                 }
-            case .table, .chart:
+            case .chart:
+                ScrollView { DatabaseChart(document: document) }
+            case .table:
                 #if os(macOS)
                 DatabaseTable(document: document, selection: $selection)
                 #else

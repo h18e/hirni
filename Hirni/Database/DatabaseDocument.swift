@@ -77,6 +77,9 @@ final class DatabaseDocument {
             view.dateField = database.fields.first { $0.type == .date }?.name
             view.colorField = database.fields.first { $0.type == .select }?.name
         }
+        if kind == .chart {
+            view.chart = ChartModel.defaultSettings(for: database)
+        }
         database.views.append(view)
         selectView(view.name)
         scheduleSave()
