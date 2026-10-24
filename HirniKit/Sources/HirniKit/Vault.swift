@@ -166,8 +166,8 @@ public struct Vault: Sendable {
     public func renameNote(at url: URL, to title: String) throws -> URL {
         let target = FileNaming.uniqueURL(
             in: url.deletingLastPathComponent(),
-            baseName: FileNaming.sanitized(title) + (Self.isDatabase(url) ? ".hirnidb" : ""),
-            pathExtension: url.pathExtension,
+            baseName: FileNaming.sanitized(title),
+            pathExtension: FileNaming.split(url.lastPathComponent).pathExtension,
             excluding: url
         )
         try moveIfNeeded(from: url, to: target)

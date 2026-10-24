@@ -9,8 +9,8 @@ extension Vault {
     public func createDatabase(in folder: URL, title: String = "Neue Datenbank") throws -> URL {
         let url = FileNaming.uniqueURL(
             in: folder,
-            baseName: FileNaming.sanitized(title) + ".hirnidb",
-            pathExtension: VaultLayout.noteExtension
+            baseName: FileNaming.sanitized(title),
+            pathExtension: String(VaultLayout.databaseSuffix.dropFirst())
         )
         let database = Database(fields: [Field(name: "Name", type: .text)])
         try Coordinated.write(url, options: .forReplacing) { url in

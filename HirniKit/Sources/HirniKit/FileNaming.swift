@@ -47,6 +47,16 @@ public enum FileNaming {
         }
     }
 
+    /// Name und Endung einer Datei. `.hirnidb.md` gilt als eine Endung, damit
+    /// die Nummer davor steht: «Ausgaben 2.hirnidb.md», nicht «Ausgaben.hirnidb 2.md».
+    public static func split(_ fileName: String) -> (base: String, pathExtension: String?) {
+        if fileName.lowercased().hasSuffix(VaultLayout.databaseSuffix) {
+            return (String(fileName.dropLast(VaultLayout.databaseSuffix.count)), String(VaultLayout.databaseSuffix.dropFirst()))
+        }
+        let ns = fileName as NSString
+        return ns.pathExtension.isEmpty ? (fileName, nil) : (ns.deletingPathExtension, ns.pathExtension)
+    }
+
     /// Prüft auch auf iCloud-Platzhalter, die noch nicht heruntergeladen sind.
     static func exists(_ url: URL, fileManager: FileManager) -> Bool {
         if fileManager.fileExists(atPath: url.path(percentEncoded: false)) { return true }

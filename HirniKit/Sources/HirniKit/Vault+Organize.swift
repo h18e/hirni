@@ -29,9 +29,8 @@ extension Vault {
             return target
         }
 
-        let target = FileNaming.uniqueURL(
-            in: folder, baseName: url.deletingPathExtension().lastPathComponent, pathExtension: url.pathExtension
-        )
+        let parts = FileNaming.split(url.lastPathComponent)
+        let target = FileNaming.uniqueURL(in: folder, baseName: parts.base, pathExtension: parts.pathExtension)
         let text = Self.isNote(name: url.lastPathComponent) ? try? readNote(at: url) : nil
         let updated = try text.map { try moveAttachments(ofNote: $0, from: url, toFolder: folder) }
         try Coordinated.move(from: url, to: target)
@@ -50,8 +49,8 @@ extension Vault {
         }
         let copy = FileNaming.uniqueURL(
             in: url.deletingLastPathComponent(),
-            baseName: FileNaming.sanitized(title) + ".hirnidb",
-            pathExtension: VaultLayout.noteExtension
+            baseName: FileNaming.sanitized(title),
+            pathExtension: String(VaultLayout.databaseSuffix.dropFirst())
         )
         try Coordinated.write(copy, options: .forReplacing) { try Data(text.utf8).write(to: $0, options: .withoutOverwriting) }
         return copy

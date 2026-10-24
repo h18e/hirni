@@ -163,6 +163,38 @@ struct DatabaseVaultTests {
         #expect(try test.vault.readDatabase(at: copy).rows.count == 1)
     }
 
+    @Test func numbersGoBeforeTheDatabaseSuffix() throws {
+        let test = try TestVault()
+        let first = try test.vault.createDatabase(in: test.vault.inboxURL)
+        let second = try test.vault.createDatabase(in: test.vault.inboxURL)
+        #expect(second.lastPathComponent == "Neue Datenbank 2.hirnidb.md")
+        #expect(Vault.isDatabase(second))
+        #expect(Vault.title(of: second) == "Neue Datenbank 2")
+
+        // Umbenennen auf einen belegten Namen, Verschieben, Duplizieren, Wiederherstellen
+        let renamed = try test.vault.renameNote(at: second, to: "Neue Datenbank")
+        #expect(renamed.lastPathComponent == "Neue Datenbank 2.hirnidb.md")
+        try test.write("", to: "Privat/.keep")
+        _ = try test.vault.createDatabase(in: test.vault.root.appending(path: "Privat"))
+        let moved = try test.vault.move(first, to: test.vault.root.appending(path: "Privat"))
+        #expect(moved.lastPathComponent == "Neue Datenbank 2.hirnidb.md")
+        let copy1 = try test.vault.duplicateNote(at: moved)
+        let copy2 = try test.vault.duplicateNote(at: moved)
+        #expect(copy1.lastPathComponent == "Neue Datenbank 2 Kopie.hirnidb.md")
+        #expect(copy2.lastPathComponent == "Neue Datenbank 2 Kopie 2.hirnidb.md")
+
+        try test.vault.moveToTrash(copy2)
+        _ = try test.vault.duplicateNote(at: moved) // belegt jetzt «… Kopie 2»
+        let restored = try test.vault.restore(try #require(try test.vault.trashEntries().first))
+        #expect(restored.lastPathComponent == "Neue Datenbank 2 Kopie 2 2.hirnidb.md") // wie bei Notizen
+    }
+
+    @Test func splitFileNames() {
+        #expect(FileNaming.split("A.hirnidb.md") == ("A", "hirnidb.md"))
+        #expect(FileNaming.split("A.md") == ("A", "md"))
+        #expect(FileNaming.split("Ordner") == ("Ordner", nil))
+    }
+
     @Test func databasesAreNotNotesForTagsAndIndex() throws {
         let test = try TestVault()
         _ = try test.vault.createDatabase(in: test.vault.inboxURL)

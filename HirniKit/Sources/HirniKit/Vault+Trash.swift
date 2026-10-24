@@ -75,10 +75,10 @@ extension Vault {
         let folder = original.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
 
-        let name = original.lastPathComponent
-        let ext = entry.isFolder ? nil : (original.pathExtension.isEmpty ? nil : original.pathExtension)
-        let base = ext == nil ? name : original.deletingPathExtension().lastPathComponent
-        let target = FileNaming.uniqueURL(in: folder, baseName: base, pathExtension: ext)
+        let parts = entry.isFolder
+            ? (base: original.lastPathComponent, pathExtension: nil)
+            : FileNaming.split(original.lastPathComponent)
+        let target = FileNaming.uniqueURL(in: folder, baseName: parts.base, pathExtension: parts.pathExtension)
 
         try Coordinated.move(from: entry.itemURL, to: target)
         if let container = entry.containerURL {
