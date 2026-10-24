@@ -98,32 +98,108 @@ private struct EditingRow: Identifiable {
 
 #if os(macOS)
 /// Mac: alle Felder als Spalten, Werte direkt in der Zelle bearbeiten.
+///
+/// Bewusst ein eigenes Raster statt SwiftUIs `Table`: `Table` mit
+/// wechselnden Spalten (`TableColumnForEach`) stürzte beim Bearbeiten ab
+/// (Absturz in AttributeGraph beim Aufbau der Spaltenliste).
 private struct DatabaseTable: View {
     let document: DatabaseDocument
     @Binding var selection: Set<String>
 
+    private let handleWidth: CGFloat = 36
+
     var body: some View {
-        Table(document.database.rows, selection: $selection) {
-            TableColumnForEach(document.database.fields) { field in
-                TableColumn(field.name) { row in
-                    CellEditor(field: field, raw: binding(row: row.id, field: field.name), compact: true)
+        ScrollView([.horizontal, .vertical]) {
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                Section {
+                    ForEach(Array(document.database.rows.enumerated()), id: \.element.id) { index, row in
+                        rowView(row, number: index + 1)
+                    }
+                } header: {
+                    header
                 }
-                .width(min: 60, ideal: field.type == .text ? 200 : 110)
             }
-        }
-        .onDeleteCommand {
-            document.deleteRows(selection)
-            selection = []
-        }
-        .contextMenu(forSelectionType: String.self) { ids in
-            Button("Löschen", systemImage: "trash", role: .destructive) {
-                document.deleteRows(ids)
-            }
+            .padding(.bottom, 20)
         }
         .overlay {
             if document.database.rows.isEmpty {
                 ContentUnavailableView("Noch keine Einträge", systemImage: "tablecells", description: Text("Mit + oben einen Eintrag hinzufügen (⇧⌘N)."))
             }
+        }
+        .toolbar {
+            ToolbarItem {
+                Button("Auswahl löschen", systemImage: "trash") {
+                    document.deleteRows(selection)
+                    selection = []
+                }
+                .keyboardShortcut(.delete, modifiers: .command)
+                .disabled(selection.isEmpty)
+                .help("Gewählte Einträge löschen (⌘⌫)")
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: 0) {
+            Color.clear.frame(width: handleWidth)
+            ForEach(document.database.fields) { field in
+                Label(field.name, systemImage: field.type.systemImage)
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .frame(width: width(of: field), alignment: .leading)
+                Divider()
+            }
+        }
+        .frame(height: 28)
+        .background(.bar)
+        .overlay(alignment: .bottom) { Divider() }
+    }
+
+    private func rowView(_ row: Row, number: Int) -> some View {
+        let isSelected = selection.contains(row.id)
+        return HStack(spacing: 0) {
+            // Zeilennummer: Klick wählt die Zeile (⌘-Klick: mehrere).
+            Text("\(number)")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(isSelected ? .white : .secondary)
+                .frame(width: handleWidth, height: 30)
+                .background(isSelected ? Color.accentColor : .clear)
+                .contentShape(Rectangle())
+                .onTapGesture { toggle(row.id) }
+            ForEach(document.database.fields) { field in
+                CellEditor(field: field, raw: binding(row: row.id, field: field.name), compact: true)
+                    .padding(.horizontal, 8)
+                    .frame(width: width(of: field), height: 30, alignment: .leading)
+                Divider()
+            }
+        }
+        .background(isSelected ? Color.accentColor.opacity(0.12) : (number.isMultiple(of: 2) ? Color.primary.opacity(0.03) : .clear))
+        .overlay(alignment: .bottom) { Divider().opacity(0.5) }
+        .contextMenu {
+            Button("Löschen", systemImage: "trash", role: .destructive) {
+                document.deleteRows(selection.contains(row.id) ? selection : [row.id])
+                selection = []
+            }
+        }
+    }
+
+    private func toggle(_ id: String) {
+        if NSEvent.modifierFlags.contains(.command) {
+            if selection.contains(id) { selection.remove(id) } else { selection.insert(id) }
+        } else {
+            selection = selection == [id] ? [] : [id]
+        }
+    }
+
+    private func width(of field: Field) -> CGFloat {
+        switch field.type {
+        case .text, .url: 220
+        case .multiSelect: 170
+        case .date: (field.includesTime ?? false) ? 190 : 150
+        case .checkbox: 80
+        case .number, .select: 130
         }
     }
 
