@@ -70,9 +70,13 @@ final class DatabaseDocument {
         scheduleSave()
     }
 
-    func addView() {
+    func addView(kind: ViewKind = .table) {
         if database.views.isEmpty { database.views.append(currentView) } // «Alle» behalten
-        let view = SavedView(name: uniqueViewName("Ansicht"))
+        var view = SavedView(name: uniqueViewName(kind == .table ? "Ansicht" : kind.label), kind: kind)
+        if kind == .calendar {
+            view.dateField = database.fields.first { $0.type == .date }?.name
+            view.colorField = database.fields.first { $0.type == .select }?.name
+        }
         database.views.append(view)
         selectView(view.name)
         scheduleSave()
@@ -158,9 +162,10 @@ final class DatabaseDocument {
 
     /// Neuer Eintrag. Werte aus einfachen Filtern der Ansicht werden
     /// übernommen (z. B. Filter «Kategorie ist Essen» → Kategorie = Essen).
+    /// `values`: Vorgaben, z. B. das Datum des angetippten Kalendertags.
     @discardableResult
-    func addRow() -> String {
-        var row = Row()
+    func addRow(values: [String: String] = [:]) -> String {
+        var row = Row(values: values)
         for rule in currentView.filters ?? [] {
             guard let field = database.field(named: rule.field), let value = rule.value, !value.isEmpty else {
                 if rule.condition == .checked { row[rule.field] = CellValue.raw(bool: true) }

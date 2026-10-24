@@ -33,9 +33,15 @@ struct ViewBar: View {
                         }
                     }
                 }
-                Button("Neue Ansicht", systemImage: "plus") { document.addView() }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
+                Menu {
+                    Button("Tabelle", systemImage: ViewKind.table.systemImage) { document.addView(kind: .table) }
+                    Button("Kalender", systemImage: ViewKind.calendar.systemImage) { document.addView(kind: .calendar) }
+                } label: {
+                    Label("Neue Ansicht", systemImage: "plus")
+                        .labelStyle(.iconOnly)
+                }
+                .menuIndicator(.hidden)
+                .buttonStyle(.borderless)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 4)
@@ -70,6 +76,59 @@ struct ViewOptions: View {
                 }
                 .tint(view.filters?.isEmpty == false ? .accentColor : .secondary)
 
+                if view.kind == .calendar {
+                    calendarOptions(view)
+                } else {
+                    tableOptions(view)
+                }
+            }
+            .labelStyle(.titleAndIcon)
+            .buttonStyle(.borderless)
+            .font(.subheadline)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 6)
+        }
+        .menuIndicator(.hidden)
+        .sheet(isPresented: $editsFilters) { FilterEditor(document: document) }
+        .sheet(isPresented: $editsSorts) { SortEditor(document: document) }
+    }
+
+    /// Kalender: welches Datum, welche Farbe.
+    @ViewBuilder
+    private func calendarOptions(_ view: SavedView) -> some View {
+        let dateFields = document.database.fields.filter { $0.type == .date }
+        Menu {
+            Picker("Datumsfeld", selection: Binding(
+                get: { CalendarModel.dateField(for: view, in: document.database)?.name ?? "" },
+                set: { name in document.updateView { $0.dateField = name } }
+            )) {
+                ForEach(dateFields) { Text($0.name).tag($0.name) }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label(CalendarModel.dateField(for: view, in: document.database).map { "Datum: \($0.name)" } ?? "Datumsfeld", systemImage: "calendar")
+        }
+        .tint(.secondary)
+
+        Menu {
+            Picker("Farbe nach", selection: Binding(
+                get: { view.colorField ?? "" },
+                set: { name in document.updateView { $0.colorField = name.isEmpty ? nil : name } }
+            )) {
+                Text("Keine Farbe").tag("")
+                ForEach(document.database.fields.filter { $0.type == .select || $0.type == .multiSelect }) {
+                    Text($0.name).tag($0.name)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label(view.colorField.map { "Farbe: \($0)" } ?? "Farbe", systemImage: "paintpalette")
+        }
+        .tint(view.colorField != nil ? .accentColor : .secondary)
+    }
+
+    @ViewBuilder
+    private func tableOptions(_ view: SavedView) -> some View {
                 Button { editsSorts = true } label: {
                     Label(count("Sortieren", view.sorts?.count), systemImage: "arrow.up.arrow.down")
                 }
@@ -127,16 +186,6 @@ struct ViewOptions: View {
                     Label(count("Berechnen", view.aggregates?.count), systemImage: "sum")
                 }
                 .tint(view.aggregates?.isEmpty == false ? .accentColor : .secondary)
-            }
-            .labelStyle(.titleAndIcon)
-            .buttonStyle(.borderless)
-            .font(.subheadline)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 6)
-        }
-        .menuIndicator(.hidden)
-        .sheet(isPresented: $editsFilters) { FilterEditor(document: document) }
-        .sheet(isPresented: $editsSorts) { SortEditor(document: document) }
     }
 
     /// «Filter (2)». Negative Zahl = ausgeblendete Felder.

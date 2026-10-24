@@ -68,11 +68,23 @@ struct DatabaseView: View {
             ViewOptions(document: document)
             Divider()
 
-            #if os(macOS)
-            DatabaseTable(document: document, selection: $selection)
-            #else
-            DatabaseRowList(document: document) { editingRow = EditingRow(id: $0) }
-            #endif
+            switch document.currentView.kind {
+            case .calendar:
+                DatabaseCalendar(document: document) { id in
+                    // Erst öffnen, wenn das Tagesblatt zu ist: zwei Blätter
+                    // gleichzeitig zeigt das System nicht zuverlässig an.
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(400))
+                        editingRow = EditingRow(id: id)
+                    }
+                }
+            case .table, .chart:
+                #if os(macOS)
+                DatabaseTable(document: document, selection: $selection)
+                #else
+                DatabaseRowList(document: document) { editingRow = EditingRow(id: $0) }
+                #endif
+            }
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {

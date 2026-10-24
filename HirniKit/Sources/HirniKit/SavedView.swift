@@ -20,6 +20,10 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
     public var groupBy: String?
     public var aggregates: [String: Aggregate]?
     public var hiddenFields: [String]?
+    /// Kalender: nach welchem Datumsfeld die Einträge verteilt werden.
+    public var dateField: String?
+    /// Kalender: Einträge farbig nach diesem Auswahlfeld.
+    public var colorField: String?
 
     public init(name: String, kind: ViewKind = .table) {
         self.name = name
@@ -34,6 +38,8 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
         case groupBy = "gruppierung"
         case aggregates = "berechnungen"
         case hiddenFields = "ausgeblendet"
+        case dateField = "datumsfeld"
+        case colorField = "farbfeld"
     }
 
     public init(from decoder: Decoder) throws {
@@ -45,6 +51,8 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
         groupBy = try container.decodeIfPresent(String.self, forKey: .groupBy)
         aggregates = try container.decodeIfPresent([String: Aggregate].self, forKey: .aggregates)
         hiddenFields = try container.decodeIfPresent([String].self, forKey: .hiddenFields)
+        dateField = try container.decodeIfPresent(String.self, forKey: .dateField)
+        colorField = try container.decodeIfPresent(String.self, forKey: .colorField)
     }
 
     /// Leere Listen nicht schreiben, damit die Datei kurz bleibt.
@@ -57,6 +65,8 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
         try container.encodeIfPresent(groupBy, forKey: .groupBy)
         if let aggregates, !aggregates.isEmpty { try container.encode(aggregates, forKey: .aggregates) }
         if let hiddenFields, !hiddenFields.isEmpty { try container.encode(hiddenFields, forKey: .hiddenFields) }
+        try container.encodeIfPresent(dateField, forKey: .dateField)
+        try container.encodeIfPresent(colorField, forKey: .colorField)
     }
 
     /// Feldnamen in Regeln anpassen, wenn ein Feld umbenannt oder gelöscht wurde.
@@ -74,6 +84,8 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
             return SortRule(field: new, descending: rule.descending)
         }
         if groupBy == old { groupBy = new }
+        if dateField == old { dateField = new }
+        if colorField == old { colorField = new }
         if let value = aggregates?.removeValue(forKey: old), let new { aggregates?[new] = value }
         hiddenFields = hiddenFields?.compactMap { $0 == old ? new : $0 }
     }
