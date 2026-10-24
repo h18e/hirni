@@ -20,7 +20,6 @@ struct VaultTests {
         let test = try TestVault()
         try test.write("# Alt\nalter Inhalt", to: "Inbox/Alt.md")
         try test.write("Neuer Inhalt", to: "Inbox/Neu.md")
-        try test.write("", to: "Inbox/Ausgaben.hirnidb.md")
         try test.write("", to: "Inbox/bild.jpg")
         let old = test.vault.inboxURL.appending(path: "Alt.md")
         try FileManager.default.setAttributes(

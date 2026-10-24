@@ -56,6 +56,11 @@ struct NoteListView: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
+                Button("Neue Datenbank", systemImage: "tablecells.badge.ellipsis") {
+                    Task { await store.newDatabase() }
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
                 Button("Neue Notiz", systemImage: "square.and.pencil") {
                     Task { await store.newNote() }
                 }
@@ -152,6 +157,12 @@ private struct NoteRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
+                if note.isDatabase {
+                    Image(systemName: "tablecells")
+                        .font(.caption)
+                        .foregroundStyle(.tint)
+                        .accessibilityLabel("Datenbank")
+                }
                 if note.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.caption)

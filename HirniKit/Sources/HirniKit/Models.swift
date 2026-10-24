@@ -28,6 +28,8 @@ public struct NoteSummary: Identifiable, Hashable, Sendable {
     public let isDownloaded: Bool
     /// `angepinnt: true` im YAML-Kopf. Angepinnte Notizen stehen oben.
     public let isPinned: Bool
+    /// Eine Datenbank (`.hirnidb.md`) statt einer Notiz.
+    public var isDatabase: Bool { Vault.isDatabase(url) }
 
     public init(url: URL, title: String, modified: Date, preview: String, isDownloaded: Bool, isPinned: Bool = false) {
         self.url = url

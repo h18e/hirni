@@ -13,8 +13,8 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ fertig
 | 3 | Markdown-Editor | Hervorhebung, Formatierungsleiste iPhone, Tastenkürzel Mac, Checklisten abhaken, `#tags` mit Vorschlägen | Komfortables Schreiben | ✅ |
 | 4 | Anhänge | Bilder (Fotos, Kamera, Dateien, Drag'n'Drop) und PDFs, Anzeige in der Notiz | Fotos in Notizen | ✅ |
 | 5 | Suche & Tags | Lokaler Such-Index, Volltextsuche, Tag-Liste | Alles wiederfinden | ✅ |
-| 6 | Konflikte & Robustheit | Konflikt-Hinweis und -Auflösung, Änderungen von Claude/Finder live übernehmen, Download-Fortschritt | Gleichzeitiges Bearbeiten ohne Datenverlust | 🟡 gebaut, Test auf Mac + iPhone offen |
-| 7 | Datenbank: Grundlagen | Dateiformat festlegen, Felder (alle 7 Typen), Zeilen bearbeiten (Tabelle am Mac, Formular am iPhone) | Erste Datenbank erfassen | ⬜ |
+| 6 | Konflikte & Robustheit | Konflikt-Hinweis und -Auflösung, Änderungen von Claude/Finder live übernehmen, Download-Fortschritt | Gleichzeitiges Bearbeiten ohne Datenverlust | ✅ |
+| 7 | Datenbank: Grundlagen | Dateiformat festlegen, Felder (alle 7 Typen), Zeilen bearbeiten (Tabelle am Mac, Formular am iPhone) | Erste Datenbank erfassen | 🟡 gebaut, Test auf Mac + iPhone offen |
 | 8 | Datenbank: Tabelle komplett | Mehrere Ansichten, Filter, Sortierung, Gruppierung, Berechnungen pro Spalte, Suche in Datenbanken | Auswertungen in Tabellen | ⬜ |
 | 9 | Kalender-Ansicht | Monatskalender nach Datumsfeld, Farben nach Auswahlfeld | z. B. Kinder-Weekends | ⬜ |
 | 10 | Diagramm-Ansicht | Balken/Linie, Gruppierung nach Feld oder Zeitraum, Summe/Anzahl/Durchschnitt | z. B. Ausgaben pro Monat | ⬜ |

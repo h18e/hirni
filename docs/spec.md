@@ -78,10 +78,29 @@ hirni/
 
 ### Datenbank
 
-- Eine Datenbank ist **eine Datei** `Name.hirnidb.md`.
-- **YAML-Kopf:** Schema (Felder mit Typ und Optionen) und gespeicherte Ansichten
-- **Inhalt:** eine Markdown-Tabelle, eine Zeile pro Eintrag, mit einer stabilen `id`-Spalte
-- Dadurch können Mensch, Claude und Obsidian die Datei lesen. Die genaue Syntax (Escaping von `|`, Darstellung von Mehrfachauswahl, Datumsformat ISO 8601) wird in Etappe 6 festgelegt und hier nachgetragen.
+- Eine Datenbank ist **eine Datei** `Name.hirnidb.md`. Sie erscheint in der Notizliste ihres Ordners mit Tabellen-Symbol und «Datenbank · N Einträge».
+- **Format** (verbindlich, so dürfen auch Claude und andere Programme schreiben):
+
+  ```
+  ---
+  hirni-datenbank: 1
+  felder:
+    - {"name": "Name", "typ": "text"}
+    - {"name": "Betrag", "typ": "zahl", "format": "chf"}
+    - {"name": "Kategorie", "typ": "auswahl", "optionen": ["Essen", "Reisen"]}
+    - {"name": "Datum", "typ": "datum", "zeit": true}
+  ---
+  Optionaler Text vor der Tabelle.
+
+  | id | Name | Betrag | Kategorie | Datum |
+  |---|---|---|---|---|
+  | k3f9a2c1 | Pizza | 42.5 | Essen | 2026-10-24 19:30 |
+  ```
+
+  - **Kopf:** `hirni-datenbank: 1` kennzeichnet die Datei. Unter `felder:` steht pro Feld eine Zeile mit einem JSON-Objekt. Das ist gültiges YAML und lässt sich leicht lesen und schreiben. Schlüssel: `name`, `typ` (`text`, `zahl`, `auswahl`, `mehrfachauswahl`, `datum`, `checkbox`, `url`), optional `format` (`normal`, `chf`, `eur`, `usd`, `prozent`), `optionen` (Liste) und `zeit` (Datum mit Uhrzeit). Weitere Kopfzeilen bleiben unverändert erhalten.
+  - **Tabelle:** Die erste Spalte heisst `id` (8 Zeichen, zufällig). Die weiteren Spalten tragen die Feldnamen, ihre Reihenfolge ist egal. Ein `|` in einem Wert wird als `\|` geschrieben, ein Zeilenumbruch als `<br>`. Text vor und nach der Tabelle bleibt erhalten.
+  - **Werte** (ohne Ländereinstellung): Zahl `42.5` (beim Lesen geht auch `42,50`, `CHF 1'200` oder `12 %`), Prozent als `12` für 12 %, Datum `2026-10-24` oder `2026-10-24 14:30`, Zeitraum `2026-10-24/2026-10-26` (beim Lesen auch `24.10.2026`), Checkbox `ja`/`nein`, Mehrfachauswahl `Ferien, Kinder` (Optionen ohne Komma).
+  - **Robust:** Werte, die nicht zum Feldtyp passen, bleiben unverändert stehen und werden so angezeigt. Spalten ohne Feld im Kopf (z. B. von Hand ergänzt) werden zu Textfeldern. Zeilen ohne oder mit doppelter `id` bekommen eine neue. Eine Datei mit unlesbarem Kopf wird angezeigt, aber nicht verändert.
 - **Zeilen-Seite:** Zu jeder Zeile lässt sich optional eine Notiz anlegen, im Ordner `Name/` neben der Datenbank. Im Frontmatter steht `hirni-zeile: <id>`.
 - **Eingebettete Ansicht in einer Notiz:** ein Codeblock, der in anderen Programmen lesbar bleibt:
 
@@ -160,10 +179,11 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 
 ### Datenbanken
 
-- Datenbank anlegen, Felder hinzufügen, umbenennen, Typ ändern (mit Warnung bei Datenverlust), umsortieren und löschen
-- Zeilen anlegen, bearbeiten und löschen
-- **Mac:** direkt in der Tabelle bearbeiten
-- **iPhone:** Zeile antippen → Formular
+- **Anlegen:** Knopf «Neue Datenbank» (Tabellen-Symbol) über der Notizliste, im gerade offenen Ordner. Eine neue Datenbank hat das Textfeld «Name».
+- **Felder** (Knopf mit Reglern): hinzufügen, umbenennen (die Werte wandern mit), Typ ändern, Zahlenformat, Datum mit Uhrzeit, Optionen für Auswahl/Mehrfachauswahl pflegen, löschen. Übernommen wird mit «Fertig». Gingen dabei Werte verloren (gelöschtes Feld, Wert passt nicht zum neuen Typ oder zu den Optionen), fragt hirni vorher nach und nennt die Anzahl.
+- **Einträge:** anlegen (+, am Mac ⇧⌘N), bearbeiten, löschen. Am Mac direkt in der Tabelle (eine Spalte pro Feld, löschen mit ⌫ oder Rechtsklick). Auf dem iPhone als Liste (erstes Feld als Titel, die nächsten Werte darunter), ein Tipp öffnet das Formular, Löschen per Wischen, Sortieren per Ziehen.
+- **Eingaben je Typ:** Text, Zahl (formatiert, z. B. «CHF 42.50»), Auswahl-Menü, Mehrfachauswahl mit Häkchen, Datum mit Kalender (optional Zeitraum), Schalter für Checkbox, URL mit Knopf zum Öffnen.
+- **Gleichzeitige Änderungen** (anderes Gerät, Claude): werden Zelle für Zelle zusammengeführt. Haben beide Seiten dieselbe Zelle verschieden geändert, bleibt die Eingabe in der App, und ein Hinweis nennt die Anzahl.
 - Ansichten anlegen, umbenennen und wechseln, Filter, Sortierung und Gruppierung einstellen
 - Tabelle, Kalender und Diagramm wie im Datenmodell beschrieben
 - Zeilen-Seite öffnen bzw. anlegen

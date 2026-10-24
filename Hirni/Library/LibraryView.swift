@@ -22,7 +22,10 @@ struct LibraryView: View {
                 NoteListView()
             }
         } detail: {
-            if let url = store.selectedNote {
+            if let url = store.selectedNote, Vault.isDatabase(url) {
+                DatabaseView(url: url)
+                    .id(url)
+            } else if let url = store.selectedNote {
                 NoteEditorView(url: url)
             } else {
                 ContentUnavailableView("Keine Notiz ausgewählt", systemImage: "note.text")

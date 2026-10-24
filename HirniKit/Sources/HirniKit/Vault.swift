@@ -39,14 +39,17 @@ public struct Vault: Sendable {
     /// zuerst, sonst neueste zuerst.
     public func notes(in folder: URL) throws -> [NoteSummary] {
         try entries(in: folder)
-            .filter { !$0.isDirectory && Self.isNote(name: $0.name) }
+            .filter { !$0.isDirectory && (Self.isNote(name: $0.name) || Self.isDatabase($0.url)) }
             .map { entry in
                 let head = entry.isDownloaded ? beginning(of: entry.url) : ""
+                let preview = Self.isDatabase(entry.url)
+                    ? (entry.isDownloaded ? Self.databasePreview((try? String(contentsOf: entry.url, encoding: .utf8)) ?? "") : "Datenbank")
+                    : NotePreview.make(from: head)
                 return NoteSummary(
                     url: entry.url,
                     title: Self.title(of: entry.url),
                     modified: entry.modified,
-                    preview: NotePreview.make(from: head),
+                    preview: preview,
                     isDownloaded: entry.isDownloaded,
                     isPinned: Frontmatter.value(Frontmatter.pinnedKey, in: head) == "true"
                 )
@@ -79,8 +82,10 @@ public struct Vault: Sendable {
             && !name.lowercased().hasSuffix(VaultLayout.databaseSuffix)
     }
 
+    /// Titel = Dateiname ohne `.md` bzw. `.hirnidb.md`.
     public static func title(of noteURL: URL) -> String {
-        noteURL.deletingPathExtension().lastPathComponent
+        let name = noteURL.deletingPathExtension().lastPathComponent
+        return isDatabase(noteURL) ? String(name.dropLast(".hirnidb".count)) : name
     }
 
     /// Liest nur den Anfang der Datei – für Vorschau und YAML-Kopf reicht das.
@@ -161,7 +166,7 @@ public struct Vault: Sendable {
     public func renameNote(at url: URL, to title: String) throws -> URL {
         let target = FileNaming.uniqueURL(
             in: url.deletingLastPathComponent(),
-            baseName: FileNaming.sanitized(title),
+            baseName: FileNaming.sanitized(title) + (Self.isDatabase(url) ? ".hirnidb" : ""),
             pathExtension: url.pathExtension,
             excluding: url
         )

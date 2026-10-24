@@ -196,6 +196,14 @@ final class VaultStore {
         selectedNote = url
     }
 
+    func newDatabase() async {
+        if sidebarSelection == .trash || sidebarSelection?.isTag == true { sidebarSelection = .inbox }
+        let folder = currentFolderURL ?? vault.inboxURL
+        guard let url = await perform({ try $0.createDatabase(in: folder) }) else { return }
+        await reload()
+        selectedNote = url
+    }
+
     func read(_ url: URL) async -> String? {
         await perform { try $0.readNote(at: url) }
     }

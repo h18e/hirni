@@ -44,9 +44,17 @@ extension Vault {
     /// Legt «Titel Kopie» im selben Ordner an. Die Kopie ist nicht angepinnt.
     public func duplicateNote(at url: URL) throws -> URL {
         let text = Frontmatter.setting(Frontmatter.pinnedKey, to: nil, in: try readNote(at: url))
-        return try createNote(
-            in: url.deletingLastPathComponent(), title: "\(Self.title(of: url)) Kopie", text: text
+        let title = "\(Self.title(of: url)) Kopie"
+        guard Self.isDatabase(url) else {
+            return try createNote(in: url.deletingLastPathComponent(), title: title, text: text)
+        }
+        let copy = FileNaming.uniqueURL(
+            in: url.deletingLastPathComponent(),
+            baseName: FileNaming.sanitized(title) + ".hirnidb",
+            pathExtension: VaultLayout.noteExtension
         )
+        try Coordinated.write(copy, options: .forReplacing) { try Data(text.utf8).write(to: $0, options: .withoutOverwriting) }
+        return copy
     }
 
     /// Anpinnen ist keine inhaltliche Änderung: Das Änderungsdatum bleibt, damit
