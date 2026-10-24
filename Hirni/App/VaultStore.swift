@@ -1,6 +1,9 @@
 import Foundation
 import HirniKit
 import Observation
+#if os(iOS)
+import UIKit
+#endif
 import os
 
 let vaultLog = Logger(subsystem: "ch.hebera.hirni", category: "vault")
@@ -36,6 +39,8 @@ final class VaultStore {
     private(set) var tags: [String] = []
     /// Dieselben Tags mit Anzahl Notizen (für die Seitenleiste).
     private(set) var tagCounts: [TagCount] = []
+    /// Konflikte und laufende Downloads, gemeldet von iCloud.
+    private(set) var iCloudStatus = VaultMonitor.Status()
 
     var sidebarSelection: SidebarItem? = .inbox {
         didSet {
@@ -90,9 +95,10 @@ final class VaultStore {
 
     func start() async {
         guard monitor == nil else { return }
-        let monitor = VaultMonitor { [weak self] in
-            Task { await self?.reload() }
-        }
+        let monitor = VaultMonitor(
+            onChange: { [weak self] in Task { await self?.reload() } },
+            onStatus: { [weak self] in self?.iCloudStatus = $0 }
+        )
         monitor.start()
         self.monitor = monitor
         do {
@@ -210,6 +216,50 @@ final class VaultStore {
         let known = Set(tags.map { $0.lowercased() })
         let new = MarkdownSyntax.tags(in: Frontmatter.split(text).body).filter { !known.contains($0.lowercased()) }
         if !new.isEmpty { tags += new }
+    }
+
+    // MARK: - Konflikte
+
+    func hasConflict(_ url: URL) -> Bool {
+        iCloudStatus.conflicted.contains(url.canonical)
+    }
+
+    func downloadProgress(of url: URL) -> Double? {
+        iCloudStatus.downloading[url.canonical]
+    }
+
+    func conflictVersions(of url: URL) async -> [ConflictVersion] {
+        let vault = vault
+        return await Task.detached { vault.conflictVersions(of: url) }.value
+    }
+
+    func resolveConflict(at url: URL, choice: ConflictChoice) async {
+        await openEditor?.flushIfShowing(url)
+        await perform { try $0.resolveConflict(at: url, choice: choice) }
+        // Der Editor soll den gewählten Stand sofort zeigen, auch wenn iCloud
+        // das Datum nicht verändert hat.
+        if let editor = openEditor, editor.url == url { await editor.reloadFromDisk() }
+        iCloudStatus.conflicted.remove(url.canonical)
+        await reload()
+    }
+
+    /// Speichert `text` als eigene Notiz neben `note` (Konflikt: beide behalten).
+    func saveConflictCopy(text: String, of note: URL) async -> URL? {
+        #if os(iOS)
+        let device = UIDevice.current.name
+        #else
+        let device = Host.current().localizedName
+        #endif
+        let copy = await perform { try $0.saveConflictCopy(text: text, of: note, deviceName: device) }
+        await reload()
+        return copy
+    }
+
+    /// Lesen für den Editor: Ein Fehler wird nicht als Meldung gezeigt,
+    /// sondern im Editor selbst.
+    func readForEditor(_ url: URL) async -> Result<String, Error> {
+        let vault = vault
+        return await Task.detached { Result { try vault.readNote(at: url) } }.value
     }
 
     // MARK: - Anhänge
@@ -354,6 +404,7 @@ struct EditorHandle {
     let url: URL
     let flush: () async -> Void
     let reloadHeader: () async -> Void
+    let reloadFromDisk: () async -> Void
 
     func flushIfShowing(_ noteURL: URL) async {
         if url == noteURL { await flush() }

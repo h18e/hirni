@@ -6,6 +6,10 @@ import SwiftUI
 /// Der Editor bleibt bestehen, wenn die Notiz umbenannt wird (die Adresse
 /// ändert sich dabei). So kann ein Speichervorgang nie unter dem alten Namen
 /// eine zweite Datei anlegen.
+///
+/// Vor jedem Speichern prüft er, ob die Datei inzwischen anderswo geändert
+/// wurde (anderes Gerät, Finder, Claude). Dann wird zusammengeführt oder
+/// nachgefragt, aber nie still überschrieben.
 struct NoteEditorView: View {
     @Environment(VaultStore.self) private var store
     /// Die in der Liste ausgewählte Notiz.
@@ -23,14 +27,35 @@ struct NoteEditorView: View {
     @State private var savedText = ""
     @State private var savedModified: Date = .distantPast
     @State private var isRenaming = false
+    /// Die Datei wurde anderswo geändert, und das liess sich nicht automatisch
+    /// mit den Eingaben hier zusammenführen. Bis zur Entscheidung wird nicht gespeichert.
+    @State private var externalChange: ExternalChange?
+    @State private var showsConflictVersions = false
+    @State private var loadError: String?
     @State private var controller = EditorController()
     @FocusState private var titleIsFocused: Bool
 
     private var isLoaded: Bool { fileURL != nil }
     private var hasUnsavedChanges: Bool { text != savedText }
 
+    struct ExternalChange: Equatable {
+        let header: String?
+        let text: String
+        let modified: Date
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if let externalChange {
+                ExternalChangeBanner(
+                    keepMine: { Task { await keepMine(over: externalChange) } },
+                    takeTheirs: { take(externalChange) },
+                    keepBoth: { Task { await keepBoth(externalChange) } }
+                )
+            } else if let fileURL, store.hasConflict(fileURL) {
+                ConflictBanner { showsConflictVersions = true }
+            }
+
             TextField(Vault.title(of: fileURL ?? url), text: $title)
                 .font(.title.bold())
                 .textFieldStyle(.plain)
@@ -50,9 +75,7 @@ struct NoteEditorView: View {
             #endif
         }
         .disabled(!isLoaded)
-        .overlay {
-            if !isLoaded { ProgressView("Wird geladen …") }
-        }
+        .overlay { loadingOverlay }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #else
@@ -63,6 +86,11 @@ struct NoteEditorView: View {
             importFiles: { await importFiles($0) },
             importPhoto: { await importPhoto($0) }
         ))
+        .sheet(isPresented: $showsConflictVersions) {
+            if let fileURL {
+                ConflictResolverView(url: fileURL, currentText: Frontmatter.join(header: header, body: text))
+            }
+        }
         .task(id: url) { await open(url) }
         .task { await store.refreshTags() }
         .onChange(of: store.tags, initial: true) { _, tags in
@@ -82,9 +110,32 @@ struct NoteEditorView: View {
         }
         .onDisappear {
             if store.openEditor?.url == fileURL { store.openEditor = nil }
+            // Ungelöste Fremdänderung: lieber nicht speichern als überschreiben.
+            guard externalChange == nil else { return }
             let snapshot = Frontmatter.join(header: header, body: text)
             if let fileURL, text != savedText {
                 Task { [store] in _ = await store.write(snapshot, to: fileURL) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var loadingOverlay: some View {
+        if let loadError {
+            ContentUnavailableView(
+                "Notiz lässt sich nicht öffnen",
+                systemImage: "exclamationmark.triangle",
+                description: Text(loadError)
+            )
+            .background(.background)
+        } else if !isLoaded {
+            if let progress = store.downloadProgress(of: url) {
+                ProgressView(value: progress) {
+                    Text("Wird aus iCloud geladen … \(Int(progress * 100)) %")
+                }
+                .frame(maxWidth: 240)
+            } else {
+                ProgressView("Wird geladen …")
             }
         }
     }
@@ -116,22 +167,31 @@ struct NoteEditorView: View {
     }
     #endif
 
+    // MARK: - Laden und Speichern
+
     /// Öffnet `newURL`. Nach einem Umbenennen ist das bereits die offene Datei,
     /// dann passiert nichts.
     private func open(_ newURL: URL) async {
         guard newURL != fileURL else { return }
         await save()
+        externalChange = nil
+        loadError = nil
 
-        guard let content = await store.read(newURL) else { return }
+        let content: String
+        switch await store.readForEditor(newURL) {
+        case .success(let text):
+            content = text
+        case .failure:
+            loadError = "Die Datei ist keine lesbare Textdatei (UTF-8). hirni verändert sie nicht."
+            return
+        }
         let modified = await store.modificationDate(of: newURL) ?? .now
         let (header, body) = Frontmatter.split(content)
         // Zuerst anmelden: Die Hervorhebung braucht den Ordner der Notiz,
         // um eingebettete Bilder zu finden.
         register(for: newURL)
         self.header = header
-        text = body
-        controller.setText(body)
-        savedText = body
+        show(body)
         savedModified = modified
         title = Vault.title(of: newURL)
         fileURL = newURL
@@ -145,14 +205,97 @@ struct NoteEditorView: View {
         }
     }
 
+    /// Setzt Text als neuen gespeicherten Stand (Laden, Fremdänderung übernehmen).
+    private func show(_ body: String) {
+        text = body
+        controller.setText(body)
+        savedText = body
+    }
+
     private func save() async {
-        guard let fileURL, !isRenaming, hasUnsavedChanges else { return }
-        let snapshot = text
+        guard let fileURL, !isRenaming, hasUnsavedChanges, externalChange == nil else { return }
+        var snapshot = text
+
+        // Wurde die Datei seit dem letzten Laden/Speichern anderswo geändert?
+        if let diskModified = await store.modificationDate(of: fileURL),
+           diskModified.timeIntervalSince(savedModified) > 0.5,
+           case .success(let disk) = await store.readForEditor(fileURL) {
+            let (diskHeader, theirs) = Frontmatter.split(disk)
+            header = diskHeader
+            if theirs != savedText {
+                guard let merged = ThreeWayMerge.merge(base: savedText, mine: snapshot, theirs: theirs) else {
+                    externalChange = ExternalChange(header: diskHeader, text: theirs, modified: diskModified)
+                    return
+                }
+                // Beides passt zusammen: den zusammengeführten Text zeigen und speichern.
+                if merged != snapshot {
+                    text = merged
+                    controller.setText(merged)
+                }
+                snapshot = merged
+            }
+        }
+
         if let modified = await store.write(Frontmatter.join(header: header, body: snapshot), to: fileURL) {
             savedText = snapshot
             savedModified = modified
         }
     }
+
+    /// Hat ein anderes Gerät, der Finder oder Claude die Datei geändert, wird der
+    /// neue Stand übernommen. Gibt es hier ungespeicherte Eingaben, wird über
+    /// `save()` zusammengeführt.
+    private func reloadIfChangedElsewhere() async {
+        guard let fileURL, !isRenaming, externalChange == nil,
+              let modified = await store.modificationDate(of: fileURL),
+              modified.timeIntervalSince(savedModified) > 0.5
+        else { return }
+        if hasUnsavedChanges {
+            await save()
+            return
+        }
+        guard case .success(let content) = await store.readForEditor(fileURL),
+              !hasUnsavedChanges, fileURL == self.fileURL
+        else { return }
+        let (header, body) = Frontmatter.split(content)
+        self.header = header
+        show(body)
+        savedModified = modified
+    }
+
+    /// Nach dem Lösen eines iCloud-Konflikts: den Stand der Datei zeigen.
+    private func reloadFromDisk() async {
+        guard let fileURL, case .success(let content) = await store.readForEditor(fileURL) else { return }
+        let (header, body) = Frontmatter.split(content)
+        self.header = header
+        show(body)
+        savedModified = await store.modificationDate(of: fileURL) ?? .now
+    }
+
+    // MARK: - Fremdänderung entscheiden
+
+    private func keepMine(over change: ExternalChange) async {
+        externalChange = nil
+        savedModified = change.modified // jetzt bewusst überschreiben
+        await save()
+    }
+
+    private func take(_ change: ExternalChange) {
+        externalChange = nil
+        header = change.header
+        show(change.text)
+        savedModified = change.modified
+    }
+
+    private func keepBoth(_ change: ExternalChange) async {
+        guard let fileURL else { return }
+        let mine = Frontmatter.join(header: header, body: text)
+        if await store.saveConflictCopy(text: mine, of: fileURL) != nil {
+            take(change)
+        }
+    }
+
+    // MARK: - Titel
 
     private func commitTitle() async {
         guard let fileURL, !isRenaming else { return }
@@ -177,24 +320,6 @@ struct NoteEditorView: View {
         await save()
     }
 
-    /// Hat ein anderes Gerät, der Finder oder Claude die Datei geändert, und
-    /// gibt es hier keine ungespeicherten Eingaben, wird der neue Stand übernommen.
-    /// (Echte Konflikte – beide Seiten geändert – behandelt Etappe 6.)
-    private func reloadIfChangedElsewhere() async {
-        guard let fileURL, !isRenaming, !hasUnsavedChanges,
-              let modified = await store.modificationDate(of: fileURL),
-              modified.timeIntervalSince(savedModified) > 0.5,
-              let content = await store.read(fileURL),
-              !hasUnsavedChanges, fileURL == self.fileURL
-        else { return }
-        let (header, body) = Frontmatter.split(content)
-        self.header = header
-        text = body
-        controller.setText(body)
-        savedText = body
-        savedModified = modified
-    }
-
     /// Meldet sich beim Store, damit er vor Dateioperationen speichern kann,
     /// und sagt dem Editor, wo die Anhänge dieser Notiz liegen.
     private func register(for fileURL: URL) {
@@ -204,7 +329,8 @@ struct NoteEditorView: View {
         store.openEditor = EditorHandle(
             url: fileURL,
             flush: { await save() },
-            reloadHeader: { await reloadHeader() }
+            reloadHeader: { await reloadHeader() },
+            reloadFromDisk: { await reloadFromDisk() }
         )
     }
 
@@ -234,7 +360,7 @@ struct NoteEditorView: View {
 
     /// Liest nur den YAML-Kopf neu (nach Anpinnen), der Text bleibt unberührt.
     private func reloadHeader() async {
-        guard let fileURL, let content = await store.read(fileURL) else { return }
+        guard let fileURL, case .success(let content) = await store.readForEditor(fileURL) else { return }
         header = Frontmatter.split(content).header
     }
 }

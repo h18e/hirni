@@ -12,8 +12,8 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ fertig
 | 2 | Ordnen | Verschieben per Drag'n'Drop (Mac) und Wischen/Menü (iPhone), Anpinnen, Duplizieren | Notizen aus der Inbox einsortieren | ✅ |
 | 3 | Markdown-Editor | Hervorhebung, Formatierungsleiste iPhone, Tastenkürzel Mac, Checklisten abhaken, `#tags` mit Vorschlägen | Komfortables Schreiben | ✅ |
 | 4 | Anhänge | Bilder (Fotos, Kamera, Dateien, Drag'n'Drop) und PDFs, Anzeige in der Notiz | Fotos in Notizen | ✅ |
-| 5 | Suche & Tags | Lokaler Such-Index, Volltextsuche, Tag-Liste | Alles wiederfinden | 🟡 gebaut, Test auf Mac + iPhone offen |
-| 6 | Konflikte & Robustheit | Konflikt-Hinweis und -Auflösung, Änderungen von Claude/Finder live übernehmen, Download-Fortschritt | Gleichzeitiges Bearbeiten ohne Datenverlust | ⬜ |
+| 5 | Suche & Tags | Lokaler Such-Index, Volltextsuche, Tag-Liste | Alles wiederfinden | ✅ |
+| 6 | Konflikte & Robustheit | Konflikt-Hinweis und -Auflösung, Änderungen von Claude/Finder live übernehmen, Download-Fortschritt | Gleichzeitiges Bearbeiten ohne Datenverlust | 🟡 gebaut, Test auf Mac + iPhone offen |
 | 7 | Datenbank: Grundlagen | Dateiformat festlegen, Felder (alle 7 Typen), Zeilen bearbeiten (Tabelle am Mac, Formular am iPhone) | Erste Datenbank erfassen | ⬜ |
 | 8 | Datenbank: Tabelle komplett | Mehrere Ansichten, Filter, Sortierung, Gruppierung, Berechnungen pro Spalte, Suche in Datenbanken | Auswertungen in Tabellen | ⬜ |
 | 9 | Kalender-Ansicht | Monatskalender nach Datumsfeld, Farben nach Auswahlfeld | z. B. Kinder-Weekends | ⬜ |

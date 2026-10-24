@@ -85,7 +85,7 @@ struct NoteListView: View {
 
     private var noteRows: some View {
         ForEach(store.notes) { note in
-            NoteRow(note: note)
+            NoteRow(note: note, hasConflict: store.hasConflict(note.url))
                 .tag(note.url)
                 .draggable(VaultItemTransfer(url: note.url)) {
                     Label(note.title, systemImage: "note.text")
@@ -147,6 +147,7 @@ struct MovingItem: Identifiable {
 
 private struct NoteRow: View {
     let note: NoteSummary
+    let hasConflict: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -160,6 +161,12 @@ private struct NoteRow: View {
                 Text(note.title)
                     .font(.headline)
                     .lineLimit(1)
+                if hasConflict {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .accessibilityLabel("Mehrere Fassungen")
+                }
             }
             HStack(spacing: 6) {
                 Text(note.modified, format: .relative(presentation: .named))

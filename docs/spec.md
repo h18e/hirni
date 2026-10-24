@@ -173,7 +173,10 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 
 - hirni überwacht den iCloud-Ordner und zeigt Änderungen von anderen Geräten oder von Claude automatisch an.
 - Dateien, die auf dem iPhone noch nicht heruntergeladen sind, lädt hirni beim Öffnen nach und zeigt dabei einen Fortschritt.
-- **Konflikt** (dieselbe Datei auf zwei Geräten geändert): Hinweis «2 Versionen vorhanden». Raphi wählt eine Version oder behält beide als separate Dateien.
+- **Gleichzeitig geändert, während du tippst** (Claude, Finder, anderes Gerät): Vor jedem Speichern prüft der Editor, ob die Datei inzwischen anderswo geändert wurde. Betreffen die Änderungen verschiedene Zeilen, werden beide automatisch zusammengeführt (3-Wege-Vergleich, zeilenweise). Betreffen sie dieselbe Stelle, wird nicht gespeichert, und oben erscheint ein Hinweis mit «Meine behalten», «Andere übernehmen» und «Beide behalten». Bei «Beide behalten» wird die eigene Fassung zu einer eigenen Notiz «Titel (Gerätename)».
+- **iCloud-Konflikt** (dieselbe Datei auf zwei Geräten offline geändert): In der Notizliste erscheint ein oranges Warnzeichen, im Editor der Hinweis «Von dieser Notiz gibt es mehrere Fassungen». «Ansehen» zeigt alle Fassungen mit Gerät und Zeit, mit der Wahl «Diese behalten», «Diese übernehmen» oder «Alle behalten» (die anderen werden zu eigenen Notizen).
+- **Unlesbare Dateien** (kein UTF-8-Text): Der Editor zeigt einen Hinweis und verändert die Datei nicht.
+- **Download-Fortschritt:** Eine Notiz, die noch aus iCloud geladen wird, zeigt den Fortschritt in Prozent. In der Seitenleiste steht, wie viele Dateien iCloud gerade lädt.
 - **Datenbank-Konflikte:** Wo möglich werden sie automatisch Zeile für Zeile zusammengeführt (über die `id`). Nur echte Konflikte in derselben Zeile werden nachgefragt.
 
 ## Ausserhalb von Version 1

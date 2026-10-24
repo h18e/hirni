@@ -42,8 +42,15 @@ struct SidebarView: View {
                 }
             }
 
-            Label("Zuletzt gelöscht", systemImage: "trash")
-                .tag(SidebarItem.trash)
+            Section {
+                Label("Zuletzt gelöscht", systemImage: "trash")
+                    .tag(SidebarItem.trash)
+            } footer: {
+                let count = store.iCloudStatus.downloading.count
+                if count > 0 {
+                    Label("iCloud lädt \(count) \(count == 1 ? "Datei" : "Dateien") …", systemImage: "icloud.and.arrow.down")
+                }
+            }
         }
         .navigationTitle("hirni")
         #if os(macOS)
