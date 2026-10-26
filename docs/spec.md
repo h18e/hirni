@@ -189,8 +189,9 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 ### Datenbanken
 
 - **Anlegen:** Knopf «Neue Datenbank» (Tabellen-Symbol) über der Notizliste, im gerade offenen Ordner. Eine neue Datenbank hat das Textfeld «Name».
-- **Felder** (Knopf mit Reglern): hinzufügen, umbenennen (die Werte wandern mit), Typ ändern, Zahlenformat, Datum mit Uhrzeit, Optionen für Auswahl/Mehrfachauswahl pflegen, löschen. Übernommen wird mit «Fertig». Gingen dabei Werte verloren (gelöschtes Feld, Wert passt nicht zum neuen Typ oder zu den Optionen), fragt hirni vorher nach und nennt die Anzahl.
+- **Felder** (Knopf mit Reglern): hinzufügen, umbenennen (die Werte wandern mit), Typ ändern, Zahlenformat, Datum mit Uhrzeit, Optionen für Auswahl/Mehrfachauswahl pflegen («Option hinzufügen» legt eine leere Option an, der Cursor steht gleich darin; Optionen lassen sich direkt umbenennen, die Einträge und Filter wandern mit; leer gelassene neue Optionen fallen weg), löschen. Übernommen wird mit «Fertig». Gingen dabei Werte verloren (gelöschtes Feld, Wert passt nicht zum neuen Typ oder zu den Optionen), fragt hirni vorher nach und nennt die Anzahl.
 - **Einträge:** anlegen (+, am Mac ⇧⌘N), bearbeiten, löschen. Am Mac direkt in der Tabelle (eine Spalte pro Feld, löschen mit ⌫ oder Rechtsklick). Auf dem iPhone als Liste (erstes Feld als Titel, die nächsten Werte darunter), ein Tipp öffnet das Formular, Löschen per Wischen, Sortieren per Ziehen.
+- **Tabelle am Mac:** Ist sie schmaler als das Fenster, steht sie links oben.
 - **Eingaben je Typ:** Text, Zahl (formatiert, z. B. «CHF 42.50»), Auswahl-Menü, Mehrfachauswahl mit Häkchen, Datum mit Kalender (optional Zeitraum), Schalter für Checkbox, URL mit Knopf zum Öffnen.
 - **Ansichten:** Leiste unter dem Titel. Antippen wechselt, + legt eine neue an, lange drücken bzw. Rechtsklick benennt um, dupliziert oder löscht. Solange es keine gespeicherte Ansicht gibt, heisst die Standardansicht «Alle». Sie wird gespeichert, sobald man etwas daran ändert. Welche Ansicht gewählt ist, merkt sich jedes Gerät nur für sich, das steht nicht in der Datei.
 - **Pro Ansicht:**

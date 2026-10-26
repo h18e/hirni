@@ -251,8 +251,9 @@ final class DatabaseDocument {
         }
         for edit in edits {
             guard let original = edit.originalName, let old = database.field(named: original) else { continue }
+            let renames = edit.optionRenames
             for index in result.rows.indices {
-                var value = result.rows[index][original]
+                var value = CellValue.renamingOptions(result.rows[index][original], renames, type: old.type)
                 if original != edit.field.name {
                     result.rows[index][original] = ""
                 }
@@ -267,6 +268,7 @@ final class DatabaseDocument {
         // Ansichten nachführen: umbenannte Felder in Regeln anpassen, gelöschte entfernen.
         let renames = edits.compactMap { edit in edit.originalName.map { ($0, edit.field.name) } }
         for index in result.views.indices {
+            for edit in edits { if let original = edit.originalName { result.views[index].renameOptions(of: original, edit.optionRenames) } }
             for (old, new) in renames where old != new { result.views[index].renameField(old, to: new) }
             for name in database.fields.map(\.name) where !keptOriginals.contains(name) {
                 result.views[index].renameField(name, to: nil)
@@ -348,4 +350,22 @@ struct FieldEdit: Identifiable, Equatable {
     let id = UUID()
     let originalName: String?
     var field: Field
+    /// Ursprünglicher Name jeder Option (`nil` für neue), in derselben
+    /// Reihenfolge wie `field.options`. So werden Umbenennungen erkannt.
+    var optionOrigins: [String?]
+
+    init(originalName: String?, field: Field) {
+        self.originalName = originalName
+        self.field = field
+        optionOrigins = originalName == nil ? (field.options ?? []).map { _ in nil } : (field.options ?? []).map(Optional.some)
+    }
+
+    /// Umbenannte Optionen: alt → neu.
+    var optionRenames: [String: String] {
+        var renames: [String: String] = [:]
+        for (origin, name) in zip(optionOrigins, field.options ?? []) {
+            if let origin, origin != name { renames[origin] = name }
+        }
+        return renames
+    }
 }

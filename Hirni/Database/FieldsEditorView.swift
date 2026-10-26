@@ -66,6 +66,11 @@ struct FieldsEditorView: View {
         if names.contains(where: { $0.lowercased() == "id" }) { return "«id» ist für hirni reserviert." }
         if Set(names.map { $0.lowercased() }).count != names.count { return "Zwei Felder haben denselben Namen." }
         if edits.isEmpty { return "Eine Datenbank braucht mindestens ein Feld." }
+        for edit in edits {
+            let options = edit.namedOptions
+            if options.contains(where: \.isEmpty) { return "Im Feld «\(edit.field.name)» hat eine Option keinen Namen." }
+            if Set(options).count != options.count { return "Im Feld «\(edit.field.name)» gibt es eine Option doppelt." }
+        }
         if edits.contains(where: { ($0.field.options ?? []).contains { $0.contains(",") } && $0.field.type == .multiSelect }) {
             return "Optionen einer Mehrfachauswahl dürfen kein Komma enthalten."
         }
@@ -82,6 +87,14 @@ struct FieldsEditorView: View {
         let cleaned = edits.map { edit -> FieldEdit in
             var edit = edit
             edit.field.name = edit.field.name.trimmingCharacters(in: .whitespaces)
+            // Neue, leer gelassene Optionen fallen weg.
+            if let options = edit.field.options {
+                let keep = options.indices.filter {
+                    !options[$0].trimmingCharacters(in: .whitespaces).isEmpty || (edit.optionOrigins[safe: $0] ?? nil) != nil
+                }
+                edit.field.options = keep.map { options[$0].trimmingCharacters(in: .whitespaces) }
+                edit.optionOrigins = keep.map { edit.optionOrigins[safe: $0] ?? nil }
+            }
             return edit
         }
         edits = cleaned
@@ -102,7 +115,7 @@ struct FieldsEditorView: View {
 private struct FieldSection: View {
     @Binding var edit: FieldEdit
     let delete: () -> Void
-    @State private var newOption = ""
+    @FocusState private var focusedOption: Int?
 
     var body: some View {
         Section {
@@ -126,24 +139,23 @@ private struct FieldSection: View {
                     set: { edit.field.includesTime = $0 ? true : nil }
                 ))
             case .select, .multiSelect:
-                ForEach(edit.field.options ?? [], id: \.self) { option in
-                    HStack {
-                        Text(option)
-                        Spacer()
-                        Button("Entfernen", systemImage: "minus.circle") {
-                            edit.field.options?.removeAll { $0 == option }
-                        }
-                        .labelStyle(.iconOnly)
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(.red)
+                // Optionen direkt umbenennen; die Einträge wandern beim Übernehmen mit.
+                ForEach(Array((edit.field.options ?? []).indices), id: \.self) { index in
+                    HStack(spacing: 10) {
+                        Circle()
+                            .fill(OptionColors.color(index))
+                            .frame(width: 10, height: 10)
+                        TextField("Option", text: option(at: index), prompt: Text("Name der Option"))
+                            .labelsHidden()
+                            .focused($focusedOption, equals: index)
+                        Button("Option entfernen", systemImage: "minus.circle.fill") { removeOption(at: index) }
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(.red)
                     }
                 }
-                HStack {
-                    TextField("Neue Option", text: $newOption)
-                        .onSubmit(addOption)
-                    Button("Hinzufügen", action: addOption)
-                        .disabled(newOption.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
+                Button("Option hinzufügen", systemImage: "plus.circle.fill", action: addOption)
+                    .buttonStyle(.borderless)
             case .text, .checkbox, .url:
                 EmptyView()
             }
@@ -165,15 +177,58 @@ private struct FieldSection: View {
                     edit.field.options = edit.field.options ?? []
                 } else {
                     edit.field.options = nil
+                    edit.optionOrigins = []
                 }
             }
         )
     }
 
+    /// Neue, leere Option mit dem Cursor darin.
     private func addOption() {
-        let option = newOption.trimmingCharacters(in: .whitespaces)
-        guard !option.isEmpty, !(edit.field.options ?? []).contains(option) else { return }
-        edit.field.options = (edit.field.options ?? []) + [option]
-        newOption = ""
+        let options = edit.field.options ?? []
+        edit.field.options = options + [""]
+        edit.optionOrigins.append(nil)
+        // Erst wenn die Zeile da ist, lässt sie sich fokussieren.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            focusedOption = options.count
+        }
+    }
+
+    private func removeOption(at index: Int) {
+        guard var options = edit.field.options, options.indices.contains(index) else { return }
+        options.remove(at: index)
+        edit.field.options = options
+        if edit.optionOrigins.indices.contains(index) { edit.optionOrigins.remove(at: index) }
+        focusedOption = nil
+    }
+
+    /// Über die Position, mit Schutz: Nach dem Entfernen darf ein altes
+    /// Feld nicht mehr auf eine Option zugreifen, die es nicht mehr gibt.
+    private func option(at index: Int) -> Binding<String> {
+        Binding(
+            get: { (edit.field.options ?? []).indices.contains(index) ? edit.field.options![index] : "" },
+            set: { value in
+                guard let options = edit.field.options, options.indices.contains(index) else { return }
+                edit.field.options![index] = value
+            }
+        )
+    }
+}
+
+private extension FieldEdit {
+    /// Optionen ohne die neuen, noch leeren (die beim Übernehmen wegfallen).
+    var namedOptions: [String] {
+        let options = field.options ?? []
+        return options.indices.compactMap { index in
+            let name = options[index].trimmingCharacters(in: .whitespaces)
+            return name.isEmpty && (optionOrigins[safe: index] ?? nil) == nil ? nil : name
+        }
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

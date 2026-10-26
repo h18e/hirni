@@ -159,4 +159,16 @@ public enum CellValue {
         case .url: return URL(string: raw)?.scheme != nil
         }
     }
+
+    /// Wert nach dem Umbenennen von Optionen (`alt` → `neu`). Bei einer
+    /// Mehrfachauswahl wird jede Option einzeln umbenannt.
+    public static func renamingOptions(_ raw: String, _ renames: [String: String], type: FieldType) -> String {
+        guard !renames.isEmpty, !raw.isEmpty else { return raw }
+        switch type {
+        case .select: return renames[raw] ?? raw
+        case .multiSelect: return Self.raw(list: list(raw).map { renames[$0] ?? $0 })
+        default: return raw
+        }
+    }
+
 }

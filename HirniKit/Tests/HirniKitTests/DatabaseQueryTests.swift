@@ -154,3 +154,21 @@ struct SavedViewFileTests {
         #expect(db.views.map(\.name) == ["Gut"])
     }
 }
+
+struct OptionRenameTests {
+    @Test func renamesSelectAndMultiSelectValues() {
+        let renames = ["Essen": "Verpflegung"]
+        #expect(CellValue.renamingOptions("Essen", renames, type: .select) == "Verpflegung")
+        #expect(CellValue.renamingOptions("Reisen", renames, type: .select) == "Reisen")
+        #expect(CellValue.renamingOptions("Essen, Kinder", renames, type: .multiSelect) == "Verpflegung, Kinder")
+        #expect(CellValue.renamingOptions("Essen", renames, type: .text) == "Essen")
+    }
+
+    @Test func renamesFilterValues() {
+        var view = SavedView(name: "Essen")
+        view.filters = [FilterRule(field: "Kategorie", condition: .equals, value: "Essen"),
+                        FilterRule(field: "Name", condition: .equals, value: "Essen")]
+        view.renameOptions(of: "Kategorie", ["Essen": "Verpflegung"])
+        #expect(view.filters?.map(\.value) == ["Verpflegung", "Essen"])
+    }
+}

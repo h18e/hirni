@@ -175,6 +175,8 @@ private struct DatabaseTable: View {
             }
             .padding(.bottom, 20)
         }
+        // Ist die Tabelle schmaler als das Fenster, steht sie links oben statt in der Mitte.
+        .defaultScrollAnchor(.topLeading, for: .alignment)
         .overlay {
             if document.database.rows.isEmpty {
                 ContentUnavailableView("Noch keine Einträge", systemImage: "tablecells", description: Text("Mit + oben einen Eintrag hinzufügen (⇧⌘N)."))

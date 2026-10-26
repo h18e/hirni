@@ -74,6 +74,17 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
         try container.encodeIfPresent(chart, forKey: .chart)
     }
 
+    /// Filterwerte anpassen, wenn Optionen eines Felds umbenannt wurden.
+    public mutating func renameOptions(of field: String, _ renames: [String: String]) {
+        guard !renames.isEmpty else { return }
+        filters = filters?.map { rule in
+            guard rule.field == field, let value = rule.value, let new = renames[value] else { return rule }
+            var rule = rule
+            rule.value = new
+            return rule
+        }
+    }
+
     /// Feldnamen in Regeln anpassen, wenn ein Feld umbenannt oder gelöscht wurde.
     public mutating func renameField(_ old: String, to new: String?) {
         filters = filters?.compactMap { rule in
