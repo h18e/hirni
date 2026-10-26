@@ -52,7 +52,7 @@ struct AttachmentLinkTests {
     @Test func embedsAreGreyAndNotLinks() {
         let spans = MarkdownSyntax.spans(in: "![x](_Anhänge/a.png)")
         #expect(spans.contains { $0.kind == .embed(path: "_Anhänge/a.png") })
-        #expect(!spans.contains { $0.kind == .link })
+        #expect(!spans.contains { if case .link = $0.kind { true } else { false } })
     }
 }
 

@@ -168,11 +168,12 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 
 - **Grundfunktionen:** anlegen, umbenennen, löschen, anpinnen, duplizieren («Titel Kopie», nicht angepinnt)
 - **Markdown-Hervorhebung:** Die Syntax bleibt sichtbar, aber grau. Überschriften (1–6), fett, kursiv, durchgestrichen, Listen, Checklisten, Zitate, Inline-Code, Codeblöcke, Links und Tags werden gestaltet. Gerade Anführungszeichen und Bindestriche bleiben erhalten (keine automatische Ersetzung).
-- **iPhone:** Formatierungsleiste über der Tastatur: Überschrift, fett, kursiv, Liste, Checkliste, Tag, Tastatur ausblenden. Der Knopf für Bilder folgt in Etappe 4.
+- **iPhone:** Formatierungsleiste über der Tastatur: Überschrift, fett, kursiv, Liste, Checkliste, Tag, Anhang (Foto, Kamera, Datei, Datenbank-Ansicht), Tastatur ausblenden.
 - **Mac:** Knöpfe in der Fensterleiste mit Tastenkürzeln: Überschrift ⇧⌘H, fett ⌘B, kursiv ⌘I, Liste ⇧⌘8, Checkliste ⇧⌘L
 - **Überschrift-Knopf:** wechselt reihum keine → `#` → `##` → `###` → keine
 - **Listen:** Liste und Checkliste lassen sich auch auf einer leeren Zeile beginnen. Return setzt sie fort, Return in einem leeren Punkt beendet sie.
-- **Checklisten:** ein Tipp bzw. Klick auf `[ ]` hakt ab, erledigte Punkte erscheinen durchgestrichen
+- **Checklisten:** ein Tipp bzw. Klick auf `[ ]` hakt ab, erledigte Punkte erscheinen durchgestrichen. Das `- ` davor steht in der Datei (Markdown), wird im Editor aber ausgeblendet.
+- **Links:** `[Text](Adresse)` und eingetippte oder eingefügte Adressen (`https://…`, `http://…`, `www.…`) erscheinen blau unterstrichen. Ein Tipp (iPhone) bzw. Klick (Mac) öffnet sie im Browser. Satzzeichen am Ende gehören nicht zur Adresse, `_` und `#` in Adressen formatieren nichts.
 - **Tags:** Nach `#` erscheinen passende Tags aus dem ganzen hirni-Ordner (die häufigsten zuerst) und aus der offenen Notiz, auch eben erst getippte. Auf dem iPhone in der Leiste, am Mac unter dem Text, dort übernimmt Tab den ersten Vorschlag. Tags dürfen Buchstaben (auch Umlaute), Ziffern, `_`, `-` und `/` enthalten, aber nicht nur aus Ziffern bestehen (wie bei Obsidian).
 - **Bilder und PDFs einfügen:** iPhone über die Büroklammer in der Leiste (Foto-Mediathek, bis 10 Fotos auf einmal, Kamera, Datei). Mac über die Büroklammer in der Fensterleiste (⇧⌘A) oder per Drag'n'Drop einer Datei in den Text. Fotos werden als JPEG mit höchstens 3000 Pixeln gespeichert. Standortdaten und andere Metadaten werden dabei entfernt. HEIC-Dateien werden in JPEG umgewandelt.
 - **Anzeige:** Bilder und die erste PDF-Seite erscheinen direkt unter ihrer Zeile (Bilder höchstens 360 Punkte hoch, PDFs 260). Der Verweis selbst bleibt klein und grau sichtbar. Fehlt die Datei, erscheint ein Hinweis-Symbol. Antippen bzw. Klicken öffnet die Vorschau (QuickLook).

@@ -16,11 +16,14 @@ public struct MarkdownSpan: Equatable, Sendable {
         case codeBlock
         case quote
         case listMarker
+        /// `- ` vor einer Checkbox: steht in der Datei, wird im Editor ausgeblendet.
+        case hiddenMarker
         /// `[ ]` bzw. `[x]` einer Checkliste.
         case checkbox(checked: Bool)
         /// Text eines erledigten Checklisten-Punkts.
         case doneItem
-        case link
+        /// Link: Beschriftung von `[Text](Adresse)` oder eine eingetippte Adresse.
+        case link(url: String)
         case tag(String)
         /// Eingebetteter Anhang `![](pfad)`, Pfad relativ zur Notiz.
         case embed(path: String)
@@ -62,6 +65,25 @@ public enum MarkdownSyntax {
         return spans
     }
 
+    /// Die Adresse, die sich öffnen lässt: `www.…` bekommt `https://`.
+    public static func linkURL(_ address: String) -> URL? {
+        let trimmed = address.trimmingCharacters(in: .whitespaces)
+        let full = trimmed.lowercased().hasPrefix("www.") ? "https://" + trimmed : trimmed
+        guard let url = URL(string: full), let scheme = url.scheme?.lowercased(),
+              ["http", "https", "mailto"].contains(scheme) else { return nil }
+        return url
+    }
+
+    /// Link an Stelle `index` (Tipp/Klick im Editor).
+    public static func link(at index: Int, in text: String) -> URL? {
+        for span in spans(in: text) {
+            guard case .link(let url) = span.kind,
+                  index >= span.range.location, index < NSMaxRange(span.range) else { continue }
+            return linkURL(url)
+        }
+        return nil
+    }
+
     /// Alle `#tags` im Text (ohne `#`), ohne Doppelte (Gross/klein egal).
     public static func tags(in text: String) -> [String] {
         var seen = Set<String>()
@@ -92,7 +114,7 @@ public enum MarkdownSyntax {
         } else if let m = Patterns.checkbox.firstMatch(in: text, range: line) {
             let box = m.range(at: 3)
             let checked = (text as NSString).substring(with: box).lowercased() == "[x]"
-            spans.append(MarkdownSpan(.listMarker, m.range(at: 2)))
+            spans.append(MarkdownSpan(.hiddenMarker, NSRange(m.range(at: 2).location..<box.location)))
             spans.append(MarkdownSpan(.checkbox(checked: checked), box))
             contentStart = NSMaxRange(m.range)
             if checked, NSMaxRange(line) > contentStart {
@@ -133,6 +155,32 @@ public enum MarkdownSyntax {
             spans.append(MarkdownSpan(.syntax, m.range))
         }
 
+        // Links: zuerst `[Text](Adresse)`, dann eingetippte Adressen. Beides
+        // ist danach geschützt, damit `_` oder `#` in Adressen nichts formatieren.
+        let ns = text as NSString
+        for m in Patterns.link.matches(in: text, range: range) where isFree(m.range) {
+            let label = m.range(at: 1)
+            // Nur die Adresse schützen: Die Beschriftung darf fett oder kursiv sein.
+            protected.append(NSRange(NSMaxRange(label)..<NSMaxRange(m.range)))
+            spans.append(MarkdownSpan(.link(url: ns.substring(with: m.range(at: 2))), label))
+            spans.append(MarkdownSpan(.syntax, NSRange(location: m.range.location, length: 1)))
+            spans.append(MarkdownSpan(.syntax, NSRange(NSMaxRange(label)..<NSMaxRange(m.range))))
+        }
+        for m in Patterns.bareURL.matches(in: text, range: range) where isFree(m.range) {
+            var found = m.range
+            // Satzzeichen am Ende gehören nicht zur Adresse («Siehe hebera.ch.»).
+            // Eine schliessende Klammer nur, wenn sie in der Adresse geöffnet wurde
+            // («(siehe www.hebera.ch)» gegenüber «…/Wiki_(Begriff)»).
+            while found.length > 0, let last = ns.substring(with: NSRange(location: NSMaxRange(found) - 1, length: 1)).first {
+                let address = ns.substring(with: found)
+                let unbalanced = last == ")" && address.filter({ $0 == "(" }).count < address.filter({ $0 == ")" }).count
+                guard ".,;:!?'\"".contains(last) || unbalanced else { break }
+                found.length -= 1
+            }
+            protected.append(found)
+            spans.append(MarkdownSpan(.link(url: ns.substring(with: found)), found))
+        }
+
         var boldMarkers: [NSRange] = []
         for m in Patterns.bold.matches(in: text, range: range) where isFree(m.range) {
             let open = NSRange(location: m.range.location, length: 2)
@@ -156,13 +204,6 @@ public enum MarkdownSyntax {
             spans.append(MarkdownSpan(.syntax, NSRange(location: NSMaxRange(m.range) - 2, length: 2)))
         }
 
-        for m in Patterns.link.matches(in: text, range: range) where isFree(m.range) {
-            let label = m.range(at: 1)
-            spans.append(MarkdownSpan(.link, label))
-            spans.append(MarkdownSpan(.syntax, NSRange(location: m.range.location, length: 1)))
-            spans.append(MarkdownSpan(.syntax, NSRange(NSMaxRange(label)..<NSMaxRange(m.range))))
-        }
-
         for m in Patterns.tag.matches(in: text, range: range) where isFree(m.range) {
             let name = (text as NSString).substring(with: m.range(at: 1))
             spans.append(MarkdownSpan(.tag(name), m.range))
@@ -183,6 +224,8 @@ public enum MarkdownSyntax {
         static let italic = regex(#"(?<![*_\w])([*_])(?=\S)(.+?)(?<=\S)\1(?![*_\w])"#)
         static let strikethrough = regex(#"~~(?=\S)(.+?)(?<=\S)~~"#)
         static let link = regex(#"\[([^\]\n]+)\]\(([^)\s]+)\)"#)
+        /// `https://…`, `http://…` oder `www.…`, nicht mitten in einem Wort oder einer Mailadresse.
+        static let bareURL = regex(#"(?<![\w@/.])(?:https?://|www\.)[^\s<>\[\]]+"#)
         /// Wie Obsidian: Buchstaben, Ziffern, `_`, `-`, `/`, aber nicht nur Ziffern.
         static let tag = regex(#"(?<![\w#/&])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)"#)
 

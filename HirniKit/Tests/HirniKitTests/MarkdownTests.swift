@@ -37,7 +37,9 @@ struct MarkdownSyntaxTests {
         #expect(spans.contains(MarkdownSpan(.checkbox(checked: false), NSRange(location: 2, length: 3))))
         #expect(texts(.checkbox(checked: true), in: text) == ["[x]"])
         #expect(texts(.doneItem, in: text) == ["erledigt"])
-        #expect(texts(.listMarker, in: text) == ["-", "-", "-"])
+        // Vor Checkboxen wird «- » ausgeblendet, normale Listen behalten den Strich.
+        #expect(texts(.hiddenMarker, in: text) == ["- ", "- "])
+        #expect(texts(.listMarker, in: text) == ["-"])
     }
 
     @Test func codeBlockHasNoInlineMarkup() {
@@ -50,8 +52,27 @@ struct MarkdownSyntaxTests {
     @Test func linksAndQuotes() {
         let text = "> Zitat mit [Link](https://hebera.ch)"
         #expect(texts(.quote, in: text) == [text])
-        #expect(texts(.link, in: text) == ["Link"])
+        #expect(texts(.link(url: "https://hebera.ch"), in: text) == ["Link"])
         #expect(texts(.syntax, in: text) == [">", "[", "](https://hebera.ch)"])
+    }
+
+    @Test func bareURLsBecomeLinks() {
+        let text = "Siehe https://hebera.ch/a_b_c#teil. Oder www.sbb.ch, und (https://x.ch/Wiki_(Begriff)) sowie mail@www.ch"
+        let links = MarkdownSyntax.spans(in: text).compactMap { span -> String? in
+            if case .link(let url) = span.kind { return url } else { return nil }
+        }
+        #expect(links == ["https://hebera.ch/a_b_c#teil", "www.sbb.ch", "https://x.ch/Wiki_(Begriff)"])
+        // Unterstriche und # in Adressen sind weder kursiv noch Tags.
+        #expect(texts(.italic, in: text).isEmpty)
+        #expect(MarkdownSyntax.tags(in: text).isEmpty)
+    }
+
+    @Test func linkAtIndexAndNormalizedURL() {
+        let text = "Seite www.sbb.ch und [Bern](https://bern.ch)"
+        #expect(MarkdownSyntax.link(at: 8, in: text)?.absoluteString == "https://www.sbb.ch")
+        #expect(MarkdownSyntax.link(at: 23, in: text)?.absoluteString == "https://bern.ch")
+        #expect(MarkdownSyntax.link(at: 2, in: text) == nil)
+        #expect(MarkdownSyntax.linkURL("javascript:alert(1)") == nil)
     }
 
     @Test(arguments: [

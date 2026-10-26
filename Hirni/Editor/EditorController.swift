@@ -115,6 +115,12 @@ final class EditorController {
         return true
     }
 
+    /// Link an Position `index`, z. B. zum Öffnen beim Antippen.
+    func link(at index: Int) -> URL? {
+        guard let text = currentText else { return nil }
+        return MarkdownSyntax.link(at: index, in: text)
+    }
+
     /// Tipp/Klick an Position `index`: Liegt dort eine Checkbox, wird sie umgeschaltet.
     func toggleCheckbox(at index: Int) -> Bool {
         guard let text = currentText, let selection = currentSelection,

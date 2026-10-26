@@ -134,7 +134,26 @@ struct MarkdownTextView: UIViewRepresentable {
                   let position = textView.closestPosition(to: recognizer.location(in: textView))
             else { return }
             let index = textView.offset(from: textView.beginningOfDocument, to: position)
-            _ = parent.controller.toggleCheckbox(at: index)
+            if parent.controller.toggleCheckbox(at: index) { return }
+            // Ein Tipp auf einen Link öffnet ihn (wie in Apple Notizen). Die
+            // Stelle liegt zwischen zwei Zeichen, darum beide prüfen, und nur,
+            // wenn der Finger wirklich auf dem Zeichen liegt (nicht daneben).
+            let point = recognizer.location(in: textView)
+            for candidate in [index, index - 1] {
+                if let url = parent.controller.link(at: candidate), rect(ofCharacterAt: candidate, in: textView).contains(point) {
+                    UIApplication.shared.open(url)
+                    return
+                }
+            }
+        }
+
+        private func rect(ofCharacterAt index: Int, in textView: UITextView) -> CGRect {
+            guard index >= 0, index < textView.textStorage.length else { return .null }
+            let layoutManager = textView.layoutManager
+            let glyphs = layoutManager.glyphRange(forCharacterRange: NSRange(location: index, length: 1), actualCharacterRange: nil)
+            return layoutManager.boundingRect(forGlyphRange: glyphs, in: textView.textContainer)
+                .offsetBy(dx: textView.textContainerInset.left, dy: textView.textContainerInset.top)
+                .insetBy(dx: -3, dy: -3)
         }
 
         func gestureRecognizer(

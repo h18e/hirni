@@ -100,6 +100,12 @@ enum MarkdownStyler {
             ], range: range)
         case .listMarker:
             storage.addAttribute(.foregroundColor, value: Colors.secondary, range: range)
+        case .hiddenMarker:
+            // Fast ohne Breite und unsichtbar: Vor der Checkbox steht kein Strich.
+            storage.addAttributes([
+                .font: PlatformFont.systemFont(ofSize: 0.1),
+                .foregroundColor: PlatformColor.clear,
+            ], range: range)
         case .checkbox:
             storage.addAttributes([
                 .foregroundColor: Colors.accent,
@@ -110,11 +116,15 @@ enum MarkdownStyler {
                 .foregroundColor: Colors.secondary,
                 .strikethroughStyle: NSUnderlineStyle.single.rawValue,
             ], range: range)
-        case .link:
+        case .link(let address):
             storage.addAttributes([
                 .foregroundColor: Colors.accent,
                 .underlineStyle: NSUnderlineStyle.single.rawValue,
             ], range: range)
+            #if os(macOS)
+            // Am Mac öffnet ein Klick den Link (Zeiger wird zur Hand).
+            if let url = MarkdownSyntax.linkURL(address) { storage.addAttribute(.link, value: url, range: range) }
+            #endif
         case .tag:
             storage.addAttributes([
                 .foregroundColor: Colors.accent,
