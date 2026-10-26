@@ -23,6 +23,13 @@ public struct DatabaseEmbed: Equatable, Sendable {
     /// Die schliessende ```-Zeile: Darunter erscheint die Ansicht.
     public let closingLine: NSRange
 
+    public init(database: String, view: String?, range: NSRange, closingLine: NSRange) {
+        self.database = database
+        self.view = view
+        self.range = range
+        self.closingLine = closingLine
+    }
+
     /// Erkennt alle vollständigen `hirni-db`-Blöcke. Blöcke ohne `datenbank`
     /// zählen trotzdem (mit leerem Namen), damit der Editor einen Hinweis zeigt.
     public static func blocks(in text: String) -> [DatabaseEmbed] {

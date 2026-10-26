@@ -7,6 +7,12 @@ public struct QueryResult: Equatable, Sendable {
         /// `nil`, wenn nicht gruppiert wird.
         public let title: String?
         public let rows: [Row]
+
+        public init(id: String, title: String?, rows: [Row]) {
+            self.id = id
+            self.title = title
+            self.rows = rows
+        }
     }
 
     public let groups: [Group]

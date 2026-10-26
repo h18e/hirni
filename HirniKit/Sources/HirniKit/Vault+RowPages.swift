@@ -37,16 +37,24 @@ extension Vault {
     }
 
     /// Liefert die Seite der Zeile oder legt sie an. Der Dateiname kommt vom
-    /// Titel der Zeile (erstes Feld), sonst «Eintrag».
-    public func rowPage(for database: URL, rowID: String, title: String) throws -> URL {
+    /// Titel der Zeile (erstes Feld), sonst «Eintrag». Mit `template` wird
+    /// der Text aus der Vorlage übernommen, `values` füllt `{{Feldname}}` aus.
+    public func rowPage(
+        for database: URL, rowID: String, title: String,
+        template: URL? = nil, values: [String: String] = [:], now: Date = .now
+    ) throws -> URL {
         if let existing = rowPages(for: database)[rowID] { return existing }
         let folder = Self.rowPagesFolder(for: database)
         try Coordinated.write(folder, options: .forReplacing) { url in
             try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         }
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let text = Frontmatter.setting(Self.rowKey, to: rowID, in: "")
-        return try createNote(in: folder, title: trimmed.isEmpty ? "Eintrag" : trimmed, text: text)
+        let name = trimmed.isEmpty ? "Eintrag" : trimmed
+        let body = try template.map {
+            TemplateFiller.noteText(fromTemplate: try readNote(at: $0), title: name, date: now, values: values)
+        } ?? ""
+        let text = Frontmatter.setting(Self.rowKey, to: rowID, in: body)
+        return try createNote(in: folder, title: name, text: text)
     }
 
     /// Nach Umbenennen oder Verschieben einer Datenbank zieht ihr Seiten-Ordner

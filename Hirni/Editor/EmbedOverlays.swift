@@ -19,6 +19,8 @@ final class EmbedOverlays {
     static let placeholderHeight: CGFloat = 160
     static let missingSize: CGFloat = 36
     static let gap: CGFloat = 8
+    /// Kennzeichnet eingebettete Datenbank-Ansichten (Tipps dort gehören nicht dem Text).
+    static let databaseViewID = "hirni-datenbank"
 
     /// Pfad aus dem Text → Datei. Liefert `nil` für Web-Adressen und Pfade
     /// ausserhalb des hirni-Ordners.
@@ -165,6 +167,7 @@ final class EmbedOverlays {
         host.sizingOptions = []
         // Sonst verschiebt der Bildschirmrand (Dynamic Island) den Inhalt beim Scrollen.
         host.safeAreaRegions = []
+        host.view.accessibilityIdentifier = Self.databaseViewID
         var responder: UIResponder? = textView
         while let current = responder, !(current is UIViewController) { responder = current.next }
         let parent = responder as? UIViewController

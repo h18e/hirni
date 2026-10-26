@@ -6,7 +6,7 @@ import SwiftUI
 struct DatabaseRowList: View {
     let document: DatabaseDocument
     let open: (String) -> Void
-    let openPage: (String) -> Void
+    let openPage: PageOpener
 
     var body: some View {
         let result = document.result
@@ -25,7 +25,7 @@ struct DatabaseRowList: View {
                             }
                         }
                         .swipeActions(edge: .leading) {
-                            Button("Seite", systemImage: "doc.text") { openPage(row.id) }
+                            Button("Seite", systemImage: "doc.text") { openPage(row.id, nil) }
                                 .tint(.blue)
                         }
                     }

@@ -32,6 +32,18 @@ struct CellEditor: View {
             }
         case .number:
             NumberCell(field: field, raw: $raw)
+        case .checkbox where compact:
+            // In Tabellenzellen ein Kästchen statt eines Schalters (passt in schmale Spalten).
+            Button {
+                raw = CellValue.bool(raw) ? "" : CellValue.raw(bool: true)
+            } label: {
+                Image(systemName: CellValue.bool(raw) ? "checkmark.square.fill" : "square")
+                    .font(.title3)
+                    .foregroundStyle(CellValue.bool(raw) ? Color.accentColor : .secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(field.name)
+            .accessibilityValue(CellValue.bool(raw) ? "angehakt" : "nicht angehakt")
         case .checkbox:
             Toggle(field.name, isOn: Binding(
                 get: { CellValue.bool(raw) },
@@ -178,10 +190,18 @@ private struct DateCell: View {
                         }
                     }
                 }
-                Button("Datum entfernen", systemImage: "xmark.circle.fill") { raw = "" }
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.secondary)
-                    .buttonStyle(.plain)
+                #if os(iOS)
+                // Auf dem iPhone ist die Zelle zu schmal: Entfernen geht im Formular.
+                let showsClear = !compact
+                #else
+                let showsClear = true
+                #endif
+                if showsClear {
+                    Button("Datum entfernen", systemImage: "xmark.circle.fill") { raw = "" }
+                        .labelStyle(.iconOnly)
+                        .foregroundStyle(.secondary)
+                        .buttonStyle(.plain)
+                }
             }
         } else if !raw.isEmpty {
             // Unbekanntes Format: zeigen, nicht verändern.

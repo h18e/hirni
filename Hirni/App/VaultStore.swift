@@ -35,6 +35,8 @@ final class VaultStore {
     private(set) var folders: [FolderNode] = []
     private(set) var notes: [NoteSummary] = []
     private(set) var trash: [TrashEntry] = []
+    /// Vorlagen aus dem Ordner «Vorlagen».
+    private(set) var templates: [NoteTemplate] = []
     /// Alle Tags im hirni-Ordner, die häufigsten zuerst (für Vorschläge).
     private(set) var tags: [String] = []
     /// Dieselben Tags mit Anzahl Notizen (für die Seitenleiste).
@@ -158,12 +160,14 @@ final class VaultStore {
             (
                 folders: Result { try vault.folderTree() },
                 notes: Result { try folderURL.map { try vault.notes(in: $0) } ?? [] },
-                trash: Result { showsTrash ? try vault.trashEntries() : [] }
+                trash: Result { showsTrash ? try vault.trashEntries() : [] },
+                templates: vault.templates()
             )
         }.value
 
         if case .success(let folders) = result.folders { self.folders = folders }
         if case .success(let trash) = result.trash { self.trash = trash }
+        if templates != result.templates { templates = result.templates }
         switch result.notes {
         case .success(let notes):
             self.notes = sidebarSelection?.isTag == true ? await taggedNotes() : notes
@@ -185,14 +189,31 @@ final class VaultStore {
 
     // MARK: - Notizen
 
-    func newNote() async {
+    /// Im Ordner «Vorlagen» entstehen neue Vorlagen, dort gibt es keine Auswahl.
+    var offersTemplates: Bool {
+        !templates.isEmpty && currentFolderURL?.standardizedFileURL != vault.templatesURL.standardizedFileURL
+    }
+
+    /// Neue Notiz, leer oder aus einer Vorlage.
+    func newNote(template: URL? = nil) async {
         if sidebarSelection == .trash { sidebarSelection = .inbox }
         let folder = currentFolderURL ?? vault.inboxURL
         // In der Tag-Ansicht bekommt die neue Notiz (in der Inbox) gleich den Tag.
-        let text = if case .tag(let tag) = sidebarSelection { "#\(tag) " } else { "" }
-        guard let url = await perform({ try $0.createNote(in: folder, text: text) }) else { return }
+        let tag = if case .tag(let tag) = sidebarSelection { tag } else { String?.none }
+        let url: URL?
+        if let template {
+            url = await perform { vault in
+                let url = try vault.createNote(in: folder, fromTemplate: template)
+                if let tag { try vault.writeNote("#\(tag) " + vault.readNote(at: url), to: url) }
+                return url
+            }
+        } else {
+            url = await perform({ try $0.createNote(in: folder, text: tag.map { "#\($0) " } ?? "") })
+        }
+        guard let url else { return }
         await reload()
-        justCreatedNote = url
+        // Aus einer Vorlage hat die Notiz schon einen Titel.
+        if template == nil { justCreatedNote = url }
         selectedNote = url
     }
 
@@ -326,8 +347,10 @@ final class VaultStore {
     }
 
     /// Seite der Zeile, wird bei Bedarf angelegt.
-    func rowPage(for database: URL, rowID: String, title: String) async -> URL? {
-        guard let page = await perform({ try $0.rowPage(for: database, rowID: rowID, title: title) }) else { return nil }
+    func rowPage(for database: URL, rowID: String, title: String, template: URL?, values: [String: String]) async -> URL? {
+        guard let page = await perform({
+            try $0.rowPage(for: database, rowID: rowID, title: title, template: template, values: values)
+        }) else { return nil }
         await reload()
         return page
     }

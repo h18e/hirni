@@ -11,7 +11,8 @@ struct VaultTests {
         try test.write("", to: ".obsidian/config")
 
         let tree = try test.vault.folderTree()
-        #expect(tree.map(\.name) == ["Arbeit", "Privat"])
+        // «Vorlagen» ist ein normaler, sichtbarer Ordner.
+        #expect(tree.map(\.name) == ["Arbeit", "Privat", "Vorlagen"])
         #expect(tree[1].children.map(\.name) == ["Ferien"])
         #expect(tree[1].children[0].childrenOrNil == nil)
     }

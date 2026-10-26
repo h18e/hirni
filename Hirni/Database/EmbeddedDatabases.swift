@@ -14,6 +14,8 @@ final class EmbeddedDatabases {
     @ObservationIgnored var note: URL?
     /// Höhe oder Inhalt hat sich geändert: Lücken neu berechnen.
     @ObservationIgnored var onLayoutChange: () -> Void = {}
+    /// Im Kasten wurde eine andere Ansicht gewählt: Block in der Notiz anpassen.
+    @ObservationIgnored var onViewChange: (_ embed: DatabaseEmbed, _ view: String) -> Void = { _, _ in }
 
     /// Eintrag, dessen Formular die Notiz gerade zeigt.
     var editingRow: EditingRow?
@@ -80,6 +82,20 @@ final class EmbeddedDatabases {
         return await Task.detached { vault.resolveDatabase(reference, from: note) }.value
     }
 
+    /// Die Ansicht im Kasten wurde gewechselt (auch neu angelegt oder
+    /// umbenannt). Das Dokument zieht unter den neuen Schlüssel um, damit es
+    /// nach dem Anpassen des Blocks nicht neu geladen wird.
+    func viewChanged(_ embed: DatabaseEmbed, from old: String, to new: String) {
+        guard old != new, (embed.view ?? old) != new else { return }
+        let target = DatabaseEmbed(database: embed.database, view: new, range: embed.range, closingLine: embed.closingLine)
+        if let state = states[Self.key(embed)] {
+            states[Self.key(target)] = state
+            states[Self.key(embed)] = nil
+        }
+        onViewChange(embed, new)
+        onLayoutChange()
+    }
+
     /// Nach Änderungen im hirni-Ordner: Datenbanken neu laden, fehlende neu suchen.
     func refresh() async {
         for (key, state) in states {
@@ -110,36 +126,41 @@ final class EmbeddedDatabases {
         case .loading: return Self.headerHeight + 80
         case .missing: return Self.headerHeight + 60
         case .loaded(let document):
+            return Self.chromeHeight + contentHeight(document)
+        }
+    }
+
+    private func contentHeight(_ document: DatabaseDocument) -> CGFloat {
             switch document.currentView.kind {
-            case .chart: return Self.headerHeight + 370
+            case .chart: return 370
             case .calendar:
                 #if os(iOS)
-                return Self.headerHeight + 470
+                return 470
                 #else
-                return Self.headerHeight + 640
+                return 640
                 #endif
             case .list:
                 let rows = document.result.rows.count
-                if rows == 0 { return Self.headerHeight + 60 }
-                var height = Self.headerHeight + CGFloat(min(rows, Self.maxRows)) * Self.listRowHeight
+                if rows == 0 { return 60 }
+                var height = CGFloat(min(rows, Self.maxRows)) * Self.listRowHeight
                 if rows > Self.maxRows { height += 32 }
                 if !(document.currentView.aggregates ?? [:]).isEmpty { height += 32 }
                 return height + 8
             case .table:
                 let rows = document.result.rows.count
-                if rows == 0 { return Self.headerHeight + 60 }
-                var height = Self.headerHeight + DatabaseGrid.embeddedHeight(
-                    rows: min(rows, Self.maxRows),
-                    hasFooter: !(document.currentView.aggregates ?? [:]).isEmpty
-                )
+                if rows == 0 { return 60 }
+                var height = DatabaseGrid.embeddedHeight(of: document, limit: Self.maxRows)
                 if rows > Self.maxRows { height += 32 }
                 return height
             }
-        }
     }
 
     static let headerHeight: CGFloat = 44
-    static let maxRows = 8
+    static let viewBarHeight: CGFloat = 40
+    static let optionsHeight: CGFloat = 34
+    /// Kopf, Ansichten-Leiste und Optionen zusammen.
+    static var chromeHeight: CGFloat { headerHeight + viewBarHeight + optionsHeight + 1 }
+    static let maxRows = 20
     #if os(iOS)
     static let listRowHeight: CGFloat = 56
     #else

@@ -47,6 +47,7 @@ Grundsatz: Alles ist eine normale, menschenlesbare Datei. hirni darf keine Infor
 ```
 hirni/
 ├── Inbox/                    ← neue Notizen landen hier
+├── Vorlagen/                 ← Vorlagen für neue Notizen und Zeilen-Seiten
 ├── Privat/
 │   ├── Ferien/
 │   │   ├── Packliste.md
@@ -182,6 +183,14 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Noch nicht:** Bild einfügen per Einsetzen (⌘V) und Drag'n'Drop auf dem iPhone.
 - **Speichern:** automatisch, ohne Speichern-Knopf
 
+### Vorlagen
+
+- **Ordner «Vorlagen»:** wird beim Start angelegt und erscheint wie jeder Ordner in der Seitenleiste. Jede Notiz darin ist eine Vorlage. Vorlagen werden wie Notizen angelegt, bearbeitet, umbenannt und gelöscht. Tags in Vorlagen zählen in der Tag-Liste nicht.
+- **Neue Notiz:** Gibt es Vorlagen (und ist nicht gerade der Ordner «Vorlagen» gewählt), fragt «Neue Notiz» nach: «Leere Notiz» oder eine Vorlage. Die Notiz heisst wie die Vorlage.
+- **Neue Zeilen-Seite:** «Seite anlegen» fragt ebenso nach: «Leere Seite» oder eine Vorlage. Die Seite heisst wie der Eintrag.
+- **Platzhalter** (im Text und im Namen der Vorlage, Gross/klein egal): `{{datum}}` 26.10.2026, `{{iso-datum}}` 2026-10-26, `{{zeit}}` 14:30, `{{wochentag}}` Montag, `{{titel}}` Titel der neuen Notiz. Auf Zeilen-Seiten zusätzlich `{{Feldname}}` mit dem Wert des Eintrags; ein gleichnamiges Feld (z. B. «Datum») geht dabei vor. Unbekannte Platzhalter bleiben stehen.
+- `angepinnt` und `hirni-zeile` aus dem Kopf der Vorlage werden nicht übernommen, andere Kopfzeilen schon.
+
 ### Tags und Suche
 
 - **Tags:** Die Seitenleiste zeigt unter «Tags» alle Tags mit der Anzahl Notizen, die häufigsten zuerst. Ein Tipp listet alle Notizen mit diesem Tag aus allen Ordnern, `#ferien` zeigt dabei auch `#ferien/2026`. Eine neue Notiz aus der Tag-Ansicht landet in der Inbox und hat den Tag schon drin.
@@ -194,7 +203,7 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Felder** (Knopf mit Reglern): hinzufügen, umbenennen (die Werte wandern mit), Typ ändern, Zahlenformat, Datum mit Uhrzeit, Optionen für Auswahl/Mehrfachauswahl pflegen («Option hinzufügen» legt eine leere Option an, der Cursor steht gleich darin; Optionen lassen sich direkt umbenennen, die Einträge und Filter wandern mit; leer gelassene neue Optionen fallen weg), löschen. Übernommen wird mit «Fertig». Gingen dabei Werte verloren (gelöschtes Feld, Wert passt nicht zum neuen Typ oder zu den Optionen), fragt hirni vorher nach und nennt die Anzahl.
 - **Einträge:** anlegen (+, am Mac ⇧⌘N), bearbeiten, löschen. Am Mac direkt in der Tabelle (eine Spalte pro Feld, löschen mit ⌫ oder Rechtsklick). Auf dem iPhone als Tabelle (siehe unten), ein Tipp öffnet das Formular, gelöscht wird dort mit «Eintrag löschen».
 - **Tabelle am Mac:** Ist sie schmaler als das Fenster, steht sie links oben.
-- **Tabelle auf dem iPhone:** alle sichtbaren Spalten nebeneinander, waagrecht und senkrecht scrollbar, mit Gruppen und Berechnungen. Checkboxen als Symbol, Auswahl farbig. Ein Tipp auf eine Zeile öffnet das Formular.
+- **Tabelle auf dem iPhone** (und eingebettet in Notizen): alle sichtbaren Spalten nebeneinander, waagrecht und senkrecht scrollbar, mit Gruppen und Berechnungen. Die Zellen lassen sich direkt bearbeiten. Vorne die Zeilennummer: Antippen öffnet das Formular, lange drücken (Mac: gedrückt halten) zeigt «Formular öffnen», «Seite anlegen/öffnen» und «Eintrag löschen».
 - **Spalten verschieben:** am Mac eine Spaltenüberschrift per Drag'n'Drop auf eine andere ziehen (die Spalte landet davor) oder rechts neben die letzte (ans Ende). Auf beiden Geräten auch unter «Felder» → «Reihenfolge» (iPhone: lange drücken und ziehen). Auch in eingebetteten Tabellen in Notizen lassen sich die Überschriften ziehen (iPhone: lange drücken). Die Reihenfolge gilt für Tabelle, Liste und Formular und steht so in der Datei. Das erste Feld ist der Titel eines Eintrags.
 - **Eingaben je Typ:** Text, Zahl (formatiert, z. B. «CHF 42.50»), Auswahl-Menü, Mehrfachauswahl mit Häkchen, Datum mit Kalender (optional Zeitraum), Schalter für Checkbox, URL mit Knopf zum Öffnen.
 - **Ansichten:** Leiste unter dem Titel. Antippen wechselt, + legt eine neue an, lange drücken bzw. Rechtsklick benennt um, dupliziert oder löscht. Solange es keine gespeicherte Ansicht gibt, heisst die Standardansicht «Alle». Sie wird gespeichert, sobald man etwas daran ändert. Welche Ansicht gewählt ist, merkt sich jedes Gerät nur für sich, das steht nicht in der Datei.
@@ -218,7 +227,7 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - Zeilen-Seite öffnen bzw. anlegen: im Formular «Seite anlegen»/«Seite öffnen», am Mac auch im Kontextmenü einer Zeile, auf dem iPhone mit Wischen nach rechts. Zeilen mit Seite tragen ein Dokument-Symbol, am Mac öffnet ein Klick darauf die Seite. Die Seite öffnet sich innerhalb der Datenbank, «‹» führt zurück.
 - Ansicht in eine Notiz einbetten, interaktiv angezeigt mitten im Text:
   - **Einfügen:** am Mac mit dem Tabellen-Knopf in der Fensterleiste (⇧⌘D), auf dem iPhone über die Büroklammer → «Datenbank-Ansicht». Eine Liste zeigt alle Datenbanken mit ihren Ansichten. Oben lässt sich direkt eine neue Datenbank anlegen (im Ordner der Notiz, zuerst nur mit dem Feld «Name»), die gleich eingebettet wird.
-  - **Anzeige:** Der Block bleibt klein und grau sichtbar, darunter erscheint ein Kasten mit Name und Ansicht. Tabelle: die ersten 8 Einträge mit allen sichtbaren Spalten (waagrecht scrollbar, Seiten-Symbol vorne) und die Berechnungen der Ansicht, bei mehr ein Link «… weitere». Kalender und Diagramm wie in der Datenbank, mit Blättern und Tagesblatt.
+  - **Anzeige:** Der Block bleibt klein und grau sichtbar, darunter erscheint ein Kasten mit Name, Ansichten-Leiste und Optionen (Filter, Sortierung, Gruppierung, Felder ein-/ausblenden, Berechnungen) wie in der Datenbank. Wird die Ansicht im Kasten gewechselt, angelegt oder umbenannt, passt sich die Zeile `ansicht:` an. Tabelle: die ersten 20 Einträge mit allen sichtbaren Spalten, mit Gruppen, waagrecht scrollbar, Zellen direkt bearbeitbar, unten die Berechnungen, bei mehr ein Link «… weitere». Kalender und Diagramm wie in der Datenbank, mit Blättern und Tagesblatt.
   - **Bearbeiten:** Ein Eintrag öffnet das Formular und wird direkt in der Datenbank gespeichert. Oben rechts im Kasten: «+» (neuer Eintrag), «Felder» (Felder-Editor) und «Öffnen» (ganze Datenbank).
   - Fehlt die Datenbank, steht im Kasten ein Hinweis. Änderungen anderswo (Datenbank selbst, Claude, anderes Gerät) erscheinen sofort.
 - **Zahlenfelder:** Während der Eingabe steht die blanke Zahl im Feld (`64.3`), formatiert (`CHF 64.30`) wird beim Verlassen.

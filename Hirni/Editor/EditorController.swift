@@ -91,6 +91,23 @@ final class EditorController {
         perform { MarkdownEditing.insertBlock(markdown, in: $0, selection: $1) }
     }
 
+    /// Ersetzt im Text den `hirni-db`-Block, der `embed` entspricht (gleiche
+    /// Datenbank und Ansicht), z. B. nach dem Wechsel der Ansicht im Kasten.
+    func replaceDatabaseBlock(_ embed: DatabaseEmbed, with markdown: String) {
+        perform(keepingScroll: true) { text, selection in
+            let key = EmbeddedDatabases.key(embed)
+            guard let block = DatabaseEmbed.blocks(in: text).first(where: { EmbeddedDatabases.key($0) == key }) else {
+                return TextEdit(range: NSRange(location: selection.location, length: 0), replacement: "", selection: selection)
+            }
+            // Ohne die schliessende Zeilenschaltung: Sie bleibt stehen.
+            var range = block.range
+            if (text as NSString).substring(with: range).hasSuffix("\n") { range.length -= 1 }
+            let delta = (markdown as NSString).length - range.length
+            let caret = selection.location >= NSMaxRange(range) ? selection.location + delta : selection.location
+            return TextEdit(range: range, replacement: markdown, selection: NSRange(location: max(0, caret), length: 0))
+        }
+    }
+
     func insertTag() {
         perform { text, selection in
             // Vor dem # ein Leerzeichen, falls direkt davor ein Wort steht.
@@ -172,14 +189,40 @@ final class EditorController {
 
     // MARK: - Anwenden
 
-    private func perform(_ makeEdit: (String, NSRange) -> TextEdit) {
+    private func perform(keepingScroll: Bool = false, _ makeEdit: (String, NSRange) -> TextEdit) {
         guard let text = currentText, let selection = currentSelection else { return }
-        apply(makeEdit(text, selection))
+        apply(makeEdit(text, selection), keepingScroll: keepingScroll)
     }
 
     /// Ändert den Text so, dass Rückgängig (⌘Z / Schütteln) funktioniert.
-    func apply(_ edit: TextEdit) {
+    /// `keepingScroll`: Die Ansicht springt nicht zum Cursor (Änderung kam
+    /// aus einer eingebetteten Ansicht, nicht vom Tippen).
+    func apply(_ edit: TextEdit, keepingScroll: Bool = false) {
         guard let textView else { return }
+        #if os(iOS)
+        let offset = textView.contentOffset
+        defer {
+            if keepingScroll {
+                // Die Textansicht scrollt nach einer Änderung verzögert zum
+                // Cursor, darum auch danach nochmals zurücksetzen.
+                textView.layoutIfNeeded()
+                textView.setContentOffset(offset, animated: false)
+                for delay in [0.0, 0.1, 0.3] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak textView] in
+                        textView?.setContentOffset(offset, animated: false)
+                    }
+                }
+            }
+        }
+        #else
+        let visible = textView.visibleRect.origin
+        defer {
+            if keepingScroll {
+                textView.scroll(visible)
+                DispatchQueue.main.async { [weak textView] in textView?.scroll(visible) }
+            }
+        }
+        #endif
         #if os(iOS)
         guard let start = textView.position(from: textView.beginningOfDocument, offset: edit.range.location),
               let end = textView.position(from: start, offset: edit.range.length),

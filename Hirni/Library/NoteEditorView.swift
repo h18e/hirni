@@ -89,10 +89,10 @@ struct NoteEditorView: View {
             importPhoto: { await importPhoto($0) }
         ))
         .sheet(item: editingEmbeddedRow) { row in
-            RowFormView(document: row.document, rowID: row.rowID) { id in
+            RowFormView(document: row.document, rowID: row.rowID) { id, template in
                 databases?.editingRow = nil
                 Task {
-                    if let page = await row.document.page(for: id) { store.selectedNote = page }
+                    if let page = await row.document.page(for: id, template: template) { store.selectedNote = page }
                 }
             }
         }
@@ -368,6 +368,9 @@ struct NoteEditorView: View {
         databases.note = fileURL
         let overlays = controller.overlays
         databases.onLayoutChange = { [weak overlays] in overlays?.onPreviewLoaded() }
+        databases.onViewChange = { [weak controller] embed, view in
+            controller?.replaceDatabaseBlock(embed, with: DatabaseEmbed.markdown(database: embed.database, view: view))
+        }
         overlays.databaseHeight = { [weak databases] in databases?.height(for: $0) ?? 0 }
         overlays.makeDatabaseView = { [weak databases, store] embed in
             guard let databases else { return AnyView(EmptyView()) }

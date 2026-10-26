@@ -5,6 +5,7 @@ import Foundation
 /// ```
 /// hirni/
 /// ├── Inbox/                ← neue Notizen landen hier
+/// ├── Vorlagen/            ← Vorlagen für neue Notizen und Seiten
 /// ├── <eigene Ordner>/
 /// │   └── _Anhänge/         ← Bilder und Dateien der Notizen in diesem Ordner
 /// └── _Zuletzt gelöscht/
@@ -15,6 +16,9 @@ public enum VaultLayout {
     public static let inboxFolderName = "Inbox"
     public static let trashFolderName = "_Zuletzt gelöscht"
     public static let attachmentsFolderName = "_Anhänge"
+    /// Vorlagen für neue Notizen und Zeilen-Seiten. Ein normaler, sichtbarer
+    /// Ordner: Vorlagen werden wie Notizen angelegt und bearbeitet.
+    public static let templatesFolderName = "Vorlagen"
 
     public static let noteExtension = "md"
     public static let databaseSuffix = ".hirnidb.md"
@@ -26,7 +30,7 @@ public enum VaultLayout {
     }
 
     /// Ordner, die beim ersten Start angelegt werden, falls sie fehlen.
-    public static let requiredFolders = [inboxFolderName, trashFolderName]
+    public static let requiredFolders = [inboxFolderName, trashFolderName, templatesFolderName]
 
     /// Legt die nötigen Ordner unter `root` an. Bestehende Inhalte bleiben unberührt.
     public static func prepare(root: URL, fileManager: FileManager = .default) throws {

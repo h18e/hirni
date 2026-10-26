@@ -61,10 +61,26 @@ struct NoteListView: View {
                 }
             }
             ToolbarItem(placement: .primaryAction) {
-                Button("Neue Notiz", systemImage: "square.and.pencil") {
-                    Task { await store.newNote() }
+                if store.offersTemplates {
+                    Menu {
+                        Button("Leere Notiz", systemImage: "doc") { Task { await store.newNote() } }
+                            .keyboardShortcut("n")
+                        Section("Vorlagen") {
+                            ForEach(store.templates) { template in
+                                Button(template.name, systemImage: "doc.text") {
+                                    Task { await store.newNote(template: template.url) }
+                                }
+                            }
+                        }
+                    } label: {
+                        Label("Neue Notiz", systemImage: "square.and.pencil")
+                    }
+                } else {
+                    Button("Neue Notiz", systemImage: "square.and.pencil") {
+                        Task { await store.newNote() }
+                    }
+                    .keyboardShortcut("n")
                 }
-                .keyboardShortcut("n")
             }
         }
         .refreshable { await store.reload() }

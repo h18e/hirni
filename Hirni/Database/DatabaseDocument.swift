@@ -155,11 +155,14 @@ final class DatabaseDocument {
         if pages != rowPages { rowPages = pages }
     }
 
-    /// Öffnet die Seite der Zeile, legt sie bei Bedarf an (Titel = erstes Feld).
-    func page(for rowID: String) async -> URL? {
+    /// Öffnet die Seite der Zeile, legt sie bei Bedarf an (Titel = erstes
+    /// Feld), auf Wunsch aus einer Vorlage mit den Werten des Eintrags.
+    func page(for rowID: String, template: URL? = nil) async -> URL? {
         if let page = rowPages[rowID] { return page }
         let title = database.fields.first.map { CellValue.display(value(row: rowID, field: $0.name), for: $0) } ?? ""
-        let page = await store.rowPage(for: url, rowID: rowID, title: title)
+        var values: [String: String] = [:]
+        for field in database.fields { values[field.name] = CellValue.display(value(row: rowID, field: field.name), for: field) }
+        let page = await store.rowPage(for: url, rowID: rowID, title: title, template: template, values: values)
         await refreshRowPages()
         return page
     }

@@ -85,12 +85,12 @@ struct DatabaseView: View {
             case .chart:
                 ScrollView { DatabaseChart(document: document) }
             case .list:
-                DatabaseRowList(document: document, open: { editingRow = EditingRow(id: $0) }, openPage: { showPage($0) })
+                DatabaseRowList(document: document, open: { editingRow = EditingRow(id: $0) }, openPage: { showPage($0, template: $1) })
             case .table:
                 #if os(macOS)
-                DatabaseTable(document: document, selection: $selection, openPage: { showPage($0) })
+                DatabaseTable(document: document, selection: $selection, openPage: { showPage($0, template: $1) })
                 #else
-                DatabaseGrid(document: document) { editingRow = EditingRow(id: $0) }
+                DatabaseGrid(document: document, open: { editingRow = EditingRow(id: $0) }, openPage: { showPage($0, template: $1) })
                     .overlay {
                         if document.database.rows.isEmpty {
                             ContentUnavailableView("Noch keine Einträge", systemImage: "tablecells", description: Text("Mit + oben einen Eintrag hinzufügen."))
@@ -116,9 +116,9 @@ struct DatabaseView: View {
             }
         }
         .sheet(item: $editingRow) { row in
-            RowFormView(document: document, rowID: row.id) { id in
+            RowFormView(document: document, rowID: row.id) { id, template in
                 editingRow = nil
-                showPage(id, afterSheet: true)
+                showPage(id, template: template, afterSheet: true)
             }
         }
         .navigationDestination(item: $page) { url in
@@ -137,10 +137,10 @@ struct DatabaseView: View {
 extension DatabaseView {
     /// Öffnet die Seite einer Zeile und legt sie bei Bedarf an. Aus einem
     /// Blatt heraus erst, wenn es zu ist.
-    private func showPage(_ rowID: String, afterSheet: Bool = false) {
+    private func showPage(_ rowID: String, template: URL? = nil, afterSheet: Bool = false) {
         Task {
             if afterSheet { try? await Task.sleep(for: .milliseconds(400)) }
-            page = await document?.page(for: rowID)
+            page = await document?.page(for: rowID, template: template)
         }
     }
 }
@@ -158,7 +158,7 @@ private struct EditingRow: Identifiable {
 private struct DatabaseTable: View {
     let document: DatabaseDocument
     @Binding var selection: Set<String>
-    let openPage: (String) -> Void
+    let openPage: PageOpener
 
     private let handleWidth: CGFloat = 48
 
@@ -283,7 +283,7 @@ private struct DatabaseTable: View {
                 Text("\(number)")
                     .font(.caption.monospacedDigit())
                 if document.rowPages[row.id] != nil {
-                    Button("Seite öffnen", systemImage: "doc.text") { openPage(row.id) }
+                    Button("Seite öffnen", systemImage: "doc.text") { openPage(row.id, nil) }
                         .labelStyle(.iconOnly)
                         .buttonStyle(.borderless)
                         .font(.caption2)
@@ -305,9 +305,7 @@ private struct DatabaseTable: View {
         .background(isSelected ? Color.accentColor.opacity(0.12) : (number.isMultiple(of: 2) ? Color.primary.opacity(0.03) : .clear))
         .overlay(alignment: .bottom) { Divider().opacity(0.5) }
         .contextMenu {
-            Button(document.rowPages[row.id] == nil ? "Seite anlegen" : "Seite öffnen", systemImage: "doc.text") {
-                openPage(row.id)
-            }
+            PageButton(document: document, rowID: row.id, open: openPage)
             Divider()
             Button("Löschen", systemImage: "trash", role: .destructive) {
                 document.deleteRows(selection.contains(row.id) ? selection : [row.id])
@@ -350,7 +348,7 @@ struct RowFormView: View {
     let document: DatabaseDocument
     let rowID: String
     /// Zeilen-Seite öffnen. Das Formular schliesst sich dabei.
-    let openPage: (String) -> Void
+    let openPage: PageOpener
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -367,9 +365,7 @@ struct RowFormView: View {
                     }
                 }
                 Section {
-                    Button(document.rowPages[rowID] == nil ? "Seite anlegen" : "Seite öffnen", systemImage: "doc.text") {
-                        openPage(rowID)
-                    }
+                    PageButton(document: document, rowID: rowID, open: openPage)
                 } footer: {
                     if document.rowPages[rowID] == nil {
                         Text("Eine eigene Notiz zu diesem Eintrag, für Details, Bilder und Checklisten.")

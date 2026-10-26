@@ -83,6 +83,16 @@ struct MarkdownTextView: UIViewRepresentable {
             guard let textView else { return }
             let width = textView.bounds.width - textView.textContainerInset.left - textView.textContainerInset.right
             let overlays = parent.controller.overlays
+            // Beim Neuberechnen ist der Inhalt kurz niedriger, und die
+            // Textansicht springt sonst an den Anfang (z. B. wenn eine
+            // eingebettete Ansicht ihre Höhe ändert).
+            let offset = textView.contentOffset
+            defer {
+                if textView.contentOffset.y < offset.y - 1 {
+                    textView.layoutManager.ensureLayout(for: textView.textContainer)
+                    textView.setContentOffset(offset, animated: false)
+                }
+            }
             MarkdownStyler.apply(
                 to: storage,
                 reservedHeight: { overlays.reservedHeight(for: $0, width: width) },
@@ -160,6 +170,11 @@ struct MarkdownTextView: UIViewRepresentable {
             _ gestureRecognizer: UIGestureRecognizer,
             shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
         ) -> Bool { true }
+
+        /// Tipps in einer eingebetteten Datenbank-Ansicht sind keine Tipps in den Text.
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            !sequence(first: touch.view, next: { $0?.superview }).contains { $0?.accessibilityIdentifier == EmbedOverlays.databaseViewID }
+        }
     }
 }
 

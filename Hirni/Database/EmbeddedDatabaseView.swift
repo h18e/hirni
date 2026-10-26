@@ -1,9 +1,10 @@
 import HirniKit
 import SwiftUI
 
-/// Eine Datenbank-Ansicht mitten in einer Notiz: Kopf mit Name und
-/// «Öffnen», darunter Tabelle, Kalender oder Diagramm. Einträge lassen sich
-/// antippen und im Formular bearbeiten.
+/// Eine Datenbank-Ansicht mitten in einer Notiz, mit denselben Möglichkeiten
+/// wie in der Datenbank: Ansichten wechseln und anlegen, Filter, Sortierung,
+/// Gruppierung, Felder, Zellen direkt bearbeiten. Wird die Ansicht gewechselt,
+/// passt sich die Zeile `ansicht:` im Block an.
 struct EmbeddedDatabaseView: View {
     let embed: DatabaseEmbed
     let registry: EmbeddedDatabases
@@ -11,6 +12,15 @@ struct EmbeddedDatabaseView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
+            if case .loaded(let document) = registry.state(for: embed) {
+                ViewBar(document: document)
+                    .frame(height: EmbeddedDatabases.viewBarHeight)
+                ViewOptions(document: document)
+                    .frame(height: EmbeddedDatabases.optionsHeight)
+                    .onChange(of: document.currentView.name) { old, new in
+                        registry.viewChanged(embed, from: old, to: new)
+                    }
+            }
             Divider()
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -32,10 +42,6 @@ struct EmbeddedDatabaseView: View {
                 .font(.subheadline.bold())
                 .lineLimit(1)
             if case .loaded(let document) = registry.state(for: embed) {
-                Text(document.currentView.name)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
                 Spacer()
                 Group {
                     Button("Neuer Eintrag", systemImage: "plus") {
@@ -117,9 +123,15 @@ private struct EmbeddedRows: View {
                     .foregroundStyle(.secondary)
                     .padding(12)
             } else {
-                DatabaseGrid(document: document, limit: EmbeddedDatabases.maxRows) { id in
-                    registry.editingRow = .init(document: document, rowID: id)
-                }
+                DatabaseGrid(
+                    document: document, limit: EmbeddedDatabases.maxRows,
+                    open: { registry.editingRow = .init(document: document, rowID: $0) },
+                    openPage: { id, template in
+                        Task {
+                            if let page = await document.page(for: id, template: template) { registry.store.selectedNote = page }
+                        }
+                    }
+                )
             }
             if result.rows.count > EmbeddedDatabases.maxRows {
                 Button("\(result.rows.count - EmbeddedDatabases.maxRows) weitere – Datenbank öffnen") {
@@ -131,8 +143,7 @@ private struct EmbeddedRows: View {
                 .frame(height: 32)
             }
         }
-        .onChange(of: result.rows.count) { registry.onLayoutChange() }
-        .onChange(of: document.currentView.aggregates?.isEmpty) { registry.onLayoutChange() }
+        .onChange(of: DatabaseGrid.embeddedHeight(of: document, limit: EmbeddedDatabases.maxRows)) { registry.onLayoutChange() }
     }
 }
 
