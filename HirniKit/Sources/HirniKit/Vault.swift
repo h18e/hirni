@@ -89,7 +89,7 @@ public struct Vault: Sendable {
     }
 
     /// Liest nur den Anfang der Datei – für Vorschau und YAML-Kopf reicht das.
-    private func beginning(of url: URL) -> String {
+    func beginning(of url: URL) -> String {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return "" }
         defer { try? handle.close() }
         let data = (try? handle.read(upToCount: 2048)) ?? Data()
@@ -171,6 +171,7 @@ public struct Vault: Sendable {
             excluding: url
         )
         try moveIfNeeded(from: url, to: target)
+        if Self.isDatabase(url) { try moveRowPages(from: url, to: target) }
         return target
     }
 

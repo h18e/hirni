@@ -13,11 +13,15 @@ struct DatabaseView: View {
     @State private var editingRow: EditingRow?
     @State private var showsFields = false
     @State private var selection = Set<String>()
+    /// Geöffnete Zeilen-Seite.
+    @State private var page: URL?
 
     var body: some View {
         Group {
             if let document, document.isLoaded {
-                content(document)
+                // Eigener Stapel für die Zeilen-Seite (mit Zurück-Knopf): Die
+                // Detailspalte hat keine Spalte mehr, in die sie sich öffnen könnte.
+                NavigationStack { content(document) }
             } else if let error = document?.loadError {
                 ContentUnavailableView("Datenbank lässt sich nicht öffnen", systemImage: "exclamationmark.triangle", description: Text(error))
             } else {
@@ -82,9 +86,9 @@ struct DatabaseView: View {
                 ScrollView { DatabaseChart(document: document) }
             case .table:
                 #if os(macOS)
-                DatabaseTable(document: document, selection: $selection)
+                DatabaseTable(document: document, selection: $selection, openPage: { showPage($0) })
                 #else
-                DatabaseRowList(document: document) { editingRow = EditingRow(id: $0) }
+                DatabaseRowList(document: document, open: { editingRow = EditingRow(id: $0) }, openPage: { showPage($0) })
                 #endif
             }
         }
@@ -103,10 +107,31 @@ struct DatabaseView: View {
             }
         }
         .sheet(item: $editingRow) { row in
-            RowFormView(document: document, rowID: row.id)
+            RowFormView(document: document, rowID: row.id) { id in
+                editingRow = nil
+                showPage(id, afterSheet: true)
+            }
+        }
+        .navigationDestination(item: $page) { url in
+            NoteEditorView(url: url)
+        }
+        .onChange(of: page) { _, page in
+            // Die Seite hatte sich beim Store angemeldet, jetzt wieder die Datenbank.
+            if page == nil { document.register() }
         }
         .sheet(isPresented: $showsFields) {
             FieldsEditorView(document: document)
+        }
+    }
+}
+
+extension DatabaseView {
+    /// Öffnet die Seite einer Zeile und legt sie bei Bedarf an. Aus einem
+    /// Blatt heraus erst, wenn es zu ist.
+    private func showPage(_ rowID: String, afterSheet: Bool = false) {
+        Task {
+            if afterSheet { try? await Task.sleep(for: .milliseconds(400)) }
+            page = await document?.page(for: rowID)
         }
     }
 }
@@ -124,8 +149,9 @@ private struct EditingRow: Identifiable {
 private struct DatabaseTable: View {
     let document: DatabaseDocument
     @Binding var selection: Set<String>
+    let openPage: (String) -> Void
 
-    private let handleWidth: CGFloat = 36
+    private let handleWidth: CGFloat = 48
 
     var body: some View {
         let result = document.result
@@ -233,13 +259,23 @@ private struct DatabaseTable: View {
         let isSelected = selection.contains(row.id)
         return HStack(spacing: 0) {
             // Zeilennummer: Klick wählt die Zeile (⌘-Klick: mehrere).
-            Text("\(number)")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(isSelected ? .white : .secondary)
-                .frame(width: handleWidth, height: 30)
-                .background(isSelected ? Color.accentColor : .clear)
-                .contentShape(Rectangle())
-                .onTapGesture { toggle(row.id) }
+            // Daneben das Symbol der Zeilen-Seite, falls es eine gibt.
+            HStack(spacing: 2) {
+                Text("\(number)")
+                    .font(.caption.monospacedDigit())
+                if document.rowPages[row.id] != nil {
+                    Button("Seite öffnen", systemImage: "doc.text") { openPage(row.id) }
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.borderless)
+                        .font(.caption2)
+                        .help("Seite öffnen")
+                }
+            }
+            .foregroundStyle(isSelected ? .white : .secondary)
+            .frame(width: handleWidth, height: 30)
+            .background(isSelected ? Color.accentColor : .clear)
+            .contentShape(Rectangle())
+            .onTapGesture { toggle(row.id) }
             ForEach(fields) { field in
                 CellEditor(field: field, raw: binding(row: row.id, field: field.name), compact: true)
                     .padding(.horizontal, 8)
@@ -250,6 +286,10 @@ private struct DatabaseTable: View {
         .background(isSelected ? Color.accentColor.opacity(0.12) : (number.isMultiple(of: 2) ? Color.primary.opacity(0.03) : .clear))
         .overlay(alignment: .bottom) { Divider().opacity(0.5) }
         .contextMenu {
+            Button(document.rowPages[row.id] == nil ? "Seite anlegen" : "Seite öffnen", systemImage: "doc.text") {
+                openPage(row.id)
+            }
+            Divider()
             Button("Löschen", systemImage: "trash", role: .destructive) {
                 document.deleteRows(selection.contains(row.id) ? selection : [row.id])
                 selection = []
@@ -290,6 +330,7 @@ private struct DatabaseTable: View {
 private struct DatabaseRowList: View {
     let document: DatabaseDocument
     let open: (String) -> Void
+    let openPage: (String) -> Void
 
     var body: some View {
         let result = document.result
@@ -299,13 +340,17 @@ private struct DatabaseRowList: View {
                 Section {
                     ForEach(group.rows) { row in
                         Button { open(row.id) } label: {
-                            RowSummary(fields: fields, row: row)
+                            RowSummary(fields: fields, row: row, hasPage: document.rowPages[row.id] != nil)
                         }
                         .tint(.primary)
                         .swipeActions {
                             Button("Löschen", systemImage: "trash", role: .destructive) {
                                 document.deleteRows([row.id])
                             }
+                        }
+                        .swipeActions(edge: .leading) {
+                            Button("Seite", systemImage: "doc.text") { openPage(row.id) }
+                                .tint(.blue)
                         }
                     }
                 } header: {
@@ -341,8 +386,21 @@ private struct DatabaseRowList: View {
 private struct RowSummary: View {
     let fields: [Field]
     let row: Row
+    let hasPage: Bool
 
     var body: some View {
+        HStack {
+            details
+            if hasPage {
+                Spacer()
+                Image(systemName: "doc.text")
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Hat eine Seite")
+            }
+        }
+    }
+
+    private var details: some View {
         VStack(alignment: .leading, spacing: 3) {
             let first = fields.first.map { CellValue.display(row[$0.name], for: $0) } ?? ""
             Text(first.isEmpty ? "Ohne Namen" : first)
@@ -367,6 +425,8 @@ private struct RowSummary: View {
 struct RowFormView: View {
     let document: DatabaseDocument
     let rowID: String
+    /// Zeilen-Seite öffnen. Das Formular schliesst sich dabei.
+    let openPage: (String) -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -380,6 +440,15 @@ struct RowFormView: View {
                         ))
                     } label: {
                         Label(field.name, systemImage: field.type.systemImage)
+                    }
+                }
+                Section {
+                    Button(document.rowPages[rowID] == nil ? "Seite anlegen" : "Seite öffnen", systemImage: "doc.text") {
+                        openPage(rowID)
+                    }
+                } footer: {
+                    if document.rowPages[rowID] == nil {
+                        Text("Eine eigene Notiz zu diesem Eintrag, für Details, Bilder und Checklisten.")
                     }
                 }
                 Section {

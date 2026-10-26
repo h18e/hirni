@@ -103,6 +103,10 @@ hirni/
   - **Ansichten** stehen unter `ansichten:`, ebenfalls eine JSON-Zeile pro Ansicht: `name`, `typ` (`tabelle`, `kalender`, `diagramm`), optional `filter` (Liste aus `feld`, `bedingung`, `wert`), `sortierung` (Liste aus `feld`, `absteigend`), `gruppierung` (Feldname), `berechnungen` (Feldname → `anzahl`, `summe`, `durchschnitt`, `min`, `max`), `ausgeblendet` (Feldnamen), für Kalender `datumsfeld` und `farbfeld`, für Diagramme `diagramm` mit `art` (`balken`, `linie`), `x` (Feld der waagrechten Achse), `zeitraster` (`tag`, `woche`, `monat`, `jahr`, nur bei Datumsfeldern), `y` (`anzahl`, `summe`, `durchschnitt`), `wert` (Zahlenfeld für Summe/Durchschnitt) und optional `aufteilen` (Auswahl-, Mehrfachauswahl- oder Checkbox-Feld). Bedingungen: `ist`, `ist nicht`, `enthält`, `enthält nicht`, `ist leer`, `ist nicht leer`, `>`, `<`, `≥`, `≤`, `vor`, `nach`, `angehakt`, `nicht angehakt`. Eine unlesbare Ansicht wird übersprungen, die Daten bleiben sichtbar.
   - **Robust:** Werte, die nicht zum Feldtyp passen, bleiben unverändert stehen und werden so angezeigt. Spalten ohne Feld im Kopf (z. B. von Hand ergänzt) werden zu Textfeldern. Zeilen ohne oder mit doppelter `id` bekommen eine neue. Eine Datei mit unlesbarem Kopf wird angezeigt, aber nicht verändert.
 - **Zeilen-Seite:** Zu jeder Zeile lässt sich optional eine Notiz anlegen, im Ordner `Name/` neben der Datenbank. Im Frontmatter steht `hirni-zeile: <id>`.
+  - Die Zuordnung läuft nur über die `id`. Die Seite darf umbenannt werden, und Claude kann Seiten selbst anlegen (Notiz mit diesem Kopf im Ordner). Gibt es zu einer `id` mehrere Seiten, gilt die alphabetisch erste.
+  - Neue Seiten heissen wie die Zeile (erstes Feld), sonst «Eintrag». Bei gleichem Namen gibt es eine Nummer.
+  - Wird die Datenbank umbenannt oder verschoben, zieht der Ordner mit, falls der neue Name frei ist.
+  - Wird eine Zeile oder die Datenbank gelöscht, bleiben die Seiten als normale Notizen stehen.
 - **Eingebettete Ansicht in einer Notiz:** ein Codeblock, der in anderen Programmen lesbar bleibt:
 
   ````
@@ -202,7 +206,7 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Gleichzeitige Änderungen** (anderes Gerät, Claude): werden Zelle für Zelle zusammengeführt. Haben beide Seiten dieselbe Zelle verschieden geändert, bleibt die Eingabe in der App, und ein Hinweis nennt die Anzahl.
 - Ansichten anlegen, umbenennen und wechseln, Filter, Sortierung und Gruppierung einstellen
 - Tabelle, Kalender und Diagramm wie im Datenmodell beschrieben
-- Zeilen-Seite öffnen bzw. anlegen
+- Zeilen-Seite öffnen bzw. anlegen: im Formular «Seite anlegen»/«Seite öffnen», am Mac auch im Kontextmenü einer Zeile, auf dem iPhone mit Wischen nach rechts. Zeilen mit Seite tragen ein Dokument-Symbol, am Mac öffnet ein Klick darauf die Seite. Die Seite öffnet sich innerhalb der Datenbank, «‹» führt zurück.
 - Ansicht in eine Notiz einbetten, interaktiv angezeigt mitten im Text
 
 ### Sync und Konflikte

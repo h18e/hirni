@@ -311,7 +311,8 @@ struct NoteEditorView: View {
         if let newURL {
             self.fileURL = newURL
             savedModified = await store.modificationDate(of: newURL) ?? savedModified
-            store.selectedNote = newURL
+            // Als Zeilen-Seite in einer Datenbank geöffnet, bleibt die Datenbank gewählt.
+            if store.selectedNote == fileURL { store.selectedNote = newURL }
             register(for: newURL)
         }
         title = Vault.title(of: self.fileURL ?? fileURL)

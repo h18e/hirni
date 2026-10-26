@@ -37,6 +37,7 @@ extension Vault {
         if let text, let updated, updated != text {
             try writeNote(updated, to: target)
         }
+        if Self.isDatabase(url) { try moveRowPages(from: url, to: target) }
         return target
     }
 

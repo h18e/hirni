@@ -311,6 +311,20 @@ final class VaultStore {
         selectedNote = copy
     }
 
+    // MARK: - Zeilen-Seiten
+
+    func rowPages(for database: URL) async -> [String: URL] {
+        let vault = vault
+        return await Task.detached { vault.rowPages(for: database) }.value
+    }
+
+    /// Seite der Zeile, wird bei Bedarf angelegt.
+    func rowPage(for database: URL, rowID: String, title: String) async -> URL? {
+        guard let page = await perform({ try $0.rowPage(for: database, rowID: rowID, title: title) }) else { return nil }
+        await reload()
+        return page
+    }
+
     func setPinned(_ pinned: Bool, note url: URL) async {
         await openEditor?.flushIfShowing(url)
         await perform { try $0.setPinned(pinned, note: url) }

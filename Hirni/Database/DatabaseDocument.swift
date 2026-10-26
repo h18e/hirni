@@ -18,6 +18,8 @@ final class DatabaseDocument {
     private(set) var loadError: String?
     /// Hinweis nach einem Zusammenführen mit Konflikten.
     var mergeNotice: String?
+    /// Zeilen mit eigener Seite: `id` → Notiz.
+    private(set) var rowPages: [String: URL] = [:]
 
     /// Gewählte Ansicht (nur auf diesem Gerät, wird nicht gespeichert).
     private(set) var selectedViewName: String?
@@ -136,11 +138,31 @@ final class DatabaseDocument {
             loadError = "Die Datei ist keine lesbare Textdatei (UTF-8). hirni verändert sie nicht."
         }
         register()
+        await refreshRowPages()
+    }
+
+    // MARK: - Zeilen-Seiten
+
+    /// Seiten können auch anderswo entstehen (Claude, anderes Gerät), darum
+    /// bei jeder Änderung im hirni-Ordner neu nachsehen.
+    func refreshRowPages() async {
+        let pages = await store.rowPages(for: url)
+        if pages != rowPages { rowPages = pages }
+    }
+
+    /// Öffnet die Seite der Zeile, legt sie bei Bedarf an (Titel = erstes Feld).
+    func page(for rowID: String) async -> URL? {
+        if let page = rowPages[rowID] { return page }
+        let title = database.fields.first.map { CellValue.display(value(row: rowID, field: $0.name), for: $0) } ?? ""
+        let page = await store.rowPage(for: url, rowID: rowID, title: title)
+        await refreshRowPages()
+        return page
     }
 
     /// Wurde die Datei anderswo geändert und gibt es hier nichts Ungespeichertes,
     /// wird neu geladen. Sonst führt `save()` zusammen.
     func reloadIfChangedElsewhere() async {
+        await refreshRowPages()
         guard isLoaded, let modified = await store.modificationDate(of: url),
               modified.timeIntervalSince(savedModified) > 0.5
         else { return }
@@ -294,10 +316,12 @@ final class DatabaseDocument {
         savedModified = await store.modificationDate(of: newURL) ?? savedModified
         register()
         store.selectedNote = newURL
+        await refreshRowPages()
     }
 
     /// Beim Store anmelden: Vor Verschieben/Löschen wird zuerst gespeichert.
-    private func register() {
+    /// Auch nach dem Schliessen einer Zeilen-Seite, die sich angemeldet hatte.
+    func register() {
         store.openEditor = EditorHandle(
             url: url,
             flush: { [weak self] in await self?.save() },
