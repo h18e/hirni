@@ -24,8 +24,15 @@ public enum NotePreview {
         return cleaned.count > maxLength ? String(cleaned.prefix(maxLength)) + "…" : cleaned
     }
 
-    /// `![](_Anhänge/foto.jpg)` → `[Bild]`, damit die Vorschau lesbar bleibt.
+    /// `![](_Anhänge/foto.jpg)` → `[Bild]`, ein `hirni-db`-Block →
+    /// `[Datenbank: Ausgaben]`, damit die Vorschau lesbar bleibt.
     private static func replacingEmbeds(in text: String) -> String {
+        let blocks = NSMutableString(string: text)
+        for block in DatabaseEmbed.blocks(in: text).reversed() {
+            let name = (block.database as NSString).lastPathComponent
+            blocks.replaceCharacters(in: block.range, with: name.isEmpty ? "[Datenbank]" : "[Datenbank: \(name)]")
+        }
+        let text = blocks as String
         let result = NSMutableString(string: text)
         for embed in AttachmentLinks.embeds(in: text).reversed() {
             let label = switch AttachmentLinks.kind(of: embed.path) {

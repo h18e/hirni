@@ -1,4 +1,5 @@
 import HirniKit
+import SwiftUI
 
 #if os(iOS)
 import UIKit
@@ -6,11 +7,11 @@ import UIKit
 import AppKit
 #endif
 
-/// Zeigt eingebettete Bilder und PDFs im Editor an.
+/// Zeigt eingebettete Bilder, PDFs und Datenbank-Ansichten im Editor an.
 ///
-/// Der Text bleibt Markdown (`![](_Anhänge/foto.jpg)`). Unter dieser Zeile
-/// lässt die Hervorhebung eine Lücke frei (Absatzabstand), und hier wird
-/// eine Bildansicht genau in diese Lücke gelegt.
+/// Der Text bleibt Markdown (`![](_Anhänge/foto.jpg)` bzw. ein
+/// `hirni-db`-Block). Unter dieser Zeile lässt die Hervorhebung eine Lücke
+/// frei (Absatzabstand), und hier wird eine Ansicht genau in diese Lücke gelegt.
 @MainActor
 final class EmbedOverlays {
     static let maxImageHeight: CGFloat = 360
@@ -26,7 +27,17 @@ final class EmbedOverlays {
     /// Eine Vorschau ist fertig geladen: Lücken neu berechnen und Bilder setzen.
     var onPreviewLoaded: () -> Void = {}
 
+    /// Platz unter einem `hirni-db`-Block (inklusive Abstand).
+    var databaseHeight: (DatabaseEmbed) -> CGFloat = { _ in 0 }
+    /// Die SwiftUI-Ansicht für einen `hirni-db`-Block.
+    var makeDatabaseView: (DatabaseEmbed) -> AnyView = { _ in AnyView(EmptyView()) }
+
     private var views: [EmbedImageView] = []
+    #if os(iOS)
+    private var databaseViews: [(key: String, host: UIHostingController<AnyView>)] = []
+    #else
+    private var databaseViews: [(key: String, host: NSHostingView<AnyView>)] = []
+    #endif
 
     /// Wie viel Platz unter der Zeile mit `path` frei bleiben soll.
     func reservedHeight(for path: String, width: CGFloat) -> CGFloat {
@@ -65,6 +76,9 @@ final class EmbedOverlays {
         let text = textView.string
         #endif
         let ns = text as NSString
+        // Ausserhalb des sichtbaren Bereichs schätzt die Textansicht die
+        // Zeilen sonst nur, und die Ansichten landeten neben ihrer Lücke.
+        layoutManager.ensureLayout(forCharacterRange: NSRange(location: 0, length: ns.length))
 
         var index = 0
         for span in MarkdownSyntax.spans(in: text) {
@@ -99,7 +113,75 @@ final class EmbedOverlays {
         while views.count > index {
             views.removeLast().removeFromSuperview()
         }
+
+        layoutDatabases(in: textView, layoutManager: layoutManager, origin: origin, width: width, text: text)
     }
+
+    private func layoutDatabases(
+        in textView: PlatformTextView, layoutManager: NSLayoutManager, origin: CGPoint, width: CGFloat, text: String
+    ) {
+        var index = 0
+        for embed in DatabaseEmbed.blocks(in: text) {
+            let height = databaseHeight(embed) - 2 * Self.gap
+            guard height > 0 else { continue }
+            let glyph = layoutManager.glyphIndexForCharacter(at: max(embed.closingLine.location, NSMaxRange(embed.closingLine) - 1))
+            let line = layoutManager.lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: nil)
+            let frame = CGRect(x: origin.x, y: origin.y + line.maxY + Self.gap, width: width, height: height)
+            let key = EmbeddedDatabases.key(embed)
+
+            if index < databaseViews.count {
+                if databaseViews[index].key != key {
+                    databaseViews[index].host.rootView = makeDatabaseView(embed)
+                    databaseViews[index].key = key
+                }
+            } else {
+                databaseViews.append((key, makeHost(makeDatabaseView(embed), in: textView)))
+            }
+            #if os(iOS)
+            databaseViews[index].host.view.frame = frame
+            #else
+            databaseViews[index].host.frame = frame
+            #endif
+            index += 1
+        }
+        while databaseViews.count > index {
+            let removed = databaseViews.removeLast().host
+            #if os(iOS)
+            removed.willMove(toParent: nil)
+            removed.view.removeFromSuperview()
+            removed.removeFromParent()
+            #else
+            removed.removeFromSuperview()
+            #endif
+        }
+    }
+
+    #if os(iOS)
+    /// Als Kind-Controller anmelden, damit Blätter (Tagesansicht im Kalender)
+    /// aus der eingebetteten Ansicht heraus erscheinen können.
+    private func makeHost(_ view: AnyView, in textView: PlatformTextView) -> UIHostingController<AnyView> {
+        let host = UIHostingController(rootView: view)
+        host.view.backgroundColor = .clear
+        host.sizingOptions = []
+        // Sonst verschiebt der Bildschirmrand (Dynamic Island) den Inhalt beim Scrollen.
+        host.safeAreaRegions = []
+        var responder: UIResponder? = textView
+        while let current = responder, !(current is UIViewController) { responder = current.next }
+        let parent = responder as? UIViewController
+        parent?.addChild(host)
+        textView.addSubview(host.view)
+        host.didMove(toParent: parent)
+        return host
+    }
+    #else
+    private func makeHost(_ view: AnyView, in textView: PlatformTextView) -> NSHostingView<AnyView> {
+        let host = NSHostingView(rootView: view)
+        host.sizingOptions = []
+        host.safeAreaRegions = []
+        textView.addSubview(host)
+        return host
+    }
+    #endif
 
     private func imageView(at index: Int, in textView: PlatformTextView) -> EmbedImageView {
         if index < views.count { return views[index] }

@@ -30,9 +30,14 @@ final class DatabaseDocument {
     @ObservationIgnored private var savedModified: Date = .distantPast
     @ObservationIgnored private var saveTask: Task<Void, Never>?
 
-    init(store: VaultStore, url: URL) {
+    /// In eine Notiz eingebettet: Dann ist die Notiz beim Store angemeldet,
+    /// nicht die Datenbank.
+    let isEmbedded: Bool
+
+    init(store: VaultStore, url: URL, isEmbedded: Bool = false) {
         self.store = store
         self.url = url
+        self.isEmbedded = isEmbedded
     }
 
     var title: String { Vault.title(of: url) }
@@ -322,6 +327,7 @@ final class DatabaseDocument {
     /// Beim Store anmelden: Vor Verschieben/Löschen wird zuerst gespeichert.
     /// Auch nach dem Schliessen einer Zeilen-Seite, die sich angemeldet hatte.
     func register() {
+        guard !isEmbedded else { return }
         store.openEditor = EditorHandle(
             url: url,
             flush: { [weak self] in await self?.save() },

@@ -26,7 +26,12 @@ enum MarkdownStyler {
 
     /// `reservedHeight` liefert pro eingebettetem Anhang den Platz, der unter
     /// seiner Zeile für das Bild frei bleiben soll (siehe `EmbedOverlays`).
-    static func apply(to storage: NSTextStorage, reservedHeight: (String) -> CGFloat = { _ in 0 }) {
+    /// `databaseHeight` dasselbe für eingebettete Datenbanken (`hirni-db`).
+    static func apply(
+        to storage: NSTextStorage,
+        reservedHeight: (String) -> CGFloat = { _ in 0 },
+        databaseHeight: (DatabaseEmbed) -> CGFloat = { _ in 0 }
+    ) {
         let text = storage.string
         let full = NSRange(location: 0, length: storage.length)
         let base = bodyFont
@@ -48,6 +53,20 @@ enum MarkdownStyler {
             let style = NSMutableParagraphStyle()
             style.paragraphSpacing = height
             storage.addAttribute(.paragraphStyle, value: style, range: paragraph)
+        }
+
+        // Datenbank-Blöcke: klein und grau, die Ansicht erscheint darunter.
+        for embed in DatabaseEmbed.blocks(in: text) where NSMaxRange(embed.range) <= storage.length {
+            storage.removeAttribute(.backgroundColor, range: embed.range)
+            storage.addAttributes([
+                .font: PlatformFont.monospacedSystemFont(ofSize: base.pointSize * 0.75, weight: .regular),
+                .foregroundColor: Colors.syntax,
+            ], range: embed.range)
+            let height = databaseHeight(embed)
+            guard height > 0 else { continue }
+            let style = NSMutableParagraphStyle()
+            style.paragraphSpacing = height
+            storage.addAttribute(.paragraphStyle, value: style, range: (text as NSString).paragraphRange(for: embed.closingLine))
         }
         storage.endEditing()
     }

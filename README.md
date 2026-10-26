@@ -21,4 +21,4 @@ Notizen sind Markdown-Dateien, Datenbanken funktionieren wie in Notion, und Clau
 Die Notizen selbst liegen nicht hier, sondern in **iCloud Drive → hirni**
 (auf dem Mac: `~/Library/Mobile Documents/iCloud~ch~hebera~hirni/Documents/`).
 
-Status: Etappe 11 (Zeilen-Seiten) gebaut, Test auf den Geräten offen.
+Status: Etappe 12 (eingebettete Datenbanken) gebaut, Test auf den Geräten offen. Danach ist Version 1 komplett.

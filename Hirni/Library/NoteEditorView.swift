@@ -33,6 +33,8 @@ struct NoteEditorView: View {
     @State private var showsConflictVersions = false
     @State private var loadError: String?
     @State private var controller = EditorController()
+    /// Eingebettete Datenbanken (`hirni-db`-Blöcke) dieser Notiz.
+    @State private var databases: EmbeddedDatabases?
     @FocusState private var titleIsFocused: Bool
 
     private var isLoaded: Bool { fileURL != nil }
@@ -86,6 +88,17 @@ struct NoteEditorView: View {
             importFiles: { await importFiles($0) },
             importPhoto: { await importPhoto($0) }
         ))
+        .sheet(item: editingEmbeddedRow) { row in
+            RowFormView(document: row.document, rowID: row.rowID) { id in
+                databases?.editingRow = nil
+                Task {
+                    if let page = await row.document.page(for: id) { store.selectedNote = page }
+                }
+            }
+        }
+        .sheet(isPresented: showsDatabasePicker) {
+            DatabasePicker(note: fileURL ?? url) { controller.insertBlock($0) }
+        }
         .sheet(isPresented: $showsConflictVersions) {
             if let fileURL {
                 ConflictResolverView(url: fileURL, currentText: Frontmatter.join(header: header, body: text))
@@ -106,9 +119,13 @@ struct NoteEditorView: View {
             if !focused { Task { await commitTitle() } }
         }
         .onChange(of: store.revision) {
-            Task { await reloadIfChangedElsewhere() }
+            Task {
+                await reloadIfChangedElsewhere()
+                await databases?.refresh()
+            }
         }
         .onDisappear {
+            if let databases { Task { await databases.closeAll() } }
             if store.openEditor?.url == fileURL { store.openEditor = nil }
             // Ungelöste Fremdänderung: lieber nicht speichern als überschreiben.
             guard externalChange == nil else { return }
@@ -163,6 +180,9 @@ struct NoteEditorView: View {
             Button("Anhang", systemImage: "paperclip") { controller.attachmentRequest = .files }
                 .keyboardShortcut("a", modifiers: [.command, .shift])
                 .help("Bild oder PDF einfügen (⇧⌘A) – oder Datei in den Text ziehen")
+            Button("Datenbank", systemImage: "tablecells") { controller.showsDatabasePicker = true }
+                .keyboardShortcut("d", modifiers: [.command, .shift])
+                .help("Datenbank-Ansicht einfügen (⇧⌘D)")
         }
     }
     #endif
@@ -174,6 +194,7 @@ struct NoteEditorView: View {
     private func open(_ newURL: URL) async {
         guard newURL != fileURL else { return }
         await save()
+        await databases?.closeAll()
         externalChange = nil
         loadError = nil
 
@@ -327,12 +348,36 @@ struct NoteEditorView: View {
         let vault = store.vault
         controller.overlays.resolve = { vault.resolveAttachment($0, for: fileURL) }
         controller.onFileDrop = { urls in Task { await importFiles(urls) } }
+        connectDatabases(for: fileURL)
         store.openEditor = EditorHandle(
             url: fileURL,
             flush: { await save() },
             reloadHeader: { await reloadHeader() },
             reloadFromDisk: { await reloadFromDisk() }
         )
+    }
+
+    // MARK: - Eingebettete Datenbanken
+
+    private func connectDatabases(for fileURL: URL) {
+        let databases = self.databases ?? EmbeddedDatabases(store: store)
+        self.databases = databases
+        databases.note = fileURL
+        let overlays = controller.overlays
+        databases.onLayoutChange = { [weak overlays] in overlays?.onPreviewLoaded() }
+        overlays.databaseHeight = { [weak databases] in databases?.height(for: $0) ?? 0 }
+        overlays.makeDatabaseView = { [weak databases, store] embed in
+            guard let databases else { return AnyView(EmptyView()) }
+            return AnyView(EmbeddedDatabaseView(embed: embed, registry: databases).environment(store))
+        }
+    }
+
+    private var editingEmbeddedRow: Binding<EmbeddedDatabases.EditingRow?> {
+        Binding(get: { databases?.editingRow }, set: { databases?.editingRow = $0 })
+    }
+
+    private var showsDatabasePicker: Binding<Bool> {
+        Binding(get: { controller.showsDatabasePicker }, set: { controller.showsDatabasePicker = $0 })
     }
 
     // MARK: - Anhänge

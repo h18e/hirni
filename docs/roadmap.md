@@ -18,8 +18,8 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ fertig
 | 8 | Datenbank: Tabelle komplett | Mehrere Ansichten, Filter, Sortierung, Gruppierung, Berechnungen pro Spalte, Suche in Datenbanken | Auswertungen in Tabellen | ✅ |
 | 9 | Kalender-Ansicht | Monatskalender nach Datumsfeld, Farben nach Auswahlfeld | z. B. Kinder-Weekends | ✅ |
 | 10 | Diagramm-Ansicht | Balken/Linie, Gruppierung nach Feld oder Zeitraum, Summe/Anzahl/Durchschnitt | z. B. Ausgaben pro Monat | ✅ |
-| 11 | Zeilen-Seiten | Zu jeder Zeile eine Notiz anlegen/öffnen | Details zu einem Eintrag | 🟡 gebaut, Test auf Mac + iPhone offen |
-| 12 | Eingebettete Datenbanken | `hirni-db`-Block in Notizen, interaktive Anzeige im Editor | Datenbank-Ansicht mitten in einer Notiz | ⬜ |
+| 11 | Zeilen-Seiten | Zu jeder Zeile eine Notiz anlegen/öffnen | Details zu einem Eintrag | ✅ |
+| 12 | Eingebettete Datenbanken | `hirni-db`-Block in Notizen, interaktive Anzeige im Editor | Datenbank-Ansicht mitten in einer Notiz | 🟡 gebaut, Test auf Mac + iPhone offen |
 
 ## Version 1.1
 

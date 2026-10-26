@@ -65,45 +65,49 @@ struct CellEditor: View {
 
 /// Zahl mit Format (CHF, Prozent …). Zeigt den Wert formatiert und speichert
 /// ihn als einfache Zahl.
+///
+/// Während der Eingabe steht die blanke Zahl im Feld («64.3»), und das Feld
+/// behält seinen eigenen Text. Formatiert («CHF 64.30») wird erst beim
+/// Verlassen. Sonst würde ein Neuzeichnen von aussen (Speichern, Änderung
+/// anderswo) mitten im Tippen formatieren und den Cursor ans Ende setzen.
 private struct NumberCell: View {
     let field: Field
     @Binding var raw: String
 
+    @State private var text = ""
+    @FocusState private var isFocused: Bool
+
     var body: some View {
-        switch field.format ?? .plain {
-        case .plain:
-            TextField(field.name, value: number, format: .number.locale(locale))
-                .modifier(NumberInput())
-        case .chf:
-            TextField(field.name, value: number, format: .currency(code: "CHF").locale(locale))
-                .modifier(NumberInput())
-        case .eur:
-            TextField(field.name, value: number, format: .currency(code: "EUR").locale(locale))
-                .modifier(NumberInput())
-        case .usd:
-            TextField(field.name, value: number, format: .currency(code: "USD").locale(locale))
-                .modifier(NumberInput())
-        case .percent:
-            TextField(field.name, value: percent, format: .percent.locale(locale))
-                .modifier(NumberInput())
-        }
+        TextField(field.name, text: $text)
+            .modifier(NumberInput())
+            .focused($isFocused)
+            .onAppear { text = formatted }
+            .onChange(of: raw) {
+                if !isFocused { text = formatted }
+            }
+            .onChange(of: isFocused) { _, focused in
+                text = focused ? editable : formatted
+            }
+            .onChange(of: text) {
+                guard isFocused else { return }
+                let trimmed = text.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty {
+                    raw = ""
+                } else if let number = CellValue.number(trimmed) {
+                    let value = CellValue.raw(number: number)
+                    if value != raw { raw = value }
+                }
+            }
+            .onSubmit { isFocused = false }
     }
 
-    private var locale: Locale { Locale(identifier: "de_CH") }
-
-    private var number: Binding<Double?> {
-        Binding(
-            get: { CellValue.number(raw) },
-            set: { raw = $0.map(CellValue.raw(number:)) ?? "" }
-        )
+    private var formatted: String {
+        CellValue.number(raw).map { CellValue.display(number: $0, format: field.format) } ?? raw
     }
 
-    /// In der Datei steht 12 für 12 %, das Format rechnet mit 0.12.
-    private var percent: Binding<Double?> {
-        Binding(
-            get: { CellValue.number(raw).map { $0 / 100 } },
-            set: { raw = $0.map { CellValue.raw(number: $0 * 100) } ?? "" }
-        )
+    /// Zum Bearbeiten: ohne Währung und Tausendertrennzeichen, für Prozent «12».
+    private var editable: String {
+        CellValue.number(raw).map(CellValue.raw(number:)) ?? raw
     }
 }
 

@@ -21,6 +21,8 @@ final class EditorController {
 
     /// Welche Auswahl für einen neuen Anhang geöffnet werden soll (iPhone-Leiste).
     var attachmentRequest: AttachmentSource?
+    /// Auswahl «Datenbank einfügen» ist offen.
+    var showsDatabasePicker = false
 
     enum AttachmentSource: Identifiable {
         case photos
@@ -29,7 +31,7 @@ final class EditorController {
         var id: Self { self }
     }
 
-    /// Bilder unter ihren Zeilen anzeigen.
+    /// Bilder und Datenbank-Ansichten unter ihren Zeilen anzeigen.
     @ObservationIgnored let overlays = EmbedOverlays()
     /// Mac: Dateien wurden in den Text gezogen.
     @ObservationIgnored var onFileDrop: (([URL]) -> Void)?

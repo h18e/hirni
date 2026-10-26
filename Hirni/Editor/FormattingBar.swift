@@ -35,6 +35,8 @@ struct FormattingBar: View {
                     Button("Kamera", systemImage: "camera") { controller.attachmentRequest = .camera }
                 }
                 Button("Datei", systemImage: "folder") { controller.attachmentRequest = .files }
+                Divider()
+                Button("Datenbank-Ansicht", systemImage: "tablecells") { controller.showsDatabasePicker = true }
             } label: {
                 Label("Anhang", systemImage: "paperclip")
                     .labelStyle(.iconOnly)

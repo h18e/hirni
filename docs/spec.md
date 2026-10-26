@@ -116,6 +116,10 @@ hirni/
   ```
   ````
 
+  - `datenbank`: Name der Datenbank oder Pfad ab dem hirni-Ordner (`Privat/Ausgaben`). Ohne Pfad wird zuerst im Ordner der Notiz gesucht, dann im ganzen hirni-Ordner (kürzester Pfad zuerst).
+  - `ansicht`: optional, sonst die erste Ansicht. Filter, Sortierung und Darstellung kommen von dieser Ansicht.
+  - In der Notizliste erscheint der Block als «[Datenbank: Ausgaben]».
+
 #### Feldtypen (Version 1)
 
 | Typ | Beschreibung |
@@ -207,7 +211,12 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - Ansichten anlegen, umbenennen und wechseln, Filter, Sortierung und Gruppierung einstellen
 - Tabelle, Kalender und Diagramm wie im Datenmodell beschrieben
 - Zeilen-Seite öffnen bzw. anlegen: im Formular «Seite anlegen»/«Seite öffnen», am Mac auch im Kontextmenü einer Zeile, auf dem iPhone mit Wischen nach rechts. Zeilen mit Seite tragen ein Dokument-Symbol, am Mac öffnet ein Klick darauf die Seite. Die Seite öffnet sich innerhalb der Datenbank, «‹» führt zurück.
-- Ansicht in eine Notiz einbetten, interaktiv angezeigt mitten im Text
+- Ansicht in eine Notiz einbetten, interaktiv angezeigt mitten im Text:
+  - **Einfügen:** am Mac mit dem Tabellen-Knopf in der Fensterleiste (⇧⌘D), auf dem iPhone über die Büroklammer → «Datenbank-Ansicht». Eine Liste zeigt alle Datenbanken mit ihren Ansichten.
+  - **Anzeige:** Der Block bleibt klein und grau sichtbar, darunter erscheint ein Kasten mit Name und Ansicht. Tabelle: die ersten 8 Einträge (erstes Feld als Titel, dazu die nächsten Werte, Seiten-Symbol) und die Berechnungen der Ansicht, bei mehr ein Link «… weitere». Kalender und Diagramm wie in der Datenbank, mit Blättern und Tagesblatt.
+  - **Bearbeiten:** Ein Eintrag öffnet das Formular und wird direkt in der Datenbank gespeichert. Der Knopf oben rechts öffnet die ganze Datenbank.
+  - Fehlt die Datenbank, steht im Kasten ein Hinweis. Änderungen anderswo (Datenbank selbst, Claude, anderes Gerät) erscheinen sofort.
+- **Zahlenfelder:** Während der Eingabe steht die blanke Zahl im Feld (`64.3`), formatiert (`CHF 64.30`) wird beim Verlassen.
 
 ### Sync und Konflikte
 

@@ -83,7 +83,11 @@ struct MarkdownTextView: UIViewRepresentable {
             guard let textView else { return }
             let width = textView.bounds.width - textView.textContainerInset.left - textView.textContainerInset.right
             let overlays = parent.controller.overlays
-            MarkdownStyler.apply(to: storage) { overlays.reservedHeight(for: $0, width: width) }
+            MarkdownStyler.apply(
+                to: storage,
+                reservedHeight: { overlays.reservedHeight(for: $0, width: width) },
+                databaseHeight: overlays.databaseHeight
+            )
             scheduleLayout()
         }
 
@@ -225,7 +229,11 @@ struct MarkdownTextView: NSViewRepresentable {
             guard let textView else { return }
             let width = textView.textContainer?.size.width ?? textView.bounds.width
             let overlays = parent.controller.overlays
-            MarkdownStyler.apply(to: storage) { overlays.reservedHeight(for: $0, width: width) }
+            MarkdownStyler.apply(
+                to: storage,
+                reservedHeight: { overlays.reservedHeight(for: $0, width: width) },
+                databaseHeight: overlays.databaseHeight
+            )
             scheduleLayout()
         }
 
