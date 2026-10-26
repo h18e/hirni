@@ -74,3 +74,17 @@ struct TrashTests {
         #expect(test.exists("Inbox/Lose.md"))
     }
 }
+
+struct EmptyTrashTests {
+    @Test func emptiesEverything() throws {
+        let test = try TestVault()
+        let note = try test.vault.createNote(in: test.vault.inboxURL, title: "A")
+        let db = try test.vault.createDatabase(in: test.vault.inboxURL, title: "B")
+        let folder = try test.vault.createFolder(in: test.vault.root, name: "C")
+        for url in [note, db, folder] { try test.vault.moveToTrash(url) }
+        #expect(try test.vault.trashEntries().count == 3)
+        #expect(try test.vault.emptyTrash() == 3)
+        #expect(try test.vault.trashEntries().isEmpty)
+        #expect(test.exists("_Zuletzt gelöscht"))
+    }
+}

@@ -151,6 +151,7 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - Was ohne diese Begleitinfo im Papierkorb liegt (z. B. im Finder hineingezogen), wird beim Wiederherstellen in die Inbox gelegt, Ordner in die oberste Ebene.
 - Ist der ursprüngliche Name beim Wiederherstellen belegt, bekommt das Element eine Nummer («Einkauf 2»). Fehlt der ursprüngliche Ordner, wird er neu angelegt.
 - Nach 30 Tagen räumt hirni automatisch auf.
+- «Alle löschen» (Papierkorb-Knopf oben) leert «Zuletzt gelöscht» sofort ganz, nach einer Rückfrage mit der Anzahl. Einzelne Einträge: Wischen oder Kontextmenü «Endgültig löschen».
 
 ## Funktionale Anforderungen (Version 1)
 
@@ -175,6 +176,7 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Überschrift-Knopf:** wechselt reihum keine → `#` → `##` → `###` → keine
 - **Listen:** Liste und Checkliste lassen sich auch auf einer leeren Zeile beginnen. Return setzt sie fort, Return in einem leeren Punkt beendet sie.
 - **Checklisten:** ein Tipp bzw. Klick auf `[ ]` hakt ab, erledigte Punkte erscheinen durchgestrichen. Das `- ` davor steht in der Datei (Markdown), wird im Editor aber ausgeblendet.
+- **Tabellen:** gewöhnliche Markdown-Tabellen (`| A | B |`, Trennzeile `|---|`, erste Zeile = Kopf). Der Editor zeigt sie als Raster: Zellen direkt bearbeiten, Kopf fett. Über jeder Spalte und vor jeder Zeile ein Menü «…» (einfügen, verschieben, löschen). Griff rechts: ziehen fügt Spalten an, Griff unten: ziehen fügt Zeilen an; zurückziehen entfernt leere Spalten/Zeilen am Ende wieder; antippen fügt eine an. Einfügen: iPhone Büroklammer → «Tabelle», Mac Tabellen-Knopf (⌥⌘T); neue Tabelle mit 3 Spalten und 2 Zeilen, mit Leerzeile davor und danach. In der Datei bleibt `|` in Zellen als `\|`, ein Zeilenumbruch als `<br>`.
 - **Links:** `[Text](Adresse)` und eingetippte oder eingefügte Adressen (`https://…`, `http://…`, `www.…`) erscheinen blau unterstrichen. Ein Tipp (iPhone) bzw. Klick (Mac) öffnet sie im Browser. Satzzeichen am Ende gehören nicht zur Adresse, `_` und `#` in Adressen formatieren nichts.
 - **Tags:** Nach `#` erscheinen passende Tags aus dem ganzen hirni-Ordner (die häufigsten zuerst) und aus der offenen Notiz, auch eben erst getippte. Auf dem iPhone in der Leiste, am Mac unter dem Text, dort übernimmt Tab den ersten Vorschlag. Tags dürfen Buchstaben (auch Umlaute), Ziffern, `_`, `-` und `/` enthalten, aber nicht nur aus Ziffern bestehen (wie bei Obsidian).
 - **Bilder und PDFs einfügen:** iPhone über die Büroklammer in der Leiste (Foto-Mediathek, bis 10 Fotos auf einmal, Kamera, Datei). Mac über die Büroklammer in der Fensterleiste (⇧⌘A) oder per Drag'n'Drop einer Datei in den Text. Fotos werden als JPEG mit höchstens 3000 Pixeln gespeichert. Standortdaten und andere Metadaten werden dabei entfernt. HEIC-Dateien werden in JPEG umgewandelt.

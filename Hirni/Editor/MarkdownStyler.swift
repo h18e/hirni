@@ -30,7 +30,8 @@ enum MarkdownStyler {
     static func apply(
         to storage: NSTextStorage,
         reservedHeight: (String) -> CGFloat = { _ in 0 },
-        databaseHeight: (DatabaseEmbed) -> CGFloat = { _ in 0 }
+        databaseHeight: (DatabaseEmbed) -> CGFloat = { _ in 0 },
+        tableHeight: (MarkdownTable) -> CGFloat = { _ in 0 }
     ) {
         let text = storage.string
         let full = NSRange(location: 0, length: storage.length)
@@ -67,6 +68,22 @@ enum MarkdownStyler {
             let style = NSMutableParagraphStyle()
             style.paragraphSpacing = height
             storage.addAttribute(.paragraphStyle, value: style, range: (text as NSString).paragraphRange(for: embed.closingLine))
+        }
+        // Markdown-Tabellen: Text unsichtbar und fast ohne Höhe, darüber
+        // liegt das Raster. Unter der letzten Zeile bleibt Platz dafür.
+        for table in MarkdownTable.tables(in: text) where NSMaxRange(table.range) <= storage.length {
+            let height = tableHeight(table)
+            guard height > 0 else { continue }
+            storage.removeAttribute(.link, range: table.range)
+            storage.addAttributes([
+                .font: PlatformFont.systemFont(ofSize: 0.1),
+                .foregroundColor: PlatformColor.clear,
+                .backgroundColor: PlatformColor.clear,
+            ], range: table.range)
+            let style = NSMutableParagraphStyle()
+            style.paragraphSpacing = height + 8
+            let last = (text as NSString).paragraphRange(for: NSRange(location: NSMaxRange(table.range) - 1, length: 0))
+            storage.addAttribute(.paragraphStyle, value: style, range: last)
         }
         storage.endEditing()
     }

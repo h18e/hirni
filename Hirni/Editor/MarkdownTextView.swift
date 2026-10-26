@@ -68,6 +68,7 @@ struct MarkdownTextView: UIViewRepresentable {
             self.textView = textView
             let controller = parent.controller
             controller.overlays.onPreviewLoaded = { [weak self] in self?.restyle() }
+            controller.overlays.tables.onLayoutChange = { [weak self] in self?.restyle() }
             controller.textView = textView
             controller.onTextChange = { [weak self] in self?.parent.text = $0 }
         }
@@ -96,7 +97,8 @@ struct MarkdownTextView: UIViewRepresentable {
             MarkdownStyler.apply(
                 to: storage,
                 reservedHeight: { overlays.reservedHeight(for: $0, width: width) },
-                databaseHeight: overlays.databaseHeight
+                databaseHeight: overlays.databaseHeight,
+                tableHeight: { overlays.tables.height(of: $0) }
             )
             scheduleLayout()
         }
@@ -250,6 +252,7 @@ struct MarkdownTextView: NSViewRepresentable {
             self.textView = textView
             let controller = parent.controller
             controller.overlays.onPreviewLoaded = { [weak self] in self?.restyle() }
+            controller.overlays.tables.onLayoutChange = { [weak self] in self?.restyle() }
             controller.textView = textView
             controller.onTextChange = { [weak self] in self?.parent.text = $0 }
         }
@@ -266,7 +269,8 @@ struct MarkdownTextView: NSViewRepresentable {
             MarkdownStyler.apply(
                 to: storage,
                 reservedHeight: { overlays.reservedHeight(for: $0, width: width) },
-                databaseHeight: overlays.databaseHeight
+                databaseHeight: overlays.databaseHeight,
+                tableHeight: { overlays.tables.height(of: $0) }
             )
             scheduleLayout()
         }

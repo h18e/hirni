@@ -36,6 +36,7 @@ struct FormattingBar: View {
                 }
                 Button("Datei", systemImage: "folder") { controller.attachmentRequest = .files }
                 Divider()
+                Button("Tabelle", systemImage: "squareshape.split.3x3") { controller.insertTable() }
                 Button("Datenbank-Ansicht", systemImage: "tablecells") { controller.showsDatabasePicker = true }
             } label: {
                 Label("Anhang", systemImage: "paperclip")

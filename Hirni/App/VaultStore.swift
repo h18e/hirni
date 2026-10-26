@@ -407,6 +407,11 @@ final class VaultStore {
         await reload()
     }
 
+    func emptyTrash() async {
+        await perform { try $0.emptyTrash() }
+        await reload()
+    }
+
     func deletePermanently(_ entry: TrashEntry) async {
         await perform { try $0.deletePermanently(entry) }
         await reload()

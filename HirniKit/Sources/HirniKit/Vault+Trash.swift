@@ -95,6 +95,14 @@ extension Vault {
     }
 
     /// Entfernt endgültig, was länger als 30 Tage im Papierkorb liegt.
+    /// Leert «Zuletzt gelöscht» ganz. Liefert die Anzahl gelöschter Einträge.
+    @discardableResult
+    public func emptyTrash() throws -> Int {
+        let entries = try trashEntries()
+        for entry in entries { try deletePermanently(entry) }
+        return entries.count
+    }
+
     public func purgeTrash(now: Date = .now) throws {
         let cutoff = now.addingTimeInterval(-Double(Self.trashRetentionDays) * 24 * 60 * 60)
         for entry in try trashEntries() where entry.deletedAt < cutoff {

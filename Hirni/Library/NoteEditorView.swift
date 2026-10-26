@@ -183,6 +183,9 @@ struct NoteEditorView: View {
             Button("Anhang", systemImage: "paperclip") { controller.attachmentRequest = .files }
                 .keyboardShortcut("a", modifiers: [.command, .shift])
                 .help("Bild oder PDF einfügen (⇧⌘A) – oder Datei in den Text ziehen")
+            Button("Tabelle", systemImage: "squareshape.split.3x3", action: controller.insertTable)
+                .keyboardShortcut("t", modifiers: [.command, .option])
+                .help("Tabelle einfügen (⌥⌘T)")
             Button("Datenbank", systemImage: "tablecells") { controller.showsDatabasePicker = true }
                 .keyboardShortcut("d", modifiers: [.command, .shift])
                 .help("Datenbank-Ansicht einfügen (⇧⌘D)")

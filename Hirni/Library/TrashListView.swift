@@ -4,6 +4,7 @@ import SwiftUI
 struct TrashListView: View {
     @Environment(VaultStore.self) private var store
     @State private var pendingDeletion: TrashEntry?
+    @State private var confirmsEmptying = false
 
     var body: some View {
         List {
@@ -42,6 +43,24 @@ struct TrashListView: View {
             }
         }
         .navigationTitle("Zuletzt gelöscht")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Alle löschen", systemImage: "trash.slash", role: .destructive) { confirmsEmptying = true }
+                    .disabled(store.trash.isEmpty)
+                    .help("Alles in «Zuletzt gelöscht» endgültig löschen")
+            }
+        }
+        .confirmationDialog(
+            store.trash.count == 1 ? "Den gelöschten Eintrag endgültig löschen?" : "Alle \(store.trash.count) gelöschten Einträge endgültig löschen?",
+            isPresented: $confirmsEmptying,
+            titleVisibility: .visible
+        ) {
+            Button("Alle endgültig löschen", role: .destructive) {
+                Task { await store.emptyTrash() }
+            }
+        } message: {
+            Text("Notizen, Datenbanken und Ordner in «Zuletzt gelöscht» verschwinden auf allen Geräten. Das lässt sich nicht rückgängig machen.")
+        }
         .confirmationDialog(
             "«\(pendingDeletion?.name ?? "")» endgültig löschen?",
             isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }),
@@ -62,7 +81,7 @@ private struct TrashRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Label(title, systemImage: entry.isFolder ? "folder" : "note.text")
+            Label(title, systemImage: entry.isFolder ? "folder" : (Vault.isDatabase(entry.itemURL) ? "tablecells" : "note.text"))
                 .font(.headline)
                 .lineLimit(1)
             Text("aus \(origin) · gelöscht \(entry.deletedAt.formatted(.relative(presentation: .named)))")

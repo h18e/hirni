@@ -38,6 +38,13 @@ final class EditorController {
 
     init() {
         overlays.onTap = { [weak self] url in self?.previewURL = url }
+        // Änderungen im Tabellen-Raster zurück in den Markdown-Text.
+        overlays.tables.onChange = { [weak self] index, table in self?.replaceTable(at: index, with: table) }
+        #if os(iOS)
+        overlays.tables.onDragging = { [weak self] dragging in
+            self?.textView?.panGestureRecognizer.isEnabled = !dragging
+        }
+        #endif
     }
 
     /// Alle bekannten Tags im hirni-Ordner, die häufigsten zuerst.
@@ -104,6 +111,37 @@ final class EditorController {
             if (text as NSString).substring(with: range).hasSuffix("\n") { range.length -= 1 }
             let delta = (markdown as NSString).length - range.length
             let caret = selection.location >= NSMaxRange(range) ? selection.location + delta : selection.location
+            return TextEdit(range: range, replacement: markdown, selection: NSRange(location: max(0, caret), length: 0))
+        }
+    }
+
+    /// Fügt eine neue, leere Tabelle (3 Spalten, 2 Zeilen) auf eigenen Zeilen ein.
+    /// Davor und danach eine Leerzeile, sonst lesen andere Programme
+    /// (z. B. Obsidian) die Tabelle als Fortsetzung des Absatzes.
+    func insertTable() {
+        perform { text, selection in
+            let ns = text as NSString
+            let lineStart = ns.lineRange(for: NSRange(location: selection.location, length: 0)).location
+            let previous = lineStart > 0 ? ns.lineRange(for: NSRange(location: lineStart - 1, length: 0)) : nil
+            let previousIsEmpty = previous.map { ns.substring(with: $0).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? true
+            let atLineStart = selection.location == lineStart
+            let prefix = (atLineStart ? "" : "\n") + ((atLineStart && previousIsEmpty) ? "" : "\n")
+            let insertion = prefix + MarkdownTable.empty().markdown + "\n\n"
+            return TextEdit(range: selection, replacement: insertion,
+                            selection: NSRange(location: selection.location + (insertion as NSString).length, length: 0))
+        }
+    }
+
+    private func replaceTable(at index: Int, with table: MarkdownTable) {
+        perform(keepingScroll: true) { text, selection in
+            let tables = MarkdownTable.tables(in: text)
+            guard tables.indices.contains(index) else {
+                return TextEdit(range: NSRange(location: selection.location, length: 0), replacement: "", selection: selection)
+            }
+            let range = tables[index].range
+            let markdown = table.markdown
+            let delta = (markdown as NSString).length - range.length
+            let caret = selection.location >= NSMaxRange(range) ? selection.location + delta : min(selection.location, range.location)
             return TextEdit(range: range, replacement: markdown, selection: NSRange(location: max(0, caret), length: 0))
         }
     }
@@ -195,8 +233,10 @@ final class EditorController {
     }
 
     /// Ändert den Text so, dass Rückgängig (⌘Z / Schütteln) funktioniert.
-    /// `keepingScroll`: Die Ansicht springt nicht zum Cursor (Änderung kam
-    /// aus einer eingebetteten Ansicht, nicht vom Tippen).
+    /// `keepingScroll`: Die Änderung kommt aus einer eingebetteten Ansicht
+    /// (Tabelle, Datenbank), nicht vom Tippen im Text. Dann springt die Ansicht
+    /// nicht zum Cursor, der Fokus bleibt, wo er ist, und iOS wendet keine
+    /// Tipp-Korrekturen an (sonst würde aus `---` ein Gedankenstrich).
     func apply(_ edit: TextEdit, keepingScroll: Bool = false) {
         guard let textView else { return }
         #if os(iOS)
@@ -224,6 +264,12 @@ final class EditorController {
         }
         #endif
         #if os(iOS)
+        if keepingScroll {
+            textView.textStorage.replaceCharacters(in: edit.range, with: edit.replacement)
+            if textView.isFirstResponder { textView.selectedRange = edit.selection }
+            if let currentText { onTextChange?(currentText) }
+            return
+        }
         guard let start = textView.position(from: textView.beginningOfDocument, offset: edit.range.location),
               let end = textView.position(from: start, offset: edit.range.length),
               let range = textView.textRange(from: start, to: end)
@@ -234,7 +280,7 @@ final class EditorController {
         guard textView.shouldChangeText(in: edit.range, replacementString: edit.replacement) else { return }
         textView.textStorage?.replaceCharacters(in: edit.range, with: edit.replacement)
         textView.didChangeText()
-        textView.setSelectedRange(edit.selection)
+        if !keepingScroll || textView.window?.firstResponder === textView { textView.setSelectedRange(edit.selection) }
         #endif
         if let currentText { onTextChange?(currentText) }
         updateSuggestions()

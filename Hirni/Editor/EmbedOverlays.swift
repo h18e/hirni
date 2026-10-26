@@ -19,8 +19,8 @@ final class EmbedOverlays {
     static let placeholderHeight: CGFloat = 160
     static let missingSize: CGFloat = 36
     static let gap: CGFloat = 8
-    /// Kennzeichnet eingebettete Datenbank-Ansichten (Tipps dort gehören nicht dem Text).
-    static let databaseViewID = "hirni-datenbank"
+    /// Kennzeichnet eingebettete Ansichten (Datenbanken, Tabellen): Tipps dort gehören nicht dem Text.
+    static let databaseViewID = "hirni-eingebettet"
 
     /// Pfad aus dem Text → Datei. Liefert `nil` für Web-Adressen und Pfade
     /// ausserhalb des hirni-Ordners.
@@ -34,7 +34,15 @@ final class EmbedOverlays {
     /// Die SwiftUI-Ansicht für einen `hirni-db`-Block.
     var makeDatabaseView: (DatabaseEmbed) -> AnyView = { _ in AnyView(EmptyView()) }
 
+    /// Gewöhnliche Markdown-Tabellen als bearbeitbare Raster.
+    let tables = NoteTables()
+
     private var views: [EmbedImageView] = []
+    #if os(iOS)
+    private var tableViews: [UIHostingController<AnyView>] = []
+    #else
+    private var tableViews: [NSHostingView<AnyView>] = []
+    #endif
     #if os(iOS)
     private var databaseViews: [(key: String, host: UIHostingController<AnyView>)] = []
     #else
@@ -117,6 +125,39 @@ final class EmbedOverlays {
         }
 
         layoutDatabases(in: textView, layoutManager: layoutManager, origin: origin, width: width, text: text)
+        layoutTables(in: textView, layoutManager: layoutManager, origin: origin, width: width, text: text)
+    }
+
+    /// Das Raster liegt über dem (unsichtbaren) Tabellentext, ab seiner ersten Zeile.
+    private func layoutTables(
+        in textView: PlatformTextView, layoutManager: NSLayoutManager, origin: CGPoint, width: CGFloat, text: String
+    ) {
+        let found = MarkdownTable.tables(in: text)
+        tables.update(from: found)
+        for (index, table) in found.enumerated() {
+            let glyph = layoutManager.glyphIndexForCharacter(at: table.range.location)
+            let line = layoutManager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
+            let frame = CGRect(x: origin.x, y: origin.y + line.minY, width: width, height: tables.height(of: table))
+            if index >= tableViews.count {
+                let view = AnyView(TableGrid(model: tables.model(at: index)))
+                tableViews.append(makeHost(view, in: textView))
+            }
+            #if os(iOS)
+            tableViews[index].view.frame = frame
+            #else
+            tableViews[index].frame = frame
+            #endif
+        }
+        while tableViews.count > found.count {
+            let removed = tableViews.removeLast()
+            #if os(iOS)
+            removed.willMove(toParent: nil)
+            removed.view.removeFromSuperview()
+            removed.removeFromParent()
+            #else
+            removed.removeFromSuperview()
+            #endif
+        }
     }
 
     private func layoutDatabases(
