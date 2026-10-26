@@ -17,6 +17,13 @@ final class EmbeddedDatabases {
 
     /// Eintrag, dessen Formular die Notiz gerade zeigt.
     var editingRow: EditingRow?
+    /// Datenbank, deren Felder die Notiz gerade bearbeiten lässt.
+    var editingFields: EditingFields?
+
+    struct EditingFields: Identifiable {
+        let document: DatabaseDocument
+        var id: URL { document.url }
+    }
 
     struct EditingRow: Identifiable {
         let document: DatabaseDocument
@@ -114,19 +121,16 @@ final class EmbeddedDatabases {
             case .table:
                 let rows = document.result.rows.count
                 if rows == 0 { return Self.headerHeight + 60 }
-                var height = Self.headerHeight + CGFloat(min(rows, Self.maxRows)) * Self.rowHeight
+                var height = Self.headerHeight + DatabaseGrid.embeddedHeight(
+                    rows: min(rows, Self.maxRows),
+                    hasFooter: !(document.currentView.aggregates ?? [:]).isEmpty
+                )
                 if rows > Self.maxRows { height += 32 }
-                if !(document.currentView.aggregates ?? [:]).isEmpty { height += 32 }
-                return height + 8
+                return height
             }
         }
     }
 
     static let headerHeight: CGFloat = 44
     static let maxRows = 8
-    #if os(iOS)
-    static let rowHeight: CGFloat = 52
-    #else
-    static let rowHeight: CGFloat = 40
-    #endif
 }

@@ -96,6 +96,9 @@ struct NoteEditorView: View {
                 }
             }
         }
+        .sheet(item: editingEmbeddedFields) { item in
+            FieldsEditorView(document: item.document)
+        }
         .sheet(isPresented: showsDatabasePicker) {
             DatabasePicker(note: fileURL ?? url) { controller.insertBlock($0) }
         }
@@ -374,6 +377,10 @@ struct NoteEditorView: View {
 
     private var editingEmbeddedRow: Binding<EmbeddedDatabases.EditingRow?> {
         Binding(get: { databases?.editingRow }, set: { databases?.editingRow = $0 })
+    }
+
+    private var editingEmbeddedFields: Binding<EmbeddedDatabases.EditingFields?> {
+        Binding(get: { databases?.editingFields }, set: { databases?.editingFields = $0 })
     }
 
     private var showsDatabasePicker: Binding<Bool> {

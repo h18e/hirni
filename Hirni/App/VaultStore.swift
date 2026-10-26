@@ -204,6 +204,13 @@ final class VaultStore {
         selectedNote = url
     }
 
+    /// Neue Datenbank, ohne sie zu öffnen (z. B. zum Einbetten in eine Notiz).
+    func createDatabase(in folder: URL, title: String) async -> URL? {
+        guard let url = await perform({ try $0.createDatabase(in: folder, title: title) }) else { return nil }
+        await reload()
+        return url
+    }
+
     func read(_ url: URL) async -> String? {
         await perform { try $0.readNote(at: url) }
     }

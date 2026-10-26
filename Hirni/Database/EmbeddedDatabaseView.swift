@@ -37,12 +37,22 @@ struct EmbeddedDatabaseView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 Spacer()
-                Button("Öffnen", systemImage: "arrow.up.right.square") {
-                    registry.store.selectedNote = document.url
+                Group {
+                    Button("Neuer Eintrag", systemImage: "plus") {
+                        registry.editingRow = .init(document: document, rowID: document.addRow())
+                    }
+                    .help("Neuer Eintrag")
+                    Button("Felder", systemImage: "slider.horizontal.3") {
+                        registry.editingFields = .init(document: document)
+                    }
+                    .help("Felder bearbeiten")
+                    Button("Öffnen", systemImage: "arrow.up.right.square") {
+                        registry.store.selectedNote = document.url
+                    }
+                    .help("Datenbank öffnen")
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
-                .help("Datenbank öffnen")
             } else {
                 Spacer()
             }
@@ -91,27 +101,23 @@ struct EmbeddedDatabaseView: View {
     }
 }
 
-/// Tabelle in kurz: pro Eintrag das erste Feld und die nächsten Werte.
+/// Die Tabelle mit allen sichtbaren Spalten, die ersten Einträge.
 private struct EmbeddedRows: View {
     let document: DatabaseDocument
     let registry: EmbeddedDatabases
 
     var body: some View {
         let result = document.result
-        let fields = document.visibleFields
         VStack(alignment: .leading, spacing: 0) {
             if result.rows.isEmpty {
-                Text(document.database.rows.isEmpty ? "Noch keine Einträge" : "Keine passenden Einträge")
+                Text(document.database.rows.isEmpty ? "Noch keine Einträge – mit + oben anlegen" : "Keine passenden Einträge")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .padding(12)
-            }
-            ForEach(result.rows.prefix(EmbeddedDatabases.maxRows)) { row in
-                Button { registry.editingRow = .init(document: document, rowID: row.id) } label: {
-                    line(row, fields: fields)
+            } else {
+                DatabaseGrid(document: document, limit: EmbeddedDatabases.maxRows) { id in
+                    registry.editingRow = .init(document: document, rowID: id)
                 }
-                .buttonStyle(.plain)
-                Divider().padding(.leading, 12)
             }
             if result.rows.count > EmbeddedDatabases.maxRows {
                 Button("\(result.rows.count - EmbeddedDatabases.maxRows) weitere – Datenbank öffnen") {
@@ -122,47 +128,9 @@ private struct EmbeddedRows: View {
                 .padding(.horizontal, 12)
                 .frame(height: 32)
             }
-            let aggregates = document.currentView.aggregates ?? [:]
-            if !aggregates.isEmpty {
-                let parts = document.database.fields.compactMap { field -> String? in
-                    aggregates[field.name].map { "\($0.label) \(field.name): \(DatabaseQuery.display($0, field: field, rows: result.rows))" }
-                }
-                Text(parts.joined(separator: " · "))
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .padding(.horizontal, 12)
-                    .frame(height: 32)
-            }
         }
         .onChange(of: result.rows.count) { registry.onLayoutChange() }
-    }
-
-    private func line(_ row: Row, fields: [Field]) -> some View {
-        let first = fields.first.map { CellValue.display(row[$0.name], for: $0) } ?? ""
-        let details = fields.dropFirst().prefix(3)
-            .map { CellValue.display(row[$0.name], for: $0) }
-            .filter { !$0.isEmpty }
-        return HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(first.isEmpty ? "Ohne Namen" : first)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(first.isEmpty ? .secondary : .primary)
-                if !details.isEmpty {
-                    Text(details.joined(separator: " · "))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .lineLimit(1)
-            Spacer()
-            if document.rowPages[row.id] != nil {
-                Image(systemName: "doc.text").font(.caption).foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 12)
-        .frame(height: EmbeddedDatabases.rowHeight)
-        .contentShape(Rectangle())
+        .onChange(of: document.currentView.aggregates?.isEmpty) { registry.onLayoutChange() }
     }
 }
 
@@ -175,10 +143,20 @@ struct DatabasePicker: View {
 
     @State private var databases: [(url: URL, views: [SavedView])] = []
     @State private var isLoaded = false
+    @State private var newName = ""
 
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    TextField("Name", text: $newName, prompt: Text("z. B. Ausgaben Sommerferien"))
+                        .onSubmit(createDatabase)
+                    Button("Neue Datenbank anlegen", systemImage: "plus.rectangle.on.rectangle", action: createDatabase)
+                } header: {
+                    Text("Neue Datenbank")
+                } footer: {
+                    Text("Sie liegt im Ordner dieser Notiz und hat zuerst nur das Feld «Name». Weitere Felder im Kasten unter «Felder».")
+                }
                 ForEach(databases, id: \.url) { database in
                     Section(Vault.title(of: database.url)) {
                         // Ohne gespeicherte Ansicht: die Tabelle «Alle».
@@ -210,14 +188,26 @@ struct DatabasePicker: View {
         #if os(macOS)
         .frame(minWidth: 360, minHeight: 420)
         #endif
-        .task {
-            let vault = store.vault
-            databases = await Task.detached {
-                vault.databases().map { url in
-                    (url, (try? vault.readDatabase(at: url))?.views ?? [])
-                }
-            }.value
-            isLoaded = true
+        .task { await loadDatabases() }
+    }
+
+    private func createDatabase() {
+        let name = newName.trimmingCharacters(in: .whitespaces)
+        Task {
+            guard let url = await store.createDatabase(in: note.deletingLastPathComponent(), title: name.isEmpty ? "Neue Datenbank" : name)
+            else { return }
+            insert(DatabaseEmbed.markdown(database: store.vault.databaseReference(for: url, from: note), view: nil))
+            dismiss()
         }
+    }
+
+    private func loadDatabases() async {
+        let vault = store.vault
+        databases = await Task.detached {
+            vault.databases().map { url in
+                (url, (try? vault.readDatabase(at: url))?.views ?? [])
+            }
+        }.value
+        isLoaded = true
     }
 }
