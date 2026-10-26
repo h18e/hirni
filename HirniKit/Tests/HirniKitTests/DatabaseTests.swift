@@ -255,3 +255,25 @@ struct DatabaseMergeTests {
         #expect(result.conflicts == 1)
     }
 }
+
+struct FieldOrderTests {
+    @Test func movesFieldAndKeepsValues() throws {
+        var db = Database(
+            fields: [Field(name: "A", type: .text), Field(name: "B", type: .text), Field(name: "C", type: .text)],
+            rows: [Row(id: "r1", values: ["A": "1", "B": "2", "C": "3"])]
+        )
+        db.moveField("C", before: "A")
+        #expect(db.fields.map(\.name) == ["C", "A", "B"])
+        db.moveField("C", before: nil)
+        #expect(db.fields.map(\.name) == ["A", "B", "C"])
+        db.moveField("A", before: "C")
+        #expect(db.fields.map(\.name) == ["B", "A", "C"])
+        db.moveField("X", before: "A")
+        #expect(db.fields.map(\.name) == ["B", "A", "C"])
+
+        // In der Datei stehen die Spalten danach in der neuen Reihenfolge.
+        let text = DatabaseFile.serialize(db)
+        #expect(text.contains("| id | B | A | C |"))
+        #expect(try DatabaseFile.parse(text).rows.first?["A"] == "1")
+    }
+}

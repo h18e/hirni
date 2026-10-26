@@ -221,6 +221,13 @@ final class DatabaseDocument {
         scheduleSave()
     }
 
+    /// Spalte verschieben (Mac: Überschrift ziehen), vor `target` oder ans Ende.
+    func moveField(_ name: String, before target: String?) {
+        let before = database.fields
+        database.moveField(name, before: target)
+        if database.fields != before { scheduleSave() }
+    }
+
     func moveRows(from source: IndexSet, to destination: Int) {
         database.rows.move(fromOffsets: source, toOffset: destination)
         scheduleSave()

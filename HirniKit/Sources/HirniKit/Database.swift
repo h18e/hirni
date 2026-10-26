@@ -342,3 +342,14 @@ public enum DatabaseFile {
             .replacingOccurrences(of: "\n", with: "<br>")
     }
 }
+
+extension Database {
+    /// Verschiebt ein Feld vor `target` (bzw. ans Ende bei `nil`). Die Werte
+    /// bleiben, wo sie sind: Zeilen speichern ihre Werte nach Feldname.
+    public mutating func moveField(_ name: String, before target: String?) {
+        guard name != target, let from = fields.firstIndex(where: { $0.name == name }) else { return }
+        let field = fields.remove(at: from)
+        let to = target.flatMap { target in fields.firstIndex { $0.name == target } } ?? fields.endIndex
+        fields.insert(field, at: to)
+    }
+}

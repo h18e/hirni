@@ -13,6 +13,22 @@ struct FieldsEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
+                if edits.count > 1 {
+                    Section {
+                        ForEach(edits) { edit in
+                            Label(edit.field.name.isEmpty ? "Ohne Namen" : edit.field.name, systemImage: edit.field.type.systemImage)
+                        }
+                        .onMove { edits.move(fromOffsets: $0, toOffset: $1) }
+                    } header: {
+                        Text("Reihenfolge")
+                    } footer: {
+                        #if os(iOS)
+                        Text("Zum Verschieben ein Feld lange drücken und ziehen. Das erste Feld ist der Titel eines Eintrags.")
+                        #else
+                        Text("Zum Verschieben ein Feld ziehen. Das erste Feld ist der Titel eines Eintrags. In der Tabelle lassen sich auch die Spaltenüberschriften ziehen.")
+                        #endif
+                    }
+                }
                 ForEach(edits) { edit in
                     FieldSection(edit: .element(edit.id, in: $edits, fallback: edit)) {
                         edits.removeAll { $0.id == edit.id }
