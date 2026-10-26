@@ -277,3 +277,13 @@ struct FieldOrderTests {
         #expect(try DatabaseFile.parse(text).rows.first?["A"] == "1")
     }
 }
+
+struct ListViewTests {
+    @Test func listViewRoundTripsAsListe() throws {
+        var db = Database(fields: [Field(name: "Name", type: .text)])
+        db.views = [SavedView(name: "Kurz", kind: .list)]
+        let text = DatabaseFile.serialize(db)
+        #expect(text.contains(#""typ":"liste""#))
+        #expect(try DatabaseFile.parse(text).views.first?.kind == .list)
+    }
+}

@@ -115,12 +115,15 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
 
 public enum ViewKind: String, Codable, CaseIterable, Sendable {
     case table = "tabelle"
+    /// Kurz: pro Eintrag eine Zeile mit Titel und den nächsten Werten.
+    case list = "liste"
     case calendar = "kalender"
     case chart = "diagramm"
 
     public var label: String {
         switch self {
         case .table: "Tabelle"
+        case .list: "Liste"
         case .calendar: "Kalender"
         case .chart: "Diagramm"
         }
@@ -129,6 +132,7 @@ public enum ViewKind: String, Codable, CaseIterable, Sendable {
     public var systemImage: String {
         switch self {
         case .table: "tablecells"
+        case .list: "list.bullet"
         case .calendar: "calendar"
         case .chart: "chart.bar"
         }

@@ -84,6 +84,8 @@ struct DatabaseView: View {
                 }
             case .chart:
                 ScrollView { DatabaseChart(document: document) }
+            case .list:
+                DatabaseRowList(document: document, open: { editingRow = EditingRow(id: $0) }, openPage: { showPage($0) })
             case .table:
                 #if os(macOS)
                 DatabaseTable(document: document, selection: $selection, openPage: { showPage($0) })
@@ -341,41 +343,6 @@ private struct DatabaseTable: View {
 }
 #endif
 
-#if os(macOS)
-/// Eine Spaltenüberschrift, die sich ziehen lässt und gezogene Spalten annimmt.
-private struct ColumnHeader: View {
-    let field: Field
-    let width: CGFloat
-    let drop: (String) -> Void
-    @State private var isTargeted = false
-
-    var body: some View {
-        Label(field.name, systemImage: field.type.systemImage)
-            .font(.caption.bold())
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .padding(.horizontal, 8)
-            .frame(width: width, height: 28, alignment: .leading)
-            .contentShape(Rectangle())
-            // Einfügemarke links: Hier landet die gezogene Spalte.
-            .overlay(alignment: .leading) {
-                if isTargeted { Rectangle().fill(Color.accentColor).frame(width: 3) }
-            }
-            .draggable(field.name) {
-                Label(field.name, systemImage: field.type.systemImage)
-                    .font(.caption.bold())
-                    .padding(6)
-                    .background(.bar, in: RoundedRectangle(cornerRadius: 6))
-            }
-            .dropDestination(for: String.self) { names, _ in
-                guard let name = names.first, name != field.name else { return false }
-                drop(name)
-                return true
-            } isTargeted: { isTargeted = $0 }
-            .help("Ziehen, um die Spalte zu verschieben")
-    }
-}
-#endif
 
 
 /// Formular für einen Eintrag: alle Felder untereinander.

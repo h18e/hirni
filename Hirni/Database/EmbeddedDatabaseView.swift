@@ -86,6 +86,8 @@ struct EmbeddedDatabaseView: View {
             switch document.currentView.kind {
             case .table:
                 EmbeddedRows(document: document, registry: registry)
+            case .list:
+                EmbeddedList(document: document, registry: registry)
             case .calendar:
                 DatabaseCalendar(document: document) { id in
                     // Erst öffnen, wenn das Tagesblatt zu ist.
@@ -131,6 +133,57 @@ private struct EmbeddedRows: View {
         }
         .onChange(of: result.rows.count) { registry.onLayoutChange() }
         .onChange(of: document.currentView.aggregates?.isEmpty) { registry.onLayoutChange() }
+    }
+}
+
+/// Ansicht «Liste» in kurz: die ersten Einträge mit Titel und Werten.
+private struct EmbeddedList: View {
+    let document: DatabaseDocument
+    let registry: EmbeddedDatabases
+
+    var body: some View {
+        let result = document.result
+        let fields = document.visibleFields
+        VStack(alignment: .leading, spacing: 0) {
+            if result.rows.isEmpty {
+                Text(document.database.rows.isEmpty ? "Noch keine Einträge – mit + oben anlegen" : "Keine passenden Einträge")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(12)
+            }
+            ForEach(result.rows.prefix(EmbeddedDatabases.maxRows)) { row in
+                Button { registry.editingRow = .init(document: document, rowID: row.id) } label: {
+                    RowSummary(fields: fields, row: row, hasPage: document.rowPages[row.id] != nil)
+                        .padding(.horizontal, 12)
+                        .frame(maxWidth: .infinity, minHeight: EmbeddedDatabases.listRowHeight, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Divider().padding(.leading, 12)
+            }
+            if result.rows.count > EmbeddedDatabases.maxRows {
+                Button("\(result.rows.count - EmbeddedDatabases.maxRows) weitere – Datenbank öffnen") {
+                    registry.store.selectedNote = document.url
+                }
+                .buttonStyle(.borderless)
+                .font(.subheadline)
+                .padding(.horizontal, 12)
+                .frame(height: 32)
+            }
+            let aggregates = document.currentView.aggregates ?? [:]
+            if !aggregates.isEmpty {
+                let parts = document.database.fields.compactMap { field -> String? in
+                    aggregates[field.name].map { "\($0.label) \(field.name): \(DatabaseQuery.display($0, field: field, rows: result.rows))" }
+                }
+                Text(parts.joined(separator: " · "))
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 12)
+                    .frame(height: 32)
+            }
+        }
+        .onChange(of: result.rows.count) { registry.onLayoutChange() }
     }
 }
 

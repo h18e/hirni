@@ -118,6 +118,13 @@ final class EmbeddedDatabases {
                 #else
                 return Self.headerHeight + 640
                 #endif
+            case .list:
+                let rows = document.result.rows.count
+                if rows == 0 { return Self.headerHeight + 60 }
+                var height = Self.headerHeight + CGFloat(min(rows, Self.maxRows)) * Self.listRowHeight
+                if rows > Self.maxRows { height += 32 }
+                if !(document.currentView.aggregates ?? [:]).isEmpty { height += 32 }
+                return height + 8
             case .table:
                 let rows = document.result.rows.count
                 if rows == 0 { return Self.headerHeight + 60 }
@@ -133,4 +140,9 @@ final class EmbeddedDatabases {
 
     static let headerHeight: CGFloat = 44
     static let maxRows = 8
+    #if os(iOS)
+    static let listRowHeight: CGFloat = 56
+    #else
+    static let listRowHeight: CGFloat = 46
+    #endif
 }

@@ -51,18 +51,25 @@ struct DatabaseGrid: View {
         }
     }
 
+    /// Überschriften lassen sich ziehen (iPhone: lange drücken), um Spalten
+    /// zu verschieben. Ganz rechts abgelegt kommt die Spalte ans Ende.
     private func header(_ fields: [Field]) -> some View {
         HStack(spacing: 0) {
             Color.clear.frame(width: Self.handleWidth)
             ForEach(fields) { field in
-                Label(field.name, systemImage: field.type.systemImage)
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .padding(.horizontal, 8)
-                    .frame(width: Self.width(of: field), alignment: .leading)
+                ColumnHeader(field: field, width: Self.width(of: field), height: Self.headerHeight) { dragged in
+                    document.moveField(dragged, before: field.name)
+                }
                 Divider()
             }
+            Color.clear
+                .frame(width: 60)
+                .contentShape(Rectangle())
+                .dropDestination(for: String.self) { names, _ in
+                    guard let name = names.first, document.database.field(named: name) != nil else { return false }
+                    document.moveField(name, before: nil)
+                    return true
+                }
         }
         .frame(height: Self.headerHeight)
         .background(.bar)
@@ -191,5 +198,42 @@ private struct CellText: View {
 
     private var color: Color {
         OptionColors.color(field.options?.firstIndex(of: raw))
+    }
+}
+
+/// Eine Spaltenüberschrift, die sich ziehen lässt und gezogene Spalten annimmt.
+struct ColumnHeader: View {
+    let field: Field
+    let width: CGFloat
+    var height: CGFloat = 28
+    let drop: (String) -> Void
+    @State private var isTargeted = false
+
+    var body: some View {
+        Label(field.name, systemImage: field.type.systemImage)
+            .font(.caption.bold())
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .frame(width: width, height: height, alignment: .leading)
+            .contentShape(Rectangle())
+            // Einfügemarke links: Hier landet die gezogene Spalte.
+            .overlay(alignment: .leading) {
+                if isTargeted { Rectangle().fill(Color.accentColor).frame(width: 3) }
+            }
+            .draggable(field.name) {
+                Label(field.name, systemImage: field.type.systemImage)
+                    .font(.caption.bold())
+                    .padding(6)
+                    .background(.bar, in: RoundedRectangle(cornerRadius: 6))
+            }
+            .dropDestination(for: String.self) { names, _ in
+                guard let name = names.first, name != field.name else { return false }
+                drop(name)
+                return true
+            } isTargeted: { isTargeted = $0 }
+            #if os(macOS)
+            .help("Ziehen, um die Spalte zu verschieben")
+            #endif
     }
 }

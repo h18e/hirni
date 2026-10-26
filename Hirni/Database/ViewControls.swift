@@ -35,6 +35,7 @@ struct ViewBar: View {
                 }
                 Menu {
                     Button("Tabelle", systemImage: ViewKind.table.systemImage) { document.addView(kind: .table) }
+                    Button("Liste", systemImage: ViewKind.list.systemImage) { document.addView(kind: .list) }
                     Button("Kalender", systemImage: ViewKind.calendar.systemImage) { document.addView(kind: .calendar) }
                     Button("Diagramm", systemImage: ViewKind.chart.systemImage) { document.addView(kind: .chart) }
                 } label: {
@@ -80,7 +81,7 @@ struct ViewOptions: View {
                 switch view.kind {
                 case .calendar: calendarOptions(view)
                 case .chart: ChartOptions(document: document)
-                case .table: tableOptions(view)
+                case .table, .list: tableOptions(view)
                 }
             }
             .labelStyle(.titleAndIcon)
