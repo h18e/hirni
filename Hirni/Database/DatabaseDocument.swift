@@ -140,7 +140,7 @@ final class DatabaseDocument {
                 loadError = error.localizedDescription
             }
         case .failure:
-            loadError = "Die Datei ist keine lesbare Textdatei (UTF-8). hirni verändert sie nicht."
+            loadError = "Die Datei ist keine lesbare Textdatei (UTF-8). Hirni verändert sie nicht."
         }
         register()
         await refreshRowPages()

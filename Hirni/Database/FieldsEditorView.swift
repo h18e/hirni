@@ -79,7 +79,7 @@ struct FieldsEditorView: View {
     private var problem: String? {
         let names = edits.map { $0.field.name.trimmingCharacters(in: .whitespaces) }
         if names.contains(where: \.isEmpty) { return "Jedes Feld braucht einen Namen." }
-        if names.contains(where: { $0.lowercased() == "id" }) { return "«id» ist für hirni reserviert." }
+        if names.contains(where: { $0.lowercased() == "id" }) { return "«id» ist für Hirni reserviert." }
         if Set(names.map { $0.lowercased() }).count != names.count { return "Zwei Felder haben denselben Namen." }
         if edits.isEmpty { return "Eine Datenbank braucht mindestens ein Feld." }
         for edit in edits {

@@ -98,6 +98,6 @@ private struct TrashRow: View {
 
     private var origin: String {
         let folder = (entry.originalPath as NSString).deletingLastPathComponent
-        return folder.isEmpty ? "hirni" : folder
+        return folder.isEmpty ? "Hirni" : folder
     }
 }

@@ -9,7 +9,9 @@ Claude arbeitet als erfahrener Apple-Plattform-Entwickler (Swift, SwiftUI, TextK
 
 ## Projektname und Zweck
 
-**hirni** ist eine persönliche Notizen- und Datenbank-App für Mac und iPhone und kommt ohne Abo aus. Sie vereint:
+Der App-Name lautet «Hirni» (Anzeige unter dem Symbol, im Dock, in iCloud Drive und in der App). Technische Kennungen bleiben klein: Bundle-ID `ch.hebera.hirni`, iCloud-Container `iCloud.ch.hebera.hirni` und die Kennzeichen in den Dateien (`hirni-datenbank`, `hirni-db`, `hirni-zeile`). Sie dürfen sich nie ändern, sonst findet die App ihre Daten nicht mehr.
+
+**Hirni** ist eine persönliche Notizen- und Datenbank-App für Mac und iPhone und kommt ohne Abo aus. Sie vereint:
 
 - **Apple Notizen:** native Bedienung auf beiden Geräten
 - **Obsidian:** offene Markdown-Dateien, auf die Claude direkt zugreifen kann

@@ -10,7 +10,7 @@ struct SearchResultRow: View {
             Text(hit.title)
                 .font(.headline)
                 .lineLimit(1)
-            Label(hit.folder.isEmpty ? "hirni" : hit.folder, systemImage: "folder")
+            Label(hit.folder.isEmpty ? "Hirni" : hit.folder, systemImage: "folder")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)

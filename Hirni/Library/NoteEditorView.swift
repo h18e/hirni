@@ -209,7 +209,7 @@ struct NoteEditorView: View {
         case .success(let text):
             content = text
         case .failure:
-            loadError = "Die Datei ist keine lesbare Textdatei (UTF-8). hirni verändert sie nicht."
+            loadError = "Die Datei ist keine lesbare Textdatei (UTF-8). Hirni verändert sie nicht."
             return
         }
         let modified = await store.modificationDate(of: newURL) ?? .now

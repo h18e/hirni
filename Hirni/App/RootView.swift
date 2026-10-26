@@ -15,7 +15,7 @@ struct RootView: View {
                 Image(systemName: "brain.head.profile")
                     .font(.system(size: 56))
                     .foregroundStyle(.tint)
-                Text("hirni")
+                Text("Hirni")
                     .font(.largeTitle.bold())
                 status
             }

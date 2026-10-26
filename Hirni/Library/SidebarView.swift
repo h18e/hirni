@@ -52,7 +52,7 @@ struct SidebarView: View {
                 }
             }
         }
-        .navigationTitle("hirni")
+        .navigationTitle("Hirni")
         #if os(macOS)
         .navigationSplitViewColumnWidth(min: 180, ideal: 220)
         #endif

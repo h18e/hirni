@@ -9,7 +9,7 @@
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<true/>
 			<key>NSUbiquitousContainerName</key>
-			<string>hirni</string>
+			<string>Hirni</string>
 			<key>NSUbiquitousContainerSupportedFolderLevels</key>
 			<string>Any</string>
 		</dict>
@@ -22,7 +22,7 @@
 				<string>public.data</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>hirni-Notiz oder -Ordner</string>
+			<string>Hirni-Notiz oder -Ordner</string>
 			<key>UTTypeIdentifier</key>
 			<string>ch.hebera.hirni.item</string>
 		</dict>
