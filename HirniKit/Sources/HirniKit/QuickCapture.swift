@@ -97,3 +97,57 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
         try JSONEncoder().encode(self).write(to: folder.appending(path: Self.fileName), options: .atomic)
     }
 }
+
+extension WidgetSnapshot {
+    /// Pendenz aus der Anzeige nehmen (nach dem Abhaken im Widget).
+    public mutating func complete(_ id: String) {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items.remove(at: index)
+        openCount = max(0, openCount - 1)
+    }
+}
+
+extension Vault {
+    /// Hakt die offene Pendenz mit diesem Schlüssel (`Pfad|Text`, siehe
+    /// `TaskItem.dueKey`) ab. `false`, wenn es sie nicht mehr gibt.
+    @discardableResult
+    public func completeTask(key: String, now: Date = .now) throws -> Bool {
+        guard let bar = key.firstIndex(of: "|") else { return false }
+        let note = root.appending(path: String(key[..<bar]))
+        let text = String(key[key.index(after: bar)...])
+        guard FileManager.default.fileExists(atPath: note.path(percentEncoded: false)),
+              let task = allTasks(in: note).first(where: { !$0.isDone && $0.text == text })
+        else { return false }
+        try updateTask(task) { TaskLine.setDone(true, line: $0, now: now) }
+        return true
+    }
+}
+
+/// Im Widget abgehakte Pendenzen, die es nicht selbst in den Hirni-Ordner
+/// schreiben konnte (z. B. iCloud gerade nicht erreichbar). Die App holt sie
+/// beim Start und beim Zurückkehren ab.
+public enum WidgetCompletions {
+    static let fileName = "Erledigt.json"
+
+    public static func add(_ key: String, in folder: URL) throws {
+        var keys = load(from: folder)
+        guard !keys.contains(key) else { return }
+        keys.append(key)
+        try JSONEncoder().encode(keys).write(to: folder.appending(path: fileName), options: .atomic)
+    }
+
+    /// Hakt alle wartenden ab und leert die Liste. Liefert die Anzahl.
+    @discardableResult
+    public static func apply(from folder: URL, to vault: Vault, now: Date = .now) -> Int {
+        let keys = load(from: folder)
+        guard !keys.isEmpty else { return 0 }
+        let done = keys.filter { (try? vault.completeTask(key: $0, now: now)) == true }.count
+        try? FileManager.default.removeItem(at: folder.appending(path: fileName))
+        return done
+    }
+
+    static func load(from folder: URL) -> [String] {
+        guard let data = try? Data(contentsOf: folder.appending(path: fileName)) else { return [] }
+        return (try? JSONDecoder().decode([String].self, from: data)) ?? []
+    }
+}

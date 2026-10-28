@@ -6,7 +6,6 @@ import UniformTypeIdentifiers
 @Observable
 final class ShareModel {
     nonisolated static let containerIdentifier = "iCloud.ch.hebera.hirni"
-    nonisolated static let appGroup = "group.ch.hebera.hirni"
 
     private let context: NSExtensionContext?
     var title = ""
@@ -97,7 +96,7 @@ final class ShareModel {
                     let root = container.appending(path: "Documents", directoryHint: .isDirectory)
                     try VaultLayout.prepare(root: root)
                     try Vault(root: root).importShared(item, files: files)
-                } else if let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Self.appGroup) {
+                } else if let group = AppGroup.folder {
                     try SharedInbox.enqueue(item, files: files, in: group.appending(path: SharedInbox.queueFolderName, directoryHint: .isDirectory))
                 } else {
                     return "Weder iCloud Drive noch der gemeinsame Ordner sind erreichbar."

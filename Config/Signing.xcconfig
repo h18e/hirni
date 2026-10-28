@@ -10,3 +10,8 @@
 // Das Fragezeichen bei #include? bedeutet: Fehlt die Datei, wird sie
 // übersprungen, statt den Build abzubrechen.
 #include? "Local.xcconfig"
+
+// Gemeinsamer Ordner von App und Erweiterungen (siehe HirniKit/AppGroup.swift).
+// Am Mac mit Team-Kennung, weil «group.…» dort eine Freigabe im Profil braucht.
+HIRNI_APP_GROUP = group.ch.hebera.hirni
+HIRNI_APP_GROUP[sdk=macosx*] = $(DEVELOPMENT_TEAM).ch.hebera.hirni

@@ -37,4 +37,33 @@ struct QuickCaptureTests {
         try snapshot.save(to: folder)
         #expect(WidgetSnapshot.load(from: folder) == snapshot)
     }
+
+    @Test func completeTaskByKey() throws {
+        let test = try TestVault()
+        try test.write("- [ ] Milch | Brot\n- [ ] Velo\n", to: "Inbox/Liste.md")
+        let day = TaskLine.parseDate("2026-10-28")!
+        #expect(try test.vault.completeTask(key: "Inbox/Liste.md|Milch | Brot", now: day))
+        #expect(try test.vault.completeTask(key: "Inbox/Liste.md|Milch | Brot", now: day) == false)
+        #expect(try test.vault.completeTask(key: "Inbox/Fehlt.md|Velo") == false)
+        let text = try test.vault.readNote(at: test.vault.root.appending(path: "Inbox/Liste.md"))
+        #expect(text == "- [x] Milch | Brot ✅ 2026-10-28\n- [ ] Velo\n")
+    }
+
+    @Test func completionQueue() throws {
+        let test = try TestVault()
+        try test.write("- [ ] Velo\n", to: "Inbox/Liste.md")
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try WidgetCompletions.add("Inbox/Liste.md|Velo", in: folder)
+        try WidgetCompletions.add("Inbox/Liste.md|Velo", in: folder)
+        try WidgetCompletions.add("Inbox/Weg.md|X", in: folder)
+        #expect(WidgetCompletions.apply(from: folder, to: test.vault) == 1)
+        let tasks = test.vault.allTasks()
+        #expect(tasks.allSatisfy { $0.isDone })
+        #expect(WidgetCompletions.load(from: folder).isEmpty)
+
+        var snapshot = WidgetSnapshot(openCount: 2, items: [.init(id: "a", text: "A", note: "N", notePath: "", due: nil)])
+        snapshot.complete("a")
+        #expect(snapshot == WidgetSnapshot(openCount: 1, items: []))
+    }
 }

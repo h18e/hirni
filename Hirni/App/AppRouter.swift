@@ -45,11 +45,9 @@ final class AppRouter {
 
 /// Die Daten fürs Widget im gemeinsamen App-Gruppen-Ordner.
 enum WidgetData {
-    nonisolated static let appGroup = "group.ch.hebera.hirni"
-
     /// Speichert und lässt das Widget neu zeichnen, wenn sich etwas geändert hat.
     nonisolated static func publish(_ snapshot: WidgetSnapshot) {
-        guard let folder = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup),
+        guard let folder = AppGroup.folder,
               WidgetSnapshot.load(from: folder) != snapshot
         else { return }
         try? snapshot.save(to: folder)

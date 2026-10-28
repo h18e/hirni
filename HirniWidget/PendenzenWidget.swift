@@ -1,3 +1,4 @@
+import AppIntents
 import HirniKit
 import SwiftUI
 import WidgetKit
@@ -33,8 +34,6 @@ struct SnapshotEntry: TimelineEntry {
 }
 
 struct SnapshotProvider: TimelineProvider {
-    static let appGroup = "group.ch.hebera.hirni"
-
     func placeholder(in context: Context) -> SnapshotEntry {
         SnapshotEntry(date: .now, snapshot: WidgetSnapshot(openCount: 3, items: [
             .init(id: "1", text: "Steuererklärung #büro", note: "Büro", notePath: "", due: nil),
@@ -55,7 +54,7 @@ struct SnapshotProvider: TimelineProvider {
     }
 
     private func entry() -> SnapshotEntry {
-        let folder = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Self.appGroup)
+        let folder = AppGroup.folder
         return SnapshotEntry(date: .now, snapshot: folder.flatMap(WidgetSnapshot.load) ?? WidgetSnapshot())
     }
 }
@@ -113,9 +112,7 @@ struct PendenzenView: View {
                     Spacer()
                 } else {
                     ForEach(entry.snapshot.items.prefix(maxItems)) { item in
-                        Link(destination: DeepLink.note(item.notePath)) {
-                            row(item)
-                        }
+                        row(item)
                     }
                     Spacer(minLength: 0)
                 }
@@ -126,9 +123,22 @@ struct PendenzenView: View {
 
     private func row(_ item: WidgetSnapshot.Item) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Image(systemName: "circle")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            // Der Kreis hakt ab, der Text öffnet die Notiz.
+            Button(intent: CompleteTaskIntent(id: item.id)) {
+                Image(systemName: "circle")
+                    .font(family == .systemSmall ? .caption : .body)
+                    .foregroundStyle(.secondary)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Link(destination: DeepLink.note(item.notePath)) {
+                text(item)
+            }
+        }
+    }
+
+    private func text(_ item: WidgetSnapshot.Item) -> some View {
+        HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(item.text)
                     .font(family == .systemSmall ? .caption : .subheadline)
@@ -140,6 +150,7 @@ struct PendenzenView: View {
                         .lineLimit(1)
                 }
             }
+            Spacer(minLength: 0)
         }
     }
 

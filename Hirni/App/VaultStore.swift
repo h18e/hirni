@@ -132,12 +132,13 @@ final class VaultStore {
         await reload()
     }
 
-    /// Holt ab, was die Teilen-Erweiterung nicht direkt in die Inbox legen
-    /// konnte (siehe `SharedInbox`).
+    /// Holt ab, was Teilen-Erweiterung und Widget nicht direkt in den
+    /// Hirni-Ordner schreiben konnten (siehe `SharedInbox`, `WidgetCompletions`).
     func importShared() async {
-        guard let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.ch.hebera.hirni") else { return }
+        guard let group = AppGroup.folder else { return }
         let queue = group.appending(path: SharedInbox.queueFolderName, directoryHint: .isDirectory)
         _ = await perform { SharedInbox.importPending(from: queue, into: $0) }
+        _ = await perform { WidgetCompletions.apply(from: group, to: $0) }
     }
 
     /// Tags aus dem Such-Index übernehmen (ohne Index: alle Notizen lesen).
