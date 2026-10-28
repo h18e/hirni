@@ -36,6 +36,8 @@ struct NoteEditorView: View {
     /// Eingebettete Datenbanken (`hirni-db`-Blöcke) dieser Notiz.
     @State private var databases: EmbeddedDatabases?
     @FocusState private var titleIsFocused: Bool
+    /// iPhone: Erhöhen setzt den Cursor in den Titel (siehe TitleField).
+    @State private var titleFocusRequest = 0
 
     private var isLoaded: Bool { fileURL != nil }
     private var hasUnsavedChanges: Bool { text != savedText }
@@ -58,11 +60,7 @@ struct NoteEditorView: View {
                 ConflictBanner { showsConflictVersions = true }
             }
 
-            TextField(Vault.title(of: fileURL ?? url), text: $title)
-                .font(.title.bold())
-                .textFieldStyle(.plain)
-                .focused($titleIsFocused)
-                .onSubmit { Task { await commitTitle() } }
+            titleField
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 8)
@@ -232,9 +230,7 @@ struct NoteEditorView: View {
         if store.justCreatedNote == newURL {
             store.justCreatedNote = nil
             title = "" // der Platzhalter «Neue Notiz» bleibt sichtbar
-            // Erst nach dem nächsten Bildaufbau: Vorher ist das Feld noch deaktiviert.
-            try? await Task.sleep(for: .milliseconds(50))
-            titleIsFocused = true
+            await focusTitle()
         }
     }
 
@@ -329,6 +325,45 @@ struct NoteEditorView: View {
     }
 
     // MARK: - Titel
+
+    /// Setzt den Cursor in den Titel. Auf dem iPhone klappt das nicht sofort:
+    /// Das Feld ist erst nach dem Bildaufbau aktiv, und während die neue
+    /// Notiz hereinfährt, nimmt iOS den Fokus nicht an. Darum mehrmals
+    /// versuchen, bis er sitzt (höchstens etwa 2 Sekunden).
+    private func focusTitle() async {
+        #if os(iOS)
+        titleFocusRequest += 1
+        #else
+        for _ in 0..<15 {
+            try? await Task.sleep(for: .milliseconds(150))
+            if titleIsFocused { return }
+            titleIsFocused = true
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private var titleField: some View {
+        #if os(iOS)
+        TitleField(
+            placeholder: Vault.title(of: fileURL ?? url),
+            text: $title,
+            focusRequest: titleFocusRequest,
+            onEndEditing: { Task { await commitTitle() } },
+            onSubmit: {
+                // Weiter in den Text, das Verlassen des Titels übernimmt ihn.
+                controller.focusText()
+            }
+        )
+        .frame(height: 44)
+        #else
+        TextField(Vault.title(of: fileURL ?? url), text: $title)
+            .font(.title.bold())
+            .textFieldStyle(.plain)
+            .focused($titleIsFocused)
+            .onSubmit { Task { await commitTitle() } }
+        #endif
+    }
 
     private func commitTitle() async {
         guard let fileURL, !isRenaming else { return }

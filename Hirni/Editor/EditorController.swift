@@ -222,6 +222,13 @@ final class EditorController {
     }
 
     #if os(iOS)
+    /// Cursor ans Ende des Texts (z. B. nach Return im Titel).
+    func focusText() {
+        guard let textView else { return }
+        textView.becomeFirstResponder()
+        textView.selectedRange = NSRange(location: (textView.text as NSString).length, length: 0)
+    }
+
     func dismissKeyboard() {
         textView?.resignFirstResponder()
     }
