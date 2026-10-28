@@ -3,9 +3,10 @@
 Persönliche Notizen- und Datenbank-App für Mac und iPhone, synchronisiert über iCloud Drive.
 Notizen sind Markdown-Dateien, Datenbanken funktionieren wie in Notion, und Claude kann direkt auf alle Dateien zugreifen.
 
-- [Spezifikation](docs/spec.md) – was hirni kann und wie die Dateien aufgebaut sind
+- [Spezifikation](docs/spec.md) – was Hirni kann und wie die Dateien aufgebaut sind
 - [Roadmap](docs/roadmap.md) – Etappen und Stand
 - [Ersteinrichtung](docs/SETUP.md) – App auf Mac und iPhone starten
+- Code-Sicherung: [github.com/h18e/hirni](https://github.com/h18e/hirni) (privat, Branch `main`)
 
 ## Aufbau
 
