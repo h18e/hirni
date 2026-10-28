@@ -14,5 +14,9 @@
 	<array>
 		<string>iCloud.ch.hebera.hirni</string>
 	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.ch.hebera.hirni</string>
+	</array>
 </dict>
 </plist>

@@ -128,7 +128,16 @@ final class VaultStore {
             await perform { $0.removeCreatedDates() }
             UserDefaults.standard.set(true, forKey: "erfasstDatenEntfernt")
         }
+        await importShared()
         await reload()
+    }
+
+    /// Holt ab, was die Teilen-Erweiterung nicht direkt in die Inbox legen
+    /// konnte (siehe `SharedInbox`).
+    func importShared() async {
+        guard let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.ch.hebera.hirni") else { return }
+        let queue = group.appending(path: SharedInbox.queueFolderName, directoryHint: .isDirectory)
+        _ = await perform { SharedInbox.importPending(from: queue, into: $0) }
     }
 
     /// Tags aus dem Such-Index übernehmen (ohne Index: alle Notizen lesen).

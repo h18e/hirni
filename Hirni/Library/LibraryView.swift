@@ -36,7 +36,7 @@ struct LibraryView: View {
         .environment(store)
         .task { await store.start() }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await store.reload() } }
+            if phase == .active { Task { await store.importShared(); await store.reload() } }
             // In den Hintergrund: sofort speichern, iOS beendet Apps dort ohne Vorwarnung.
             if phase == .background, let editor = store.openEditor { Task { await editor.flush() } }
         }

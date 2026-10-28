@@ -49,6 +49,8 @@ extension Vault {
 /// sie beim Start in die Inbox.
 public enum SharedInbox {
     static let itemFile = "eintrag.json"
+    /// Ordner der Warteschlange im gemeinsamen App-Gruppen-Ordner.
+    public static let queueFolderName = "Geteilt"
 
     /// Legt einen Eintrag in `queue` ab.
     public static func enqueue(_ item: SharedItem, files: [URL], in queue: URL) throws {

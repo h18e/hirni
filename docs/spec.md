@@ -201,6 +201,12 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **PDF:** A4, Ränder 16 mm, Systemschrift. Ohne Markdown-Zeichen: Überschriften, Absätze, Listen, Checklisten (☐/☑ mit Erledigt-Datum), Zitate, Codeblöcke, Tabellen, Bilder (auf eigener Zeile; PDFs und fehlende Bilder als Hinweis), Links, Tags. Eingebettete Datenbanken erscheinen als Tabelle ihrer Ansicht (sichtbare Felder, Filter, Sortierung, Gruppen, Berechnungen); Kalender und Diagramm ebenfalls als Tabelle ihrer Einträge. Der Titel steht oben, ausser die Notiz beginnt schon mit ihm als Überschrift.
 - **Technik:** Hirni erzeugt HTML (`NoteHTML`) und lässt WebKit es auf Seiten verteilen (iPhone: Druck-Renderer, Mac: Druckauftrag in eine Datei).
 
+### Teilen in Hirni
+
+- **Hirni im Teilen-Menü** anderer Apps (iPhone und Mac): Links, Texte, Bilder (bis 10) und PDFs. Ein Blatt «In Hirni sichern» zeigt Titel (änderbar), Text und Anhänge; «Sichern» legt eine Notiz in der **Inbox** an.
+- **Notiz:** zuerst der Text bzw. Link, darunter die Anhänge je auf eigener Zeile (Dateien in `Inbox/_Anhänge/`). Titel: Seitentitel, sonst erste Textzeile (max. 60 Zeichen), sonst Domain, sonst «Geteilt».
+- **Technik:** Erweiterung `HirniShare` (Bundle-ID `ch.hebera.hirni.share`) schreibt direkt in iCloud Drive. Ist iCloud nicht erreichbar, legt sie den Eintrag in die Warteschlange `Geteilt/` im gemeinsamen App-Gruppen-Ordner (`group.ch.hebera.hirni`); Hirni holt sie beim Start und beim Zurückkehren in die App ab (`SharedInbox`).
+
 ### Pendenzen
 
 - **Quelle:** Jede Checkbox-Zeile (`- [ ] …`) in einer Notiz ist eine Pendenz. Es gibt keine eigene Pendenzen-Datei; die Notizen bleiben die einzige Quelle. Vorlagen und Codeblöcke zählen nicht, leere Checkboxen auch nicht.
