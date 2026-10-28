@@ -26,13 +26,20 @@ final class ReminderScheduler: NSObject, UNUserNotificationCenterDelegate {
         UNUserNotificationCenter.current().delegate = self
     }
 
+    /// Fragt einmal nach der Erlaubnis für Mitteilungen (danach entscheidet
+    /// die Einstellung des Systems).
+    func requestPermission() async {
+        let center = UNUserNotificationCenter.current()
+        if await center.notificationSettings().authorizationStatus == .notDetermined {
+            _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+        }
+    }
+
     func update(_ plan: [TaskReminder]) async {
         guard plan != planned else { return }
         planned = plan
         let center = UNUserNotificationCenter.current()
-        if !plan.isEmpty, await center.notificationSettings().authorizationStatus == .notDetermined {
-            _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
-        }
+        if !plan.isEmpty { await requestPermission() }
         let old = await center.pendingNotificationRequests()
             .map(\.identifier)
             .filter { $0.hasPrefix(TaskReminders.identifierPrefix) }

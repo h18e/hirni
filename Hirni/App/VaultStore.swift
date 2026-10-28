@@ -385,6 +385,8 @@ final class VaultStore {
 
     /// Stichtag setzen oder (`nil`) entfernen. Steht nicht in der Notiz.
     func setDueDate(_ date: Date?, for task: TaskItem) async {
+        // Gleich beim ersten Stichtag fragen, nicht erst wenn eine Erinnerung ansteht.
+        if date != nil { await ReminderScheduler.shared.requestPermission() }
         var dates = dueDates
         dates.set(date, for: task.dueKey(in: vault))
         dueDates = dates
