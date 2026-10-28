@@ -18,6 +18,8 @@ struct LibraryView: View {
         } content: {
             if store.sidebarSelection == .trash {
                 TrashListView()
+            } else if store.sidebarSelection == .tasks {
+                TasksView()
             } else {
                 NoteListView()
             }

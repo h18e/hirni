@@ -195,6 +195,15 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Platzhalter** (im Text und im Namen der Vorlage, Gross/klein egal): `{{datum}}` 26.10.2026, `{{iso-datum}}` 2026-10-26, `{{zeit}}` 14:30, `{{wochentag}}` Montag, `{{titel}}` Titel der neuen Notiz. Auf Zeilen-Seiten zusätzlich `{{Feldname}}` mit dem Wert des Eintrags; ein gleichnamiges Feld (z. B. «Datum») geht dabei vor. Unbekannte Platzhalter bleiben stehen.
 - `angepinnt` und `hirni-zeile` aus dem Kopf der Vorlage werden nicht übernommen, andere Kopfzeilen schon.
 
+### Pendenzen
+
+- **Quelle:** Jede Checkbox-Zeile (`- [ ] …`) in einer Notiz ist eine Pendenz. Es gibt keine eigene Pendenzen-Datei; die Notizen bleiben die einzige Quelle. Vorlagen und Codeblöcke zählen nicht, leere Checkboxen auch nicht.
+- **Daten in der Zeile** (wie beim Obsidian-Plugin «Tasks»): `- [ ] Steuern #büro ➕ 2026-10-28`, erledigt zusätzlich `✅ 2026-10-30`. Der Editor zeigt die Daten klein und grau.
+  - **Erfasst (`➕`):** Hirni setzt es beim Speichern für jede Checkbox mit Text, ausser in der Zeile mit dem Cursor; beim Verlassen der Notiz für alle. Fehlt es (z. B. von Claude geschrieben), gilt das Erstelldatum der Notiz.
+  - **Erledigt (`✅`):** Abhaken (in der Notiz oder in der Liste) setzt `[x]` und das Datum, wieder öffnen entfernt beides.
+- **Kategorie:** der erste Tag in der Zeile (`#büro`). In der Liste per Kontextmenü «Kategorie» setzen, ändern oder entfernen (schreibt den Tag in die Zeile, vor die Daten).
+- **Liste «Pendenzen»** (Seitenleiste, mit Anzahl offener): offene nach Kategorie (alphabetisch, «Ohne Kategorie» zuletzt, älteste zuerst), darunter einklappbar «Erledigte Pendenzen» (zuletzt erledigte zuerst). Jede Zeile zeigt Text, Notiz und Datum. Antippen öffnet die Notiz; der Kreis hakt ab bzw. öffnet wieder (iPhone auch Wischen nach rechts).
+
 ### Tags und Suche
 
 - **Tags:** Die Seitenleiste zeigt unter «Tags» alle Tags mit der Anzahl Notizen, die häufigsten zuerst. Ein Tipp listet alle Notizen mit diesem Tag aus allen Ordnern, `#ferien` zeigt dabei auch `#ferien/2026`. Eine neue Notiz aus der Tag-Ansicht landet in der Inbox und hat den Tag schon drin.

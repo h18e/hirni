@@ -155,10 +155,11 @@ struct MarkdownEditingTests {
     @Test func toggleCheckboxOnlyOnTheBox() {
         let text = "- [ ] Milch\n- [x] Brot"
         let keep = NSRange(location: 0, length: 0)
-        let on = try! #require(MarkdownEditing.toggleCheckbox(at: 3, in: text, keeping: keep))
-        #expect(on.applied(to: text) == "- [x] Milch\n- [x] Brot")
-        let off = try! #require(MarkdownEditing.toggleCheckbox(at: 15, in: text, keeping: keep))
-        #expect(off.applied(to: text) == "- [ ] Milch\n- [ ] Brot")
+        let now = ISO8601DateFormatter().date(from: "2026-10-28T10:00:00Z")!
+        let on = try! #require(MarkdownEditing.toggleCheckbox(at: 3, in: text, keeping: keep, now: now))
+        #expect(on.applied(to: text) == "- [x] Milch ✅ 2026-10-28\n- [x] Brot")
+        let off = try! #require(MarkdownEditing.toggleCheckbox(at: 27, in: on.applied(to: text), keeping: keep, now: now))
+        #expect(off.applied(to: on.applied(to: text)) == "- [x] Milch ✅ 2026-10-28\n- [ ] Brot")
         #expect(MarkdownEditing.toggleCheckbox(at: 8, in: text, keeping: keep) == nil)
     }
 

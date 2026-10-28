@@ -25,6 +25,8 @@ public struct MarkdownSpan: Equatable, Sendable {
         /// Link: Beschriftung von `[Text](Adresse)` oder eine eingetippte Adresse.
         case link(url: String)
         case tag(String)
+        /// `➕ 2026-10-28` bzw. `✅ 2026-10-28` in einer Pendenz.
+        case taskDate
         /// Eingebetteter Anhang `![](pfad)`, Pfad relativ zur Notiz.
         case embed(path: String)
     }
@@ -153,6 +155,12 @@ public enum MarkdownSyntax {
             let path = AttachmentLinks.embeds(in: (text as NSString).substring(with: m.range)).first?.path ?? ""
             spans.append(MarkdownSpan(.embed(path: path), m.range))
             spans.append(MarkdownSpan(.syntax, m.range))
+        }
+
+        // Daten von Pendenzen: klein und grau, nichts anderes darin erkennen.
+        for m in TaskLine.datePattern.matches(in: text, range: range) where isFree(m.range) {
+            protected.append(m.range)
+            spans.append(MarkdownSpan(.taskDate, m.range))
         }
 
         // Links: zuerst `[Text](Adresse)`, dann eingetippte Adressen. Beides

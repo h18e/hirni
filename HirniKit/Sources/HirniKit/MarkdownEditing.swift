@@ -121,7 +121,9 @@ public enum MarkdownEditing {
 
     /// Hakt die Checkbox ab bzw. wieder an, wenn `index` auf `[ ]`/`[x]` liegt.
     /// Die Auswahl bleibt, wo sie war.
-    public static func toggleCheckbox(at index: Int, in text: String, keeping selection: NSRange) -> TextEdit? {
+    /// Beim Abhaken kommt `✅ Datum` ans Zeilenende, beim Öffnen fällt es weg
+    /// (für die Pendenzenliste).
+    public static func toggleCheckbox(at index: Int, in text: String, keeping selection: NSRange, now: Date = .now) -> TextEdit? {
         let ns = text as NSString
         guard index >= 0, index <= ns.length else { return nil }
         let lineRange = ns.lineRange(for: NSRange(location: min(index, max(ns.length - 1, 0)), length: 0))
@@ -130,11 +132,12 @@ public enum MarkdownEditing {
         // Ein Tipp knapp daneben zählt auch.
         guard index >= box.location, index <= NSMaxRange(box) else { return nil }
         let checked = ns.substring(with: box).lowercased() == "[x]"
-        return TextEdit(
-            range: NSRange(location: box.location + 1, length: 1),
-            replacement: checked ? " " : "x",
-            selection: selection
-        )
+        let hasNewline = ns.substring(with: lineRange).hasSuffix("\n")
+        let line = NSRange(location: lineRange.location, length: lineRange.length - (hasNewline ? 1 : 0))
+        let replacement = TaskLine.setDone(!checked, line: ns.substring(with: line), now: now)
+        let delta = (replacement as NSString).length - line.length
+        let caret = selection.location > NSMaxRange(line) ? selection.location + delta : min(selection.location, line.location + (replacement as NSString).length)
+        return TextEdit(range: line, replacement: replacement, selection: NSRange(location: caret, length: 0))
     }
 
     /// Nach Return in einer Listen- oder Checklistenzeile: neue Zeile mit

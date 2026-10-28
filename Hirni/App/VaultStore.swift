@@ -13,6 +13,8 @@ enum SidebarItem: Hashable {
     case inbox
     case folder(URL)
     case tag(String)
+    /// Alle Checkboxen aus allen Notizen.
+    case tasks
     case trash
 }
 
@@ -35,6 +37,8 @@ final class VaultStore {
     private(set) var folders: [FolderNode] = []
     private(set) var notes: [NoteSummary] = []
     private(set) var trash: [TrashEntry] = []
+    /// Alle Pendenzen (Checkboxen) aus allen Notizen.
+    private(set) var tasks: [TaskItem] = []
     /// Vorlagen aus dem Ordner «Vorlagen».
     private(set) var templates: [NoteTemplate] = []
     /// Alle Tags im hirni-Ordner, die häufigsten zuerst (für Vorschläge).
@@ -89,7 +93,7 @@ final class VaultStore {
         switch sidebarSelection {
         case .inbox, nil: vault.inboxURL
         case .folder(let url): url
-        case .tag, .trash: nil
+        case .tag, .tasks, .trash: nil
         }
     }
 
@@ -98,6 +102,7 @@ final class VaultStore {
         case .inbox, nil: VaultLayout.inboxFolderName
         case .folder(let url): url.lastPathComponent
         case .tag(let tag): "#\(tag)"
+        case .tasks: "Pendenzen"
         case .trash: "Zuletzt gelöscht"
         }
     }
@@ -168,13 +173,15 @@ final class VaultStore {
                 folders: Result { try vault.folderTree() },
                 notes: Result { try folderURL.map { try vault.notes(in: $0) } ?? [] },
                 trash: Result { showsTrash ? try vault.trashEntries() : [] },
-                templates: vault.templates()
+                templates: vault.templates(),
+                tasks: vault.allTasks()
             )
         }.value
 
         if case .success(let folders) = result.folders { self.folders = folders }
         if case .success(let trash) = result.trash { self.trash = trash }
         if templates != result.templates { templates = result.templates }
+        if tasks != result.tasks { tasks = result.tasks }
         switch result.notes {
         case .success(let notes):
             self.notes = sidebarSelection?.isTag == true ? await taggedNotes() : notes
@@ -203,7 +210,7 @@ final class VaultStore {
 
     /// Neue Notiz, leer oder aus einer Vorlage.
     func newNote(template: URL? = nil) async {
-        if sidebarSelection == .trash { sidebarSelection = .inbox }
+        if sidebarSelection == .trash || sidebarSelection == .tasks { sidebarSelection = .inbox }
         let folder = currentFolderURL ?? vault.inboxURL
         // In der Tag-Ansicht bekommt die neue Notiz (in der Inbox) gleich den Tag.
         let tag = if case .tag(let tag) = sidebarSelection { tag } else { String?.none }
@@ -344,6 +351,33 @@ final class VaultStore {
         guard let copy = await perform({ try $0.duplicateNote(at: url) }) else { return }
         await reload()
         selectedNote = copy
+    }
+
+    // MARK: - Pendenzen
+
+    /// Abhaken bzw. wieder öffnen, direkt in der Notiz.
+    func setTask(_ task: TaskItem, done: Bool) async {
+        await changeTask(task) { TaskLine.setDone(done, line: $0) }
+    }
+
+    /// Kategorie = erster Tag der Zeile; `nil` entfernt ihn.
+    func setTaskCategory(_ task: TaskItem, _ category: String?) async {
+        await changeTask(task) { TaskLine.setCategory(category, line: $0) }
+    }
+
+    private func changeTask(_ task: TaskItem, _ change: @escaping @Sendable (String) -> String) async {
+        // Ist die Notiz offen, zuerst speichern; danach liest der Editor die
+        // geänderte Datei wieder ein. Beim Speichern kann sich die Zeile
+        // ändern (Erfasst-Datum), darum die Pendenz frisch suchen.
+        await openEditor?.flushIfShowing(task.note)
+        await perform { vault in
+            let current = vault.allTasks(in: task.note).first { $0.line == task.line && $0.text == task.text }
+                ?? vault.allTasks(in: task.note).first { $0.text == task.text }
+            guard let current else { throw TaskError.changed }
+            try vault.updateTask(current, change)
+        }
+        await reload()
+        if let editor = openEditor, editor.url == task.note { await editor.reloadFromDisk() }
     }
 
     // MARK: - Zeilen-Seiten

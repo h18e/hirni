@@ -149,6 +149,11 @@ enum MarkdownStyler {
             ], range: range)
         case .syntax:
             storage.addAttribute(.foregroundColor, value: Colors.syntax, range: range)
+        case .taskDate:
+            storage.addAttributes([
+                .foregroundColor: Colors.syntax,
+                .font: PlatformFont.systemFont(ofSize: base.pointSize * 0.75),
+            ], range: range)
         case .embed:
             // Der Verweis selbst ist nur grau (über `.syntax`), das Bild kommt darunter.
             storage.addAttribute(.font, value: PlatformFont.systemFont(ofSize: base.pointSize * 0.8), range: range)

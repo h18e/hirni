@@ -18,6 +18,10 @@ struct SidebarView: View {
                     drop(items, into: store.vault.inboxURL)
                 }
 
+            Label("Pendenzen", systemImage: "checklist")
+                .badge(store.tasks.filter { !$0.isDone }.count)
+                .tag(SidebarItem.tasks)
+
             Section("Ordner") {
                 OutlineGroup(store.folders, children: \.childrenOrNil) { folder in
                     Label(folder.name, systemImage: "folder")
