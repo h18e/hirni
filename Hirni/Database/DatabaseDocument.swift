@@ -77,6 +77,13 @@ final class DatabaseDocument {
         scheduleSave()
     }
 
+    /// Datumsfeld für den Apple Kalender «Hirni», `nil` = nicht im Kalender.
+    func setCalendarField(_ name: String?) {
+        guard database.calendarField != name else { return }
+        database.calendarField = name
+        scheduleSave()
+    }
+
     func addView(kind: ViewKind = .table) {
         if database.views.isEmpty { database.views.append(currentView) } // «Alle» behalten
         var view = SavedView(name: uniqueViewName(kind == .table ? "Ansicht" : kind.label), kind: kind)
@@ -275,6 +282,11 @@ final class DatabaseDocument {
             }
         }
         result.fields = edits.map(\.field)
+        // Kalender: Feld umbenannt → mitnehmen, gelöscht oder kein Datum mehr → aus.
+        if let name = result.calendarField {
+            let edit = edits.first { $0.originalName == name }
+            result.calendarField = edit?.field.type == .date ? edit?.field.name : nil
+        }
         // Ansichten nachführen: umbenannte Felder in Regeln anpassen, gelöschte entfernen.
         let renames = edits.compactMap { edit in edit.originalName.map { ($0, edit.field.name) } }
         for index in result.views.indices {

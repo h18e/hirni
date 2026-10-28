@@ -390,6 +390,8 @@
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Hirni;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Hirni trägt Termine aus deinen Datenbanken in den eigenen Kalender «Hirni» ein.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "hirni braucht die Kamera, um Fotos direkt in Notizen einzufügen.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphone*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphone*]" = YES;
@@ -435,6 +437,8 @@
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Hirni;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Hirni trägt Termine aus deinen Datenbanken in den eigenen Kalender «Hirni» ein.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "hirni braucht die Kamera, um Fotos direkt in Notizen einzufügen.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphone*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphone*]" = YES;

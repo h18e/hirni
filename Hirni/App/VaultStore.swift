@@ -202,6 +202,7 @@ final class VaultStore {
         if tasks != result.tasks { tasks = result.tasks }
         if dueDates != result.dueDates { dueDates = result.dueDates }
         await scheduleReminders()
+        Task { [vault] in await CalendarExporter.shared.sync(vault) }
         switch result.notes {
         case .success(let notes):
             self.notes = sidebarSelection?.isTag == true ? await taggedNotes() : notes
@@ -403,13 +404,18 @@ final class VaultStore {
         WidgetData.publish(WidgetSnapshot.make(tasks: tasks, dueDates: dueDates, in: vault))
     }
 
-    /// Sprung aus Mitteilung, Widget oder Kurzbefehl: Pendenzen zeigen und
-    /// gegebenenfalls die Notiz öffnen.
+    /// Sprung aus Mitteilung, Widget, Kurzbefehl oder Kalender: eine Notiz
+    /// (bzw. Datenbank) in ihrem Ordner öffnen oder die Pendenzen zeigen.
     func open(_ destination: AppDestination) {
-        sidebarSelection = .tasks
-        guard case .note(let path) = destination else { return }
+        guard case .note(let path) = destination else {
+            sidebarSelection = .tasks
+            return
+        }
         let url = vault.root.appending(path: path)
         guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else { return }
+        // Den Ordner der Notiz zeigen, damit die Liste daneben passt.
+        let folder = url.deletingLastPathComponent()
+        sidebarSelection = folder.standardizedFileURL == vault.inboxURL.standardizedFileURL ? .inbox : .folder(folder)
         selectedNote = url
     }
 

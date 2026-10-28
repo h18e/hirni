@@ -104,6 +104,7 @@ struct DatabaseView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Felder", systemImage: "slider.horizontal.3") { showsFields = true }
+                calendarMenu(document)
                 Button("Neuer Eintrag", systemImage: "plus") {
                     let id = document.addRow()
                     #if os(iOS)
@@ -135,6 +136,29 @@ struct DatabaseView: View {
 }
 
 extension DatabaseView {
+    /// Termine dieser Datenbank im eigenen Apple Kalender «Hirni» zeigen.
+    private func calendarMenu(_ document: DatabaseDocument) -> some View {
+        let dateFields = document.database.fields.filter { $0.type == .date }
+        let isOn = document.database.calendarField != nil
+        return Menu("Apple Kalender", systemImage: isOn ? "calendar.badge.checkmark" : "calendar.badge.plus") {
+            if dateFields.isEmpty {
+                Text("Für den Kalender braucht die Datenbank ein Datumsfeld.")
+            } else {
+                Picker("Im Kalender «Hirni» zeigen", selection: Binding(
+                    get: { document.database.calendarField },
+                    set: { document.setCalendarField($0) }
+                )) {
+                    Text("Nicht im Kalender").tag(String?.none)
+                    ForEach(dateFields) { field in
+                        Text(dateFields.count == 1 ? "Im Kalender «Hirni» zeigen" : "Nach «\(field.name)» im Kalender zeigen")
+                            .tag(Optional(field.name))
+                    }
+                }
+                .pickerStyle(.inline)
+            }
+        }
+    }
+
     /// Öffnet die Seite einer Zeile und legt sie bei Bedarf an. Aus einem
     /// Blatt heraus erst, wenn es zu ist.
     private func showPage(_ rowID: String, template: URL? = nil, afterSheet: Bool = false) {

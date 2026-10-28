@@ -221,6 +221,15 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
   - Darunter die nächsten 6 offenen Pendenzen (wie im Widget) mit Kreis zum Abhaken; «Hirni öffnen», «Beenden».
 - Das Symbol bleibt, auch wenn das Hirni-Fenster geschlossen ist. Ein- und ausblenden in den Einstellungen (Hirni ▸ Einstellungen …, ⌘,).
 
+### Termine im Apple Kalender
+
+- **Pro Datenbank einschalten:** Symbol «Apple Kalender» in der Symbolleiste der Datenbank → «Im Kalender «Hirni» zeigen» (bei mehreren Datumsfeldern: welches). Gespeichert in der Datenbank-Datei als Kopfzeile `kalender: "Wann"`; gilt damit auf allen Geräten. Feld umbenannt → wird mitgenommen; gelöscht oder kein Datum mehr → aus.
+- **Eigener Kalender «Hirni»** (violett), wenn möglich in iCloud, damit ihn alle Geräte sehen. Die Termine mischen sich nicht mit anderen Kalendern und lassen sich im Kalender-App mit einem Häkchen ein- und ausblenden.
+- **Termin pro Eintrag:** Titel = erstes Feld (sonst Name der Datenbank); Datum ohne Uhrzeit → ganztägig (Zeiträume über mehrere Tage), mit Uhrzeit → ab dieser Zeit, 1 Stunde bzw. bis zur Endzeit. Link `hirni://notiz?pfad=…&zeile=…` öffnet die Datenbank in Hirni.
+- **Nur in eine Richtung:** Hirni ist die Quelle. Hirni gleicht bei jedem Einlesen ab: neue Einträge anlegen, geänderte nachführen, gelöschte und doppelte (z. B. von beiden Geräten) entfernen. Im Kalender «Hirni» von Hand Geändertes wird überschrieben, von Hand Angelegtes entfernt.
+- **Zugriff:** Hirni fragt nach vollem Kalenderzugriff erst, wenn die erste Datenbank eingeschaltet wird.
+- **Technik:** `CalendarSync` (HirniKit) plant, `CalendarExporter` (App, EventKit) führt aus.
+
 ### Pendenzen
 
 - **Quelle:** Jede Checkbox-Zeile (`- [ ] …`) in einer Notiz ist eine Pendenz. Es gibt keine eigene Pendenzen-Datei; die Notizen bleiben die einzige Quelle. Vorlagen und Codeblöcke zählen nicht, leere Checkboxen auch nicht.

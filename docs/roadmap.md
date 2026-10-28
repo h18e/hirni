@@ -30,7 +30,7 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ fertig
 | C | Erinnerungen | Benachrichtigung am Stichtag einer Pendenz | ✅ |
 | D | Widget und Kurzbefehle | Widget mit offenen Pendenzen, «Neue Notiz» per Siri/Kurzbefehle | ✅ |
 | E | Menüleiste am Mac | Schnellnotiz aus der Menüleiste | ✅ |
-| F | Kalender | Datenbank-Termine in den Apple Kalender übertragen | ⬜ |
+| F | Kalender | Datenbank-Termine in einen eigenen Apple Kalender «Hirni» übertragen | 🟡 gebaut, Test auf Mac + iPhone offen |
 
 ## Version 2 (Ideen-Speicher)
 

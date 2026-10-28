@@ -27,6 +27,9 @@ public struct Database: Equatable, Sendable {
     public var rows: [Row]
     /// Gespeicherte Ansichten (Filter, Sortierung …). Leer = nur die Standardansicht.
     public var views: [SavedView] = []
+    /// Datumsfeld, dessen Einträge im Apple Kalender «Hirni» erscheinen
+    /// (Kopfzeile `kalender: "Datum"`). `nil` = nicht im Kalender.
+    public var calendarField: String?
     /// Zeilen im Kopf, die hirni nicht kennt (z. B. von Obsidian). Sie bleiben erhalten.
     public var otherHeaderLines: [String]
     /// Text vor bzw. nach der Tabelle. Bleibt erhalten.
@@ -177,6 +180,7 @@ public enum DatabaseFile {
 
         var fields: [Field] = []
         var views: [SavedView] = []
+        var calendarField: String?
         var otherLines: [String] = []
         var isDatabase = false
         enum Block { case none, fields, views }
@@ -190,6 +194,10 @@ public enum DatabaseFile {
                 block = .fields
             } else if trimmed == "ansichten:" {
                 block = .views
+            } else if trimmed.hasPrefix("kalender:") {
+                block = .none
+                let value = trimmed.dropFirst("kalender:".count).trimmingCharacters(in: .whitespaces)
+                calendarField = try? JSONDecoder().decode(String.self, from: Data(value.utf8))
             } else if block != .none, trimmed.hasPrefix("- ") {
                 let data = Data(trimmed.dropFirst(2).trimmingCharacters(in: .whitespaces).utf8)
                 switch block {
@@ -213,6 +221,7 @@ public enum DatabaseFile {
 
         var database = Database(fields: fields, otherHeaderLines: otherLines)
         database.views = views
+        database.calendarField = calendarField
         parseTable(body, into: &database)
         return database
     }
@@ -308,6 +317,10 @@ public enum DatabaseFile {
                 let json = (try? encoder.encode(view)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
                 header.append("  - \(json)")
             }
+        }
+        if let field = database.calendarField,
+           let json = (try? encoder.encode(field)).flatMap({ String(data: $0, encoding: .utf8) }) {
+            header.append("kalender: \(json)")
         }
         header += database.otherHeaderLines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
 
