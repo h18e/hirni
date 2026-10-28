@@ -22,7 +22,7 @@ import AppKit
 final class ShareViewController: NSViewController {
     override func loadView() {
         let host = NSHostingView(rootView: ShareView(model: ShareModel(context: extensionContext)))
-        host.frame = CGRect(x: 0, y: 0, width: 420, height: 360)
+        host.frame = CGRect(x: 0, y: 0, width: 420, height: 380)
         view = host
         preferredContentSize = host.frame.size
     }

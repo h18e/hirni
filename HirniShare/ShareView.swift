@@ -120,57 +120,82 @@ final class ShareModel {
     }
 }
 
-/// Das Blatt im Teilen-Menü: Titel, Vorschau, «In Inbox sichern».
+/// Das Blatt im Teilen-Menü: Titel, Vorschau, «In Hirni sichern».
+///
+/// Am Mac zeigt eine Erweiterung keine Symbolleiste, darum stehen die
+/// Knöpfe dort unten im Blatt.
 struct ShareView: View {
     @Bindable var model: ShareModel
 
     var body: some View {
+        #if os(iOS)
         NavigationStack {
-            Form {
-                if model.isLoading {
-                    ProgressView()
-                } else {
-                    Section("Titel") {
-                        TextField("Titel", text: $model.title)
-                    }
-                    if !model.text.isEmpty {
-                        Section("Text") {
-                            Text(model.text)
-                                .lineLimit(8)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    if !model.files.isEmpty {
-                        Section("Anhänge") {
-                            ForEach(model.files, id: \.self) { file in
-                                Label(file.lastPathComponent, systemImage: file.pathExtension.lowercased() == "pdf" ? "doc.richtext" : "photo")
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
-                    if let error = model.error {
-                        Label(error, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.orange)
-                    }
+            form
+                .navigationTitle("In Hirni sichern")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { cancelButton }
+                    ToolbarItem(placement: .confirmationAction) { saveButton }
                 }
+        }
+        #else
+        VStack(spacing: 0) {
+            Text("In Hirni sichern")
+                .font(.headline)
+                .padding(.top, 14)
+            form
+            HStack {
+                Spacer()
+                cancelButton
+                    .keyboardShortcut(.cancelAction)
+                saveButton
+                    .keyboardShortcut(.defaultAction)
             }
-            .formStyle(.grouped)
-            .navigationTitle("In Hirni sichern")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { model.cancel() }
+            .padding([.horizontal, .bottom], 20)
+        }
+        .frame(width: 420, height: 380)
+        #endif
+    }
+
+    private var form: some View {
+        Form {
+            if model.isLoading {
+                ProgressView()
+            } else {
+                Section("Titel") {
+                    TextField("Titel", text: $model.title)
+                        .labelsHidden()
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Sichern") { Task { await model.save() } }
-                        .disabled(model.isLoading || model.isSaving || (model.text.isEmpty && model.files.isEmpty))
+                if !model.text.isEmpty {
+                    Section("Text") {
+                        Text(model.text)
+                            .lineLimit(5)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if !model.files.isEmpty {
+                    Section("Anhänge") {
+                        ForEach(model.files, id: \.self) { file in
+                            Label(file.lastPathComponent, systemImage: file.pathExtension.lowercased() == "pdf" ? "doc.richtext" : "photo")
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                if let error = model.error {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
                 }
             }
         }
-        #if os(macOS)
-        .frame(minWidth: 420, minHeight: 360)
-        #endif
+        .formStyle(.grouped)
+    }
+
+    private var cancelButton: some View {
+        Button("Abbrechen") { model.cancel() }
+    }
+
+    private var saveButton: some View {
+        Button("Sichern") { Task { await model.save() } }
+            .disabled(model.isLoading || model.isSaving || (model.text.isEmpty && model.files.isEmpty))
     }
 }
