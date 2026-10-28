@@ -4,6 +4,10 @@ import SwiftUI
 struct HirniApp: App {
     @State private var vault = VaultLocator()
 
+    init() {
+        ReminderScheduler.shared.install()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

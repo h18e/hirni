@@ -27,7 +27,7 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ fertig
 |---|---|---|---|
 | A | Teilen aus Hirni | Notiz als PDF (A4, mit Tabellen, Bildern und eingebetteten Datenbanken) oder als Markdown teilen; am Mac «Als PDF exportieren …» | ✅ |
 | B | Teilen in Hirni | Hirni im Teilen-Menü anderer Apps: Links, Texte, Fotos landen in der Inbox | ✅ |
-| C | Erinnerungen | Benachrichtigung am Stichtag einer Pendenz | ⬜ |
+| C | Erinnerungen | Benachrichtigung am Stichtag einer Pendenz | 🟡 gebaut, Test auf Mac + iPhone offen |
 | D | Widget und Kurzbefehle | Widget mit offenen Pendenzen, «Neue Notiz» per Siri/Kurzbefehle | ⬜ |
 | E | Menüleiste am Mac | Schnellnotiz aus der Menüleiste | ⬜ |
 | F | Kalender | Datenbank-Termine in den Apple Kalender übertragen | ⬜ |

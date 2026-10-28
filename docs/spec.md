@@ -214,6 +214,7 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Stichtag:** nur in der Liste (Kontextmenü «Stichtag …», «Stichtag entfernen»), nie in der Notiz. Gespeichert in `_Hirni/Pendenzen.json` als `{"stichtage": {"<Pfad der Notiz>|<Text der Pendenz>": "2026-11-03"}}`. Ändert sich der Text der Pendenz oder wird die Notiz umbenannt/verschoben, geht der Stichtag verloren. Anzeige «fällig Sa. 31. Okt.», überfällig rot.
 - **Kategorie:** der erste Tag in der Zeile (`#büro`). In der Liste per Kontextmenü «Kategorie» setzen, ändern oder entfernen (schreibt den Tag in die Zeile, vor die Daten).
 - **Liste «Pendenzen»** (Seitenleiste, mit Anzahl offener): offene nach Kategorie (alphabetisch, «Ohne Kategorie» zuletzt; darin nach Stichtag, ohne Stichtag zuletzt), darunter einklappbar «Erledigte Pendenzen» (zuletzt erledigte zuerst). Jede Zeile zeigt Text, Notiz, Stichtag bzw. Erledigt-Datum. Antippen öffnet die Notiz; der Kreis hakt ab bzw. öffnet wieder (iPhone auch Wischen nach rechts).
+- **Erinnerung:** Am Stichtag um 9:00 Uhr meldet sich Hirni mit einer Mitteilung (Titel = Pendenz, darunter «Heute fällig · Notiz»), auf iPhone und Mac. Nur offene Pendenzen; erledigt oder Stichtag entfernt → Mitteilung fällt weg. Die Erlaubnis fragt Hirni, sobald es die erste Erinnerung gibt. Antippen zeigt die Pendenzen und öffnet die Notiz. Geplant werden die nächsten 60 (iOS erlaubt 64 pro App), bei jedem Einlesen neu. Technik: `TaskReminders` (HirniKit) plant, `ReminderScheduler` (App) übergibt sie an das System.
 
 ### Tags und Suche
 

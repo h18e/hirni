@@ -34,7 +34,10 @@ struct LibraryView: View {
             }
         }
         .environment(store)
-        .task { await store.start() }
+        .task {
+            ReminderScheduler.shared.onOpen = { [store] path in store.openFromReminder(path) }
+            await store.start()
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await store.importShared(); await store.reload() } }
             // In den Hintergrund: sofort speichern, iOS beendet Apps dort ohne Vorwarnung.

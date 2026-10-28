@@ -200,6 +200,7 @@ final class VaultStore {
         if templates != result.templates { templates = result.templates }
         if tasks != result.tasks { tasks = result.tasks }
         if dueDates != result.dueDates { dueDates = result.dueDates }
+        await scheduleReminders()
         switch result.notes {
         case .success(let notes):
             self.notes = sidebarSelection?.isTag == true ? await taggedNotes() : notes
@@ -389,6 +390,20 @@ final class VaultStore {
         dueDates = dates
         let toSave = dates
         await perform { try $0.saveDueDates(toSave) }
+        await scheduleReminders()
+    }
+
+    /// Mitteilungen am Stichtag neu planen (nur wenn sich etwas geändert hat).
+    private func scheduleReminders() async {
+        await ReminderScheduler.shared.update(TaskReminders.plan(tasks: tasks, dueDates: dueDates, in: vault))
+    }
+
+    /// Antippen einer Mitteilung: Pendenzen zeigen und die Notiz öffnen.
+    func openFromReminder(_ path: String) {
+        let url = vault.root.appending(path: path)
+        guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else { return }
+        sidebarSelection = .tasks
+        selectedNote = url
     }
 
     /// Kategorie = erster Tag der Zeile; `nil` entfernt ihn.
