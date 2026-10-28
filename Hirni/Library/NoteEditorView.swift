@@ -1,5 +1,6 @@
 import HirniKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Editor für eine Notiz: Titel (= Dateiname) und Markdown-Text.
 ///
@@ -33,6 +34,10 @@ struct NoteEditorView: View {
     @State private var showsConflictVersions = false
     @State private var loadError: String?
     @State private var controller = EditorController()
+    #if os(macOS)
+    /// PDF für «Als PDF exportieren …».
+    @State private var exportedPDF: PDFFile?
+    #endif
     /// Eingebettete Datenbanken (`hirni-db`-Blöcke) dieser Notiz.
     @State private var databases: EmbeddedDatabases?
     @FocusState private var titleIsFocused: Bool
@@ -78,8 +83,17 @@ struct NoteEditorView: View {
         .overlay { loadingOverlay }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) { shareMenu }
+        }
         #else
         .toolbar { formattingToolbar }
+        .fileExporter(
+            isPresented: Binding(get: { exportedPDF != nil }, set: { if !$0 { exportedPDF = nil } }),
+            document: exportedPDF,
+            contentType: .pdf,
+            defaultFilename: Vault.title(of: fileURL ?? url)
+        ) { _ in exportedPDF = nil }
         #endif
         .modifier(AttachmentPickers(
             controller: controller,
@@ -191,11 +205,54 @@ struct NoteEditorView: View {
                 .keyboardShortcut("t", modifiers: [.command, .option])
                 .help("Tabelle einfügen (⌥⌘T)")
             Button("Datenbank", systemImage: "tablecells") { controller.showsDatabasePicker = true }
+        }
+        ToolbarItem {
+            shareMenu
                 .keyboardShortcut("d", modifiers: [.command, .shift])
                 .help("Datenbank-Ansicht einfügen (⇧⌘D)")
         }
     }
     #endif
+
+    // MARK: - Teilen
+
+    /// Teilen als PDF oder Markdown; am Mac zusätzlich als PDF sichern.
+    @ViewBuilder
+    private var shareMenu: some View {
+        if let fileURL {
+            Menu {
+                ShareLink(
+                    item: NotePDFExport(note: fileURL, store: store),
+                    preview: SharePreview(Vault.title(of: fileURL) + ".pdf", image: Image(systemName: "doc.richtext"))
+                ) {
+                    Label("Als PDF teilen", systemImage: "doc.richtext")
+                }
+                ShareLink(
+                    item: NoteMarkdownExport(note: fileURL, store: store),
+                    preview: SharePreview(Vault.title(of: fileURL) + ".md", image: Image(systemName: "doc.plaintext"))
+                ) {
+                    Label("Als Markdown teilen", systemImage: "doc.plaintext")
+                }
+                #if os(macOS)
+                Divider()
+                Button("Als PDF exportieren …", systemImage: "square.and.arrow.down") {
+                    Task {
+                        do {
+                            let file = try await NotePDF.file(for: fileURL, store: store)
+                            exportedPDF = PDFFile(data: try Data(contentsOf: file))
+                        } catch {
+                            store.errorMessage = "Das PDF liess sich nicht erstellen: \(error.localizedDescription)"
+                        }
+                    }
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+                #endif
+            } label: {
+                Label("Teilen", systemImage: "square.and.arrow.up")
+            }
+            .help("Als PDF oder Markdown teilen")
+        }
+    }
 
     // MARK: - Laden und Speichern
 

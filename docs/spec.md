@@ -195,6 +195,12 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Platzhalter** (im Text und im Namen der Vorlage, Gross/klein egal): `{{datum}}` 26.10.2026, `{{iso-datum}}` 2026-10-26, `{{zeit}}` 14:30, `{{wochentag}}` Montag, `{{titel}}` Titel der neuen Notiz. Auf Zeilen-Seiten zusätzlich `{{Feldname}}` mit dem Wert des Eintrags; ein gleichnamiges Feld (z. B. «Datum») geht dabei vor. Unbekannte Platzhalter bleiben stehen.
 - `angepinnt` und `hirni-zeile` aus dem Kopf der Vorlage werden nicht übernommen, andere Kopfzeilen schon.
 
+### Teilen und Export
+
+- **Menü «Teilen»** im Editor (iPhone oben rechts, Mac in der Fensterleiste): «Als PDF teilen», «Als Markdown teilen», am Mac zusätzlich «Als PDF exportieren …» (⇧⌘E, Sichern-Dialog). Vorher werden ungespeicherte Eingaben gesichert.
+- **PDF:** A4, Ränder 16 mm, Systemschrift. Ohne Markdown-Zeichen: Überschriften, Absätze, Listen, Checklisten (☐/☑ mit Erledigt-Datum), Zitate, Codeblöcke, Tabellen, Bilder (auf eigener Zeile; PDFs und fehlende Bilder als Hinweis), Links, Tags. Eingebettete Datenbanken erscheinen als Tabelle ihrer Ansicht (sichtbare Felder, Filter, Sortierung, Gruppen, Berechnungen); Kalender und Diagramm ebenfalls als Tabelle ihrer Einträge. Der Titel steht oben, ausser die Notiz beginnt schon mit ihm als Überschrift.
+- **Technik:** Hirni erzeugt HTML (`NoteHTML`) und lässt WebKit es auf Seiten verteilen (iPhone: Druck-Renderer, Mac: Druckauftrag in eine Datei).
+
 ### Pendenzen
 
 - **Quelle:** Jede Checkbox-Zeile (`- [ ] …`) in einer Notiz ist eine Pendenz. Es gibt keine eigene Pendenzen-Datei; die Notizen bleiben die einzige Quelle. Vorlagen und Codeblöcke zählen nicht, leere Checkboxen auch nicht.
