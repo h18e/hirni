@@ -39,6 +39,8 @@ final class VaultStore {
     private(set) var trash: [TrashEntry] = []
     /// Alle Pendenzen (Checkboxen) aus allen Notizen.
     private(set) var tasks: [TaskItem] = []
+    /// Stichtage der Pendenzen (aus `_Hirni/Pendenzen.json`).
+    private(set) var dueDates = TaskDueDates()
     /// Vorlagen aus dem Ordner «Vorlagen».
     private(set) var templates: [NoteTemplate] = []
     /// Alle Tags im hirni-Ordner, die häufigsten zuerst (für Vorschläge).
@@ -121,6 +123,11 @@ final class VaultStore {
             vaultLog.error("Such-Index nicht verfügbar: \(error.localizedDescription, privacy: .public)")
         }
         await perform { try $0.purgeTrash() }
+        // Eine frühere Version schrieb «➕ Datum» in Pendenzen; einmal entfernen.
+        if !UserDefaults.standard.bool(forKey: "erfasstDatenEntfernt") {
+            await perform { $0.removeCreatedDates() }
+            UserDefaults.standard.set(true, forKey: "erfasstDatenEntfernt")
+        }
         await reload()
     }
 
@@ -174,7 +181,8 @@ final class VaultStore {
                 notes: Result { try folderURL.map { try vault.notes(in: $0) } ?? [] },
                 trash: Result { showsTrash ? try vault.trashEntries() : [] },
                 templates: vault.templates(),
-                tasks: vault.allTasks()
+                tasks: vault.allTasks(),
+                dueDates: vault.dueDates()
             )
         }.value
 
@@ -182,6 +190,7 @@ final class VaultStore {
         if case .success(let trash) = result.trash { self.trash = trash }
         if templates != result.templates { templates = result.templates }
         if tasks != result.tasks { tasks = result.tasks }
+        if dueDates != result.dueDates { dueDates = result.dueDates }
         switch result.notes {
         case .success(let notes):
             self.notes = sidebarSelection?.isTag == true ? await taggedNotes() : notes
@@ -358,6 +367,19 @@ final class VaultStore {
     /// Abhaken bzw. wieder öffnen, direkt in der Notiz.
     func setTask(_ task: TaskItem, done: Bool) async {
         await changeTask(task) { TaskLine.setDone(done, line: $0) }
+    }
+
+    func dueDate(of task: TaskItem) -> Date? {
+        dueDates.due(for: task.dueKey(in: vault))
+    }
+
+    /// Stichtag setzen oder (`nil`) entfernen. Steht nicht in der Notiz.
+    func setDueDate(_ date: Date?, for task: TaskItem) async {
+        var dates = dueDates
+        dates.set(date, for: task.dueKey(in: vault))
+        dueDates = dates
+        let toSave = dates
+        await perform { try $0.saveDueDates(toSave) }
     }
 
     /// Kategorie = erster Tag der Zeile; `nil` entfernt ihn.

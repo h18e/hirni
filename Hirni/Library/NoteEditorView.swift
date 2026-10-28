@@ -136,9 +136,8 @@ struct NoteEditorView: View {
             if store.openEditor?.url == fileURL { store.openEditor = nil }
             // Ungelöste Fremdänderung: lieber nicht speichern als überschreiben.
             guard externalChange == nil else { return }
-            let body = TaskLine.stampAll(text)
-            let snapshot = Frontmatter.join(header: header, body: body)
-            if let fileURL, body != savedText {
+            let snapshot = Frontmatter.join(header: header, body: text)
+            if let fileURL, text != savedText {
                 Task { [store] in _ = await store.write(snapshot, to: fileURL) }
             }
         }
@@ -242,19 +241,8 @@ struct NoteEditorView: View {
         savedText = body
     }
 
-    /// `final`: Die Notiz wird verlassen. Dann bekommen auch Pendenzen in
-    /// der Zeile mit dem Cursor ihr Erfasst-Datum.
-    private func save(final: Bool = false) async {
-        if final, externalChange == nil, !isRenaming {
-            let stamped = TaskLine.stampAll(text)
-            if stamped != text {
-                text = stamped
-                controller.setText(stamped)
-            }
-        }
+    private func save() async {
         guard let fileURL, !isRenaming, hasUnsavedChanges, externalChange == nil else { return }
-        // Neue Pendenzen bekommen ihr Erfasst-Datum (für die Pendenzenliste).
-        if let stamped = controller.stampTasks() { text = stamped }
         var snapshot = text
 
         // Wurde die Datei seit dem letzten Laden/Speichern anderswo geändert?
@@ -410,7 +398,7 @@ struct NoteEditorView: View {
         connectDatabases(for: fileURL)
         store.openEditor = EditorHandle(
             url: fileURL,
-            flush: { await save(final: true) },
+            flush: { await save() },
             reloadHeader: { await reloadHeader() },
             reloadFromDisk: { await reloadFromDisk() }
         )

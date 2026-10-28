@@ -148,54 +148,6 @@ final class EditorController {
         }
     }
 
-    /// Fehlende Erfasst-Daten (`➕ Datum`) in Pendenzen ergänzen, ausser in
-    /// der Zeile, in der gerade getippt wird. Liefert den neuen Text, falls
-    /// sich etwas geändert hat. Der Cursor bleibt, wo er ist.
-    func stampTasks() -> String? {
-        guard let text = currentText, let selection = currentSelection else { return nil }
-        let ns = text as NSString
-        let caretLine = isEditing ? ns.substring(to: min(selection.location, ns.length)).components(separatedBy: "\n").count - 1 : nil
-        let stamped = TaskLine.stampAll(text, skippingLine: caretLine)
-        guard stamped != text, let textView else { return nil }
-        let oldLines = text.components(separatedBy: "\n")
-        let newLines = stamped.components(separatedBy: "\n")
-        guard oldLines.count == newLines.count else { return nil }
-        var starts: [Int] = []
-        var offset = 0
-        for line in oldLines {
-            starts.append(offset)
-            offset += (line as NSString).length + 1
-        }
-        var caret = selection.location
-        #if os(iOS)
-        let storage = textView.textStorage
-        #else
-        guard let storage = textView.textStorage else { return nil }
-        #endif
-        for index in oldLines.indices.reversed() where oldLines[index] != newLines[index] {
-            let range = NSRange(location: starts[index], length: (oldLines[index] as NSString).length)
-            storage.replaceCharacters(in: range, with: newLines[index])
-            if caret > NSMaxRange(range) {
-                caret += (newLines[index] as NSString).length - range.length
-            }
-        }
-        #if os(iOS)
-        textView.selectedRange = NSRange(location: caret, length: 0)
-        #else
-        textView.setSelectedRange(NSRange(location: caret, length: 0))
-        #endif
-        if let currentText { onTextChange?(currentText) }
-        return currentText
-    }
-
-    private var isEditing: Bool {
-        #if os(iOS)
-        textView?.isFirstResponder ?? false
-        #else
-        textView.map { $0.window?.firstResponder === $0 } ?? false
-        #endif
-    }
-
     func insertTag() {
         perform { text, selection in
             // Vor dem # ein Leerzeichen, falls direkt davor ein Wort steht.

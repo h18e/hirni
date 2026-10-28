@@ -2,14 +2,15 @@ import Foundation
 
 /// Eine Pendenz: eine Checkbox-Zeile (`- [ ] …`) in einer Notiz.
 ///
-/// Die Daten stehen in der Zeile selbst, wie beim Obsidian-Plugin «Tasks»:
+/// Das Erledigt-Datum steht in der Zeile, wie beim Obsidian-Plugin «Tasks»:
 ///
 /// ```
-/// - [ ] Steuererklärung #büro ➕ 2026-10-28
-/// - [x] Velo flicken ➕ 2026-10-20 ✅ 2026-10-27
+/// - [ ] Steuererklärung #büro
+/// - [x] Velo flicken ✅ 2026-10-27
 /// ```
 ///
-/// `➕` = erfasst, `✅` = erledigt. Die Kategorie ist der erste Tag der Zeile.
+/// Die Kategorie ist der erste Tag der Zeile. Stichtage stehen nicht in der
+/// Notiz, sondern in `_Hirni/Pendenzen.json` (siehe `TaskDueDates`).
 public struct TaskItem: Identifiable, Hashable, Sendable {
     /// Notiz und Zeile, z. B. `Inbox/Einkauf.md#3`.
     public var id: String { "\(note.path(percentEncoded: false))#\(line)" }
@@ -21,11 +22,14 @@ public struct TaskItem: Identifiable, Hashable, Sendable {
     /// Die ganze Zeile, um vor dem Ändern zu prüfen, ob sie noch gleich ist.
     public let rawLine: String
     public let isDone: Bool
-    /// Aus `➕`, sonst das Erstelldatum der Notiz.
-    public let created: Date?
     public let done: Date?
     /// Erster Tag der Zeile (ohne `#`), `nil` = ohne Kategorie.
     public let category: String?
+
+    /// Schlüssel für den Stichtag: Notiz (Pfad ab dem Hirni-Ordner) und Text.
+    public func dueKey(in vault: Vault) -> String {
+        "\(vault.relativePath(of: note) ?? note.lastPathComponent)|\(text)"
+    }
 }
 
 public enum TaskLine {
@@ -98,18 +102,6 @@ public enum TaskLine {
         return result
     }
 
-    /// Erfasst-Datum anfügen, falls es fehlt und die Pendenz schon Text hat.
-    public static func stamped(_ line: String, now: Date = .now) -> String {
-        guard state(of: line) != nil, date(createdMark, in: line) == nil, !content(of: line).isEmpty else { return line }
-        // Vor einem allfälligen ✅, damit die Reihenfolge stimmt.
-        let ns = line as NSString
-        if let done = datePattern.matches(in: line, range: NSRange(location: 0, length: ns.length))
-            .first(where: { ns.substring(with: $0.range(at: 1)) == doneMark }) {
-            return ns.replacingCharacters(in: NSRange(location: done.range.location, length: 0), with: " \(createdMark) \(format(now))")
-        }
-        return line.trimmingTrailingWhitespace() + " \(createdMark) \(format(now))"
-    }
-
     /// Kategorie setzen: ersten Tag der Zeile ersetzen, sonst vor den Daten
     /// einfügen. `nil` entfernt den ersten Tag.
     public static func setCategory(_ category: String?, line: String) -> String {
@@ -132,7 +124,7 @@ public enum TaskLine {
     }
 
     /// Alle Pendenzen eines Notiztexts (Codeblöcke zählen nicht).
-    static func tasks(in text: String, note: URL, fallbackCreated: Date?) -> [TaskItem] {
+    static func tasks(in text: String, note: URL) -> [TaskItem] {
         var result: [TaskItem] = []
         var inFence = false
         for (index, line) in text.components(separatedBy: "\n").enumerated() {
@@ -142,7 +134,6 @@ public enum TaskLine {
             guard !content.isEmpty else { continue }
             result.append(TaskItem(
                 note: note, line: index, text: content, rawLine: line, isDone: done,
-                created: date(createdMark, in: line) ?? fallbackCreated,
                 done: date(doneMark, in: line),
                 category: MarkdownSyntax.tags(in: content).first
             ))
@@ -150,17 +141,15 @@ public enum TaskLine {
         return result
     }
 
-    /// Fehlende Erfasst-Daten in allen Pendenzen ergänzen, ausser in der
-    /// Zeile `skippingLine` (dort wird gerade getippt).
-    public static func stampAll(_ text: String, skippingLine: Int? = nil, now: Date = .now) -> String {
-        var lines = text.components(separatedBy: "\n")
+    /// Erfasst-Daten (`➕ Datum`) entfernen, die eine frühere Version gesetzt hat.
+    public static func removingCreatedDates(_ text: String) -> String {
+        guard text.contains(createdMark) else { return text }
         var inFence = false
-        for index in lines.indices {
-            if lines[index].trimmingCharacters(in: .whitespaces).hasPrefix("```") { inFence.toggle(); continue }
-            guard !inFence, index != skippingLine else { continue }
-            lines[index] = stamped(lines[index], now: now)
-        }
-        return lines.joined(separator: "\n")
+        return text.components(separatedBy: "\n").map { line in
+            if line.trimmingCharacters(in: .whitespaces).hasPrefix("```") { inFence.toggle(); return line }
+            guard !inFence, state(of: line) != nil else { return line }
+            return removing(createdMark, from: line)
+        }.joined(separator: "\n")
     }
 }
 
@@ -187,16 +176,27 @@ extension Vault {
             .filter { !$0.isInside(templatesURL) }
             .flatMap { url -> [TaskItem] in
                 guard let text = try? String(contentsOf: url, encoding: .utf8), text.contains("[") else { return [] }
-                let created = try? url.resourceValues(forKeys: [.creationDateKey]).creationDate
-                return TaskLine.tasks(in: text, note: url, fallbackCreated: created)
+                return TaskLine.tasks(in: text, note: url)
             }
     }
 
     /// Die Pendenzen einer einzelnen Notiz.
     public func allTasks(in note: URL) -> [TaskItem] {
         guard let text = try? readNote(at: note) else { return [] }
-        let created = try? note.resourceValues(forKeys: [.creationDateKey]).creationDate
-        return TaskLine.tasks(in: text, note: note, fallbackCreated: created)
+        return TaskLine.tasks(in: text, note: note)
+    }
+
+    /// Entfernt einmalig alle `➕ Datum` aus Pendenzen. Liefert die Anzahl
+    /// geänderter Notizen.
+    @discardableResult
+    public func removeCreatedDates() -> Int {
+        var changed = 0
+        for url in allNoteURLs() {
+            guard let text = try? readNote(at: url), text.contains(TaskLine.createdMark) else { continue }
+            let cleaned = TaskLine.removingCreatedDates(text)
+            if cleaned != text, (try? writeNote(cleaned, to: url)) != nil { changed += 1 }
+        }
+        return changed
     }
 
     /// Ändert die Zeile einer Pendenz. Ist sie inzwischen anders, passiert nichts.
@@ -206,5 +206,42 @@ extension Vault {
         guard lines.indices.contains(task.line), lines[task.line] == task.rawLine else { throw TaskError.changed }
         lines[task.line] = change(lines[task.line])
         try writeNote(lines.joined(separator: "\n"), to: task.note)
+    }
+}
+
+/// Stichtage der Pendenzen, getrennt von den Notizen in
+/// `_Hirni/Pendenzen.json`: `{"stichtage": {"Inbox/Einkauf.md|Milch": "2026-11-03"}}`.
+public struct TaskDueDates: Codable, Equatable, Sendable {
+    public var stichtage: [String: String] = [:]
+
+    public init() {}
+
+    public func due(for key: String) -> Date? {
+        stichtage[key].flatMap(TaskLine.parseDate)
+    }
+
+    public mutating func set(_ date: Date?, for key: String) {
+        stichtage[key] = date.map(TaskLine.format)
+    }
+}
+
+extension Vault {
+    public var dueDatesURL: URL {
+        root.appending(path: "_Hirni", directoryHint: .isDirectory).appending(path: "Pendenzen.json")
+    }
+
+    public func dueDates() -> TaskDueDates {
+        guard let data = try? Coordinated.read(dueDatesURL, { try Data(contentsOf: $0) }),
+              let dates = try? JSONDecoder().decode(TaskDueDates.self, from: data)
+        else { return TaskDueDates() }
+        return dates
+    }
+
+    public func saveDueDates(_ dates: TaskDueDates) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        let data = try encoder.encode(dates)
+        try FileManager.default.createDirectory(at: dueDatesURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Coordinated.write(dueDatesURL) { try data.write(to: $0, options: .atomic) }
     }
 }

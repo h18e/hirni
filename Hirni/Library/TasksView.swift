@@ -2,7 +2,8 @@ import HirniKit
 import SwiftUI
 
 /// Alle Checkboxen aus allen Notizen: offene nach Kategorie (erster Tag der
-/// Zeile), darunter die erledigten. Abhaken ändert die Notiz selbst.
+/// Zeile, darin nach Stichtag), darunter die erledigten. Abhaken ändert die
+/// Notiz selbst; der Stichtag steht nur in `_Hirni/Pendenzen.json`.
 struct TasksView: View {
     @Environment(VaultStore.self) private var store
     /// Gewählte Pendenz; öffnet ihre Notiz.
@@ -10,6 +11,8 @@ struct TasksView: View {
     @State private var newCategoryFor: TaskItem?
     @State private var newCategory = ""
     @State private var showsDone = true
+    /// Pendenz, deren Stichtag gerade gesetzt wird.
+    @State private var dueFor: TaskItem?
 
     var body: some View {
         let open = store.tasks.filter { !$0.isDone }
@@ -45,6 +48,7 @@ struct TasksView: View {
             }
         }
         .navigationTitle("Pendenzen")
+        .sheet(item: $dueFor) { task in DueDateSheet(task: task) }
         .onChange(of: selection) { _, id in
             guard let id, let task = store.tasks.first(where: { $0.id == id }) else { return }
             store.selectedNote = task.note
@@ -84,14 +88,21 @@ struct TasksView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "note.text")
                     Text(Vault.title(of: task.note))
-                    if let date = task.isDone ? task.done : task.created {
-                        Text("·")
-                        Text((task.isDone ? "erledigt " : "erfasst ") + date.formatted(.dateTime.locale(Locale(identifier: "de_CH")).day().month(.abbreviated).year()))
+                    if task.isDone, let done = task.done {
+                        Text("· erledigt " + Self.format(done))
                     }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+                if !task.isDone, let due = store.dueDate(of: task) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar")
+                        Text("fällig " + Self.format(due))
+                    }
+                    .font(.caption.weight(isOverdue(due) ? .semibold : .regular))
+                        .foregroundStyle(isOverdue(due) ? Color.red : .secondary)
+                }
             }
         }
         .tag(task.id)
@@ -112,6 +123,14 @@ struct TasksView: View {
             Task { await store.setTask(task, done: !task.isDone) }
         }
         Button("Notiz öffnen", systemImage: "note.text") { selection = task.id }
+        if !task.isDone {
+            Button(store.dueDate(of: task) == nil ? "Stichtag …" : "Stichtag ändern …", systemImage: "calendar") { dueFor = task }
+            if store.dueDate(of: task) != nil {
+                Button("Stichtag entfernen", systemImage: "calendar.badge.minus") {
+                    Task { await store.setDueDate(nil, for: task) }
+                }
+            }
+        }
         Menu("Kategorie", systemImage: "tag") {
             ForEach(store.tags, id: \.self) { tag in
                 Button(tag) { Task { await store.setTaskCategory(task, tag) } }
@@ -134,6 +153,53 @@ struct TasksView: View {
                 if b == "Ohne Kategorie" { return true }
                 return a.localizedStandardCompare(b) == .orderedAscending
             }
-            .map { key in (key, grouped[key]!.sorted { ($0.created ?? .distantFuture) < ($1.created ?? .distantFuture) }) }
+            .map { key in (key, grouped[key]!.sorted { (store.dueDate(of: $0) ?? .distantFuture) < (store.dueDate(of: $1) ?? .distantFuture) }) }
+    }
+
+    private static func format(_ date: Date) -> String {
+        date.formatted(.dateTime.locale(Locale(identifier: "de_CH")).weekday(.abbreviated).day().month(.abbreviated))
+    }
+
+    /// Überfällig: Stichtag vor heute.
+    private func isOverdue(_ date: Date) -> Bool {
+        date < Calendar.current.startOfDay(for: .now)
+    }
+}
+
+/// Stichtag wählen: Kalender, Übernehmen.
+private struct DueDateSheet: View {
+    @Environment(VaultStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    let task: TaskItem
+    @State private var date = Date.now
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text(task.text).font(.headline)
+                }
+                DatePicker("Stichtag", selection: $date, displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .environment(\.locale, Locale(identifier: "de_CH"))
+            }
+            .navigationTitle("Stichtag")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Übernehmen") {
+                        Task { await store.setDueDate(date, for: task) }
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear { date = store.dueDate(of: task) ?? .now }
+        }
+        #if os(macOS)
+        .frame(minWidth: 360, minHeight: 440)
+        #endif
     }
 }

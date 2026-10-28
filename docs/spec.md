@@ -198,11 +198,10 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 ### Pendenzen
 
 - **Quelle:** Jede Checkbox-Zeile (`- [ ] …`) in einer Notiz ist eine Pendenz. Es gibt keine eigene Pendenzen-Datei; die Notizen bleiben die einzige Quelle. Vorlagen und Codeblöcke zählen nicht, leere Checkboxen auch nicht.
-- **Daten in der Zeile** (wie beim Obsidian-Plugin «Tasks»): `- [ ] Steuern #büro ➕ 2026-10-28`, erledigt zusätzlich `✅ 2026-10-30`. Der Editor zeigt die Daten klein und grau.
-  - **Erfasst (`➕`):** Hirni setzt es beim Speichern für jede Checkbox mit Text, ausser in der Zeile mit dem Cursor; beim Verlassen der Notiz für alle. Fehlt es (z. B. von Claude geschrieben), gilt das Erstelldatum der Notiz.
-  - **Erledigt (`✅`):** Abhaken (in der Notiz oder in der Liste) setzt `[x]` und das Datum, wieder öffnen entfernt beides.
+- **Erledigt-Datum in der Zeile** (wie beim Obsidian-Plugin «Tasks»): Abhaken (in der Notiz oder in der Liste) setzt `[x]` und `✅ 2026-10-30`, wieder öffnen entfernt beides. Der Editor zeigt das Datum klein und grau. Ein Erfasst-Datum gibt es nicht (eine frühere Version schrieb `➕ Datum`; das wird beim ersten Start einmal entfernt).
+- **Stichtag:** nur in der Liste (Kontextmenü «Stichtag …», «Stichtag entfernen»), nie in der Notiz. Gespeichert in `_Hirni/Pendenzen.json` als `{"stichtage": {"<Pfad der Notiz>|<Text der Pendenz>": "2026-11-03"}}`. Ändert sich der Text der Pendenz oder wird die Notiz umbenannt/verschoben, geht der Stichtag verloren. Anzeige «fällig Sa. 31. Okt.», überfällig rot.
 - **Kategorie:** der erste Tag in der Zeile (`#büro`). In der Liste per Kontextmenü «Kategorie» setzen, ändern oder entfernen (schreibt den Tag in die Zeile, vor die Daten).
-- **Liste «Pendenzen»** (Seitenleiste, mit Anzahl offener): offene nach Kategorie (alphabetisch, «Ohne Kategorie» zuletzt, älteste zuerst), darunter einklappbar «Erledigte Pendenzen» (zuletzt erledigte zuerst). Jede Zeile zeigt Text, Notiz und Datum. Antippen öffnet die Notiz; der Kreis hakt ab bzw. öffnet wieder (iPhone auch Wischen nach rechts).
+- **Liste «Pendenzen»** (Seitenleiste, mit Anzahl offener): offene nach Kategorie (alphabetisch, «Ohne Kategorie» zuletzt; darin nach Stichtag, ohne Stichtag zuletzt), darunter einklappbar «Erledigte Pendenzen» (zuletzt erledigte zuerst). Jede Zeile zeigt Text, Notiz, Stichtag bzw. Erledigt-Datum. Antippen öffnet die Notiz; der Kreis hakt ab bzw. öffnet wieder (iPhone auch Wischen nach rechts).
 
 ### Tags und Suche
 
