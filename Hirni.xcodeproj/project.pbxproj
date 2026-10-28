@@ -10,6 +10,8 @@
 		AA0000000000000000000301 /* HirniKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000401 /* HirniKit */; };
 		AA0000000000000000000302 /* HirniKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000403 /* HirniKit */; };
 		AA0000000000000000000303 /* HirniShare.appex in Erweiterungen */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000106 /* HirniShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AA0000000000000000000304 /* HirniKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000404 /* HirniKit */; };
+		AA0000000000000000000305 /* HirniWidget.appex in Erweiterungen */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000109 /* HirniWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -19,6 +21,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = AA0000000000000000000711;
 			remoteInfo = HirniShare;
+		};
+		AA0000000000000000000B02 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000801 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000721;
+			remoteInfo = HirniWidget;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -30,6 +39,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				AA0000000000000000000303 /* HirniShare.appex in Erweiterungen */,
+				AA0000000000000000000305 /* HirniWidget.appex in Erweiterungen */,
 			);
 			name = Erweiterungen;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -45,6 +55,9 @@
 		AA0000000000000000000106 /* HirniShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HirniShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000107 /* HirniShare-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "HirniShare-Info.plist"; sourceTree = "<group>"; };
 		AA0000000000000000000108 /* HirniShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HirniShare.entitlements; sourceTree = "<group>"; };
+		AA0000000000000000000109 /* HirniWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HirniWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA000000000000000000010A /* HirniWidget-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "HirniWidget-Info.plist"; sourceTree = "<group>"; };
+		AA000000000000000000010B /* HirniWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HirniWidget.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -56,6 +69,11 @@
 		AA0000000000000000000202 /* HirniShare */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = HirniShare;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000203 /* HirniWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HirniWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -77,6 +95,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000000521 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0000000000000000000304 /* HirniKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -85,6 +111,7 @@
 			children = (
 				AA0000000000000000000201 /* Hirni */,
 				AA0000000000000000000202 /* HirniShare */,
+				AA0000000000000000000203 /* HirniWidget */,
 				AA0000000000000000000105 /* HirniKit */,
 				AA0000000000000000000603 /* Config */,
 				AA0000000000000000000602 /* Products */,
@@ -96,6 +123,7 @@
 			children = (
 				AA0000000000000000000101 /* Hirni.app */,
 				AA0000000000000000000106 /* HirniShare.appex */,
+				AA0000000000000000000109 /* HirniWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -108,6 +136,8 @@
 				AA0000000000000000000104 /* Hirni.entitlements */,
 				AA0000000000000000000107 /* HirniShare-Info.plist */,
 				AA0000000000000000000108 /* HirniShare.entitlements */,
+				AA000000000000000000010A /* HirniWidget-Info.plist */,
+				AA000000000000000000010B /* HirniWidget.entitlements */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -128,6 +158,7 @@
 			);
 			dependencies = (
 				AA0000000000000000000C01 /* PBXTargetDependency */,
+				AA0000000000000000000C02 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				AA0000000000000000000201 /* Hirni */,
@@ -163,6 +194,29 @@
 			productReference = AA0000000000000000000106 /* HirniShare.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		AA0000000000000000000721 /* HirniWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000904 /* Build configuration list for PBXNativeTarget "HirniWidget" */;
+			buildPhases = (
+				AA0000000000000000000722 /* Sources */,
+				AA0000000000000000000521 /* Frameworks */,
+				AA0000000000000000000723 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000000000000000000203 /* HirniWidget */,
+			);
+			name = HirniWidget;
+			packageProductDependencies = (
+				AA0000000000000000000404 /* HirniKit */,
+			);
+			productName = HirniWidget;
+			productReference = AA0000000000000000000109 /* HirniWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -177,6 +231,9 @@
 						CreatedOnToolsVersion = 27.1;
 					};
 					AA0000000000000000000711 = {
+						CreatedOnToolsVersion = 27.1;
+					};
+					AA0000000000000000000721 = {
 						CreatedOnToolsVersion = 27.1;
 					};
 				};
@@ -200,6 +257,7 @@
 			targets = (
 				AA0000000000000000000701 /* Hirni */,
 				AA0000000000000000000711 /* HirniShare */,
+				AA0000000000000000000721 /* HirniWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -213,6 +271,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		AA0000000000000000000713 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000000723 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -236,6 +301,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000000722 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -243,6 +315,11 @@
 			isa = PBXTargetDependency;
 			target = AA0000000000000000000711 /* HirniShare */;
 			targetProxy = AA0000000000000000000B01 /* PBXContainerItemProxy */;
+		};
+		AA0000000000000000000C02 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000721 /* HirniWidget */;
+			targetProxy = AA0000000000000000000B02 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -462,6 +539,84 @@
 			};
 			name = Release;
 		};
+		AA0000000000000000000A07 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AA0000000000000000000102 /* Signing.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Config/HirniWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/HirniWidget-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Hirni;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = ch.hebera.hirni.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		AA0000000000000000000A08 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AA0000000000000000000102 /* Signing.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Config/HirniWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/HirniWidget-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Hirni;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = ch.hebera.hirni.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -492,6 +647,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		AA0000000000000000000904 /* Build configuration list for PBXNativeTarget "HirniWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000A07 /* Debug */,
+				AA0000000000000000000A08 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -507,6 +671,10 @@
 			productName = HirniKit;
 		};
 		AA0000000000000000000403 /* HirniKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HirniKit;
+		};
+		AA0000000000000000000404 /* HirniKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = HirniKit;
 		};

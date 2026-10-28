@@ -207,6 +207,12 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Notiz:** zuerst der Text bzw. Link, darunter die Anhänge je auf eigener Zeile (Dateien in `Inbox/_Anhänge/`). Titel: Seitentitel, sonst erste Textzeile (max. 60 Zeichen), sonst Domain, sonst «Geteilt».
 - **Technik:** Erweiterung `HirniShare` (Bundle-ID `ch.hebera.hirni.share`) schreibt direkt in iCloud Drive. Ist iCloud nicht erreichbar, legt sie den Eintrag in die Warteschlange `Geteilt/` im gemeinsamen App-Gruppen-Ordner (`group.ch.hebera.hirni`); Hirni holt sie beim Start und beim Zurückkehren in die App ab (`SharedInbox`).
 
+### Widget und Kurzbefehle
+
+- **Widget «Pendenzen»** (iPhone: klein, mittel, gross, Sperrbildschirm; Mac: klein, mittel, gross): Anzahl offener Pendenzen und die nächsten (mit Stichtag zuerst, früheste oben, sonst Reihenfolge in den Notizen). Darunter Notiz und «fällig heute/morgen/Sa. 31. Okt.», überfällig rot. Antippen einer Zeile öffnet die Notiz, sonst die Pendenzenliste.
+- **Technik Widget:** Die App legt `Widget.json` (`WidgetSnapshot`) in den gemeinsamen App-Gruppen-Ordner, sobald sich Pendenzen oder Stichtage ändern; das Widget liest nur. Links: `hirni://pendenzen`, `hirni://notiz?pfad=Inbox/Einkauf.md`.
+- **Kurzbefehle / Siri** (ohne Hirni zu öffnen): «Neue Notiz» (Text; erste Zeile = Titel, landet in der Inbox), «Neue Pendenz» (hängt `- [ ] …` an die Notiz «Pendenzen» in der Inbox an, legt sie bei Bedarf an), «Pendenzen zeigen» (öffnet Hirni). Siri-Sätze z. B. «Neue Notiz in Hirni», «Neue Pendenz in Hirni», «Pendenzen in Hirni zeigen».
+
 ### Pendenzen
 
 - **Quelle:** Jede Checkbox-Zeile (`- [ ] …`) in einer Notiz ist eine Pendenz. Es gibt keine eigene Pendenzen-Datei; die Notizen bleiben die einzige Quelle. Vorlagen und Codeblöcke zählen nicht, leere Checkboxen auch nicht.

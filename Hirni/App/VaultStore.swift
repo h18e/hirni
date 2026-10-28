@@ -395,16 +395,20 @@ final class VaultStore {
         await scheduleReminders()
     }
 
-    /// Mitteilungen am Stichtag neu planen (nur wenn sich etwas geändert hat).
+    /// Mitteilungen am Stichtag neu planen und das Widget nachführen (beides
+    /// nur, wenn sich etwas geändert hat).
     private func scheduleReminders() async {
         await ReminderScheduler.shared.update(TaskReminders.plan(tasks: tasks, dueDates: dueDates, in: vault))
+        WidgetData.publish(WidgetSnapshot.make(tasks: tasks, dueDates: dueDates, in: vault))
     }
 
-    /// Antippen einer Mitteilung: Pendenzen zeigen und die Notiz öffnen.
-    func openFromReminder(_ path: String) {
+    /// Sprung aus Mitteilung, Widget oder Kurzbefehl: Pendenzen zeigen und
+    /// gegebenenfalls die Notiz öffnen.
+    func open(_ destination: AppDestination) {
+        sidebarSelection = .tasks
+        guard case .note(let path) = destination else { return }
         let url = vault.root.appending(path: path)
         guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else { return }
-        sidebarSelection = .tasks
         selectedNote = url
     }
 

@@ -35,8 +35,11 @@ struct LibraryView: View {
         }
         .environment(store)
         .task {
-            ReminderScheduler.shared.onOpen = { [store] path in store.openFromReminder(path) }
+            AppRouter.shared.handler = { [store] in store.open($0) }
             await store.start()
+        }
+        .onOpenURL { url in
+            if let destination = AppDestination(url: url) { store.open(destination) }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await store.importShared(); await store.reload() } }

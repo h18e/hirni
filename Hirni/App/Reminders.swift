@@ -9,17 +9,6 @@ final class ReminderScheduler: NSObject, UNUserNotificationCenterDelegate {
     static let shared = ReminderScheduler()
 
     private var planned: [TaskReminder]?
-    /// Angetippte Notiz, bevor die App bereit war.
-    private var pendingOpen: String?
-    /// Öffnet eine Notiz (Pfad ab dem Hirni-Ordner).
-    var onOpen: ((String) -> Void)? {
-        didSet {
-            if let pendingOpen, let onOpen {
-                self.pendingOpen = nil
-                onOpen(pendingOpen)
-            }
-        }
-    }
 
     /// Früh setzen, damit auch ein Antippen bei geschlossener App ankommt.
     func install() {
@@ -65,8 +54,6 @@ final class ReminderScheduler: NSObject, UNUserNotificationCenterDelegate {
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         guard let path = response.notification.request.content.userInfo["note"] as? String else { return }
-        await MainActor.run {
-            if let onOpen { onOpen(path) } else { pendingOpen = path }
-        }
+        await MainActor.run { AppRouter.shared.open(.note(path)) }
     }
 }
