@@ -52,7 +52,14 @@ final class VaultStore {
             Task { await reload() }
         }
     }
-    var selectedNote: URL?
+    var selectedNote: URL? {
+        didSet {
+            // Wegnavigieren speichert den offenen Editor. Darauf, dass SwiftUI
+            // beim Zurückgehen «verschwunden» meldet, ist auf dem iPhone kein Verlass.
+            guard oldValue != selectedNote, let oldValue, let editor = openEditor, editor.url == oldValue else { return }
+            Task { await editor.flush() }
+        }
+    }
 
     /// Eben angelegte Notiz: Der Editor setzt dann den Fokus auf den Titel.
     var justCreatedNote: URL?

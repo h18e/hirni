@@ -35,6 +35,8 @@ struct LibraryView: View {
         .task { await store.start() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await store.reload() } }
+            // In den Hintergrund: sofort speichern, iOS beendet Apps dort ohne Vorwarnung.
+            if phase == .background, let editor = store.openEditor { Task { await editor.flush() } }
         }
         .alert("Das hat nicht geklappt", isPresented: errorIsPresented) {
             Button("OK", role: .cancel) {}

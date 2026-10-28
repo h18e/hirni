@@ -33,6 +33,8 @@ final class EditorController {
 
     /// Bilder und Datenbank-Ansichten unter ihren Zeilen anzeigen.
     @ObservationIgnored let overlays = EmbedOverlays()
+    /// Automatisches Speichern kurz nach der letzten Eingabe (siehe NoteEditorView).
+    @ObservationIgnored var autosave: Task<Void, Never>?
     /// Mac: Dateien wurden in den Text gezogen.
     @ObservationIgnored var onFileDrop: (([URL]) -> Void)?
 

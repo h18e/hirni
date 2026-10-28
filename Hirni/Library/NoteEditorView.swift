@@ -112,11 +112,17 @@ struct NoteEditorView: View {
         .onChange(of: store.tags, initial: true) { _, tags in
             controller.knownTags = tags
         }
-        // Automatisch speichern, 1 Sekunde nach der letzten Eingabe.
-        .task(id: text) {
-            try? await Task.sleep(for: .seconds(1))
-            guard !Task.isCancelled else { return }
-            await save()
+        // Automatisch speichern, 1 Sekunde nach der letzten Eingabe. Bewusst
+        // nicht über `.task`: SwiftUI meldet beim Öffnen einer neuen Notiz auf
+        // dem iPhone manchmal «verschwunden», obwohl der Editor sichtbar bleibt,
+        // und bricht damit alle `.task` ab. Der Zeitgeber im Controller läuft weiter.
+        .onChange(of: text) {
+            controller.autosave?.cancel()
+            controller.autosave = Task {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { return }
+                await save()
+            }
         }
         .onChange(of: titleIsFocused) { _, focused in
             if !focused { Task { await commitTitle() } }
