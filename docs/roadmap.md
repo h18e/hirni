@@ -29,7 +29,7 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ fertig
 | B | Teilen in Hirni | Hirni im Teilen-Menü anderer Apps: Links, Texte, Fotos landen in der Inbox | ✅ |
 | C | Erinnerungen | Benachrichtigung am Stichtag einer Pendenz | ✅ |
 | D | Widget und Kurzbefehle | Widget mit offenen Pendenzen, «Neue Notiz» per Siri/Kurzbefehle | ✅ |
-| E | Menüleiste am Mac | Schnellnotiz aus der Menüleiste | 🟡 gebaut, Test am Mac offen |
+| E | Menüleiste am Mac | Schnellnotiz aus der Menüleiste | ✅ |
 | F | Kalender | Datenbank-Termine in den Apple Kalender übertragen | ⬜ |
 
 ## Version 2 (Ideen-Speicher)
