@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 
 @main
@@ -6,6 +7,8 @@ struct HirniApp: App {
 
     init() {
         ReminderScheduler.shared.install()
+        // Siri die aktuellen Sätze melden (sonst kennt sie sie erst später).
+        HirniShortcuts.updateAppShortcutParameters()
     }
 
     var body: some Scene {

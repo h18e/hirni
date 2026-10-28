@@ -54,23 +54,39 @@ struct OpenTasksIntent: AppIntent {
     }
 }
 
+/// Siri-Sätze. Wörter wie «Notiz» oder «Erinnerung» meidet Hirni: Siri
+/// versteht sie als Apples eigene Notizen- bzw. Erinnerungsbefehle und
+/// antwortet dann «Die App Hirni unterstützt diesen Vorgang mit Siri nicht».
 struct HirniShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
             intent: NewNoteIntent(),
-            phrases: ["Neue Notiz in \(.applicationName)", "Notiz in \(.applicationName) erfassen"],
+            phrases: [
+                "In \(.applicationName) notieren",
+                "Notiere in \(.applicationName)",
+                "Etwas in \(.applicationName) festhalten",
+                "Schreib in \(.applicationName)",
+            ],
             shortTitle: "Neue Notiz",
             systemImageName: "square.and.pencil"
         )
         AppShortcut(
             intent: NewTaskIntent(),
-            phrases: ["Neue Pendenz in \(.applicationName)", "Pendenz in \(.applicationName) erfassen"],
+            phrases: [
+                "Pendenz in \(.applicationName) erfassen",
+                "\(.applicationName) Pendenz erfassen",
+                "Neue Pendenz in \(.applicationName)",
+            ],
             shortTitle: "Neue Pendenz",
             systemImageName: "checklist"
         )
         AppShortcut(
             intent: OpenTasksIntent(),
-            phrases: ["Pendenzen in \(.applicationName) zeigen", "Meine Pendenzen in \(.applicationName)"],
+            phrases: [
+                "Pendenzen in \(.applicationName) zeigen",
+                "Zeig meine Pendenzen in \(.applicationName)",
+                "\(.applicationName) Pendenzen",
+            ],
             shortTitle: "Pendenzen",
             systemImageName: "list.bullet"
         )
