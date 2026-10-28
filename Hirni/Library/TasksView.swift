@@ -13,6 +13,8 @@ struct TasksView: View {
     @State private var showsDone = true
     /// Pendenz, deren Stichtag gerade gesetzt wird.
     @State private var dueFor: TaskItem?
+    /// Pendenz, die nach Rückfrage gelöscht wird.
+    @State private var deleting: TaskItem?
 
     var body: some View {
         let open = store.tasks.filter { !$0.isDone }
@@ -49,6 +51,22 @@ struct TasksView: View {
         }
         .navigationTitle("Pendenzen")
         .sheet(item: $dueFor) { task in DueDateSheet(task: task) }
+        .confirmationDialog(
+            "Pendenz löschen?",
+            isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+            titleVisibility: .visible,
+            presenting: deleting
+        ) { task in
+            Button("Löschen", role: .destructive) { Task { await store.deleteTask(task) } }
+            Button("Abbrechen", role: .cancel) {}
+        } message: { task in
+            Text("«\(task.text)» wird aus der Notiz «\(Vault.title(of: task.note))» entfernt.")
+        }
+        #if os(macOS)
+        .onDeleteCommand {
+            if let selection, let task = store.tasks.first(where: { $0.id == selection }) { deleting = task }
+        }
+        #endif
         .onChange(of: selection) { _, id in
             guard let id, let task = store.tasks.first(where: { $0.id == id }) else { return }
             store.selectedNote = task.note
@@ -114,6 +132,10 @@ struct TasksView: View {
             }
             .tint(.green)
         }
+        .swipeActions(edge: .trailing) {
+            Button("Löschen", systemImage: "trash") { deleting = task }
+                .tint(.red)
+        }
         #endif
     }
 
@@ -141,6 +163,8 @@ struct TasksView: View {
                 Button("Ohne Kategorie", systemImage: "tag.slash") { Task { await store.setTaskCategory(task, nil) } }
             }
         }
+        Divider()
+        Button("Löschen …", systemImage: "trash", role: .destructive) { deleting = task }
     }
 
     /// Offene Pendenzen nach Kategorie, alphabetisch, «Ohne Kategorie» zuletzt.

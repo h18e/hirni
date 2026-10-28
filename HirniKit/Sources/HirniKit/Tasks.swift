@@ -209,6 +209,22 @@ extension Vault {
     }
 }
 
+extension Vault {
+    /// Löscht die Zeile der Pendenz aus ihrer Notiz und ihren Stichtag. Ist
+    /// die Zeile inzwischen anders, passiert nichts (`TaskError.changed`).
+    public func deleteTask(_ task: TaskItem) throws {
+        let text = try readNote(at: task.note)
+        var lines = text.components(separatedBy: "\n")
+        guard lines.indices.contains(task.line), lines[task.line] == task.rawLine else { throw TaskError.changed }
+        lines.remove(at: task.line)
+        try writeNote(lines.joined(separator: "\n"), to: task.note)
+        var dates = dueDates()
+        if dates.stichtage.removeValue(forKey: task.dueKey(in: self)) != nil {
+            try saveDueDates(dates)
+        }
+    }
+}
+
 /// Stichtage der Pendenzen, getrennt von den Notizen in
 /// `_Hirni/Pendenzen.json`: `{"stichtage": {"Inbox/Einkauf.md|Milch": "2026-11-03"}}`.
 public struct TaskDueDates: Codable, Equatable, Sendable {

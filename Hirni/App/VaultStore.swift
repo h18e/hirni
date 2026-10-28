@@ -418,6 +418,19 @@ final class VaultStore {
         await changeTask(task) { TaskLine.setCategory(category, line: $0) }
     }
 
+    /// Pendenz aus ihrer Notiz löschen (die ganze Zeile), samt Stichtag.
+    func deleteTask(_ task: TaskItem) async {
+        await openEditor?.flushIfShowing(task.note)
+        await perform { vault in
+            let current = vault.allTasks(in: task.note).first { $0.line == task.line && $0.text == task.text }
+                ?? vault.allTasks(in: task.note).first { $0.text == task.text }
+            guard let current else { throw TaskError.changed }
+            try vault.deleteTask(current)
+        }
+        await reload()
+        if let editor = openEditor, editor.url == task.note { await editor.reloadFromDisk() }
+    }
+
     private func changeTask(_ task: TaskItem, _ change: @escaping @Sendable (String) -> String) async {
         // Ist die Notiz offen, zuerst speichern; danach liest der Editor die
         // geänderte Datei wieder ein. Beim Speichern kann sich die Zeile

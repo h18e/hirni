@@ -46,3 +46,22 @@ struct TaskRemindersTests {
         #expect(TaskReminders.plan(tasks: tasks, dueDates: dates, in: test.vault, now: noon, calendar: calendar).isEmpty)
     }
 }
+
+struct TaskDeleteTests {
+    @Test func deletesLineAndDueDate() throws {
+        let test = try TestVault()
+        try test.write("# Liste\n- [ ] Milch\n- [x] Velo ✅ 2026-10-01\nEnde\n", to: "Inbox/Liste.md")
+        let milch = try #require(test.vault.allTasks().first { $0.text == "Milch" })
+        var dates = TaskDueDates()
+        dates.stichtage[milch.dueKey(in: test.vault)] = "2026-11-03"
+        dates.stichtage["Inbox/Andere.md|X"] = "2026-11-04"
+        try test.vault.saveDueDates(dates)
+
+        try test.vault.deleteTask(milch)
+        let text = try test.vault.readNote(at: milch.note)
+        #expect(text == "# Liste\n- [x] Velo ✅ 2026-10-01\nEnde\n")
+        #expect(test.vault.dueDates().stichtage == ["Inbox/Andere.md|X": "2026-11-04"])
+        // Zweites Mal: Zeile stimmt nicht mehr.
+        #expect(throws: TaskError.self) { try test.vault.deleteTask(milch) }
+    }
+}
