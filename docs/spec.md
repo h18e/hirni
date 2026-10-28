@@ -213,6 +213,14 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Technik Widget:** Die App legt `Widget.json` (`WidgetSnapshot`) in den gemeinsamen App-Gruppen-Ordner, sobald sich Pendenzen oder Stichtage ändern; das Widget liest es. Beim Abhaken schreibt das Widget selbst in die Notiz in iCloud Drive; ist iCloud nicht erreichbar, merkt es sich die Pendenz in `Erledigt.json` im gemeinsamen Ordner, und Hirni hakt sie beim Start bzw. beim Zurückkehren ab (`WidgetCompletions`). Gemeinsamer Ordner: iPhone `group.ch.hebera.hirni`, Mac `<Team-ID>.ch.hebera.hirni` (Einstellung `HIRNI_APP_GROUP` in Config/Signing.xcconfig; am Mac braucht «group.» eine Freigabe im Profil). Links: `hirni://pendenzen`, `hirni://notiz?pfad=Inbox/Einkauf.md`.
 - **Kurzbefehle / Siri** (ohne Hirni zu öffnen): «Neue Notiz» (Text; erste Zeile = Titel, landet in der Inbox), «Neue Pendenz» (hängt `- [ ] …` an die Notiz «Pendenzen» in der Inbox an, legt sie bei Bedarf an), «Pendenzen zeigen» (öffnet Hirni). Siri-Sätze z. B. «In Hirni notieren», «Pendenz in Hirni erfassen», «Pendenzen in Hirni zeigen». Sätze mit «Notiz» meidet Hirni: Siri leitet sie an Apples Notizen-Befehl weiter und meldet, Hirni unterstütze den Vorgang nicht.
 
+### Menüleiste am Mac
+
+- **Hirni-Symbol in der Menüleiste** (Gehirn): Klick öffnet ein Fenster mit «Notiz | Pendenz».
+  - **Notiz:** Textfeld, erste Zeile = Titel; «In Inbox sichern» (⌘↩).
+  - **Pendenz:** einzeilig, Eingabetaste erfasst; landet als `- [ ] …` in der Notiz «Pendenzen» in der Inbox (wie der Kurzbefehl).
+  - Darunter die nächsten 6 offenen Pendenzen (wie im Widget) mit Kreis zum Abhaken; «Hirni öffnen», «Beenden».
+- Das Symbol bleibt, auch wenn das Hirni-Fenster geschlossen ist. Ein- und ausblenden in den Einstellungen (Hirni ▸ Einstellungen …, ⌘,).
+
 ### Pendenzen
 
 - **Quelle:** Jede Checkbox-Zeile (`- [ ] …`) in einer Notiz ist eine Pendenz. Es gibt keine eigene Pendenzen-Datei; die Notizen bleiben die einzige Quelle. Vorlagen und Codeblöcke zählen nicht, leere Checkboxen auch nicht.
