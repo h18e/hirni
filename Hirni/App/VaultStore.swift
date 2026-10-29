@@ -385,6 +385,24 @@ final class VaultStore {
         dueDates.due(for: task.dueKey(in: vault))
     }
 
+    /// Neue Pendenz ohne eigene Notiz: landet in der Notiz «Pendenzen» in der
+    /// Inbox (wie bei Kurzbefehl und Menüleiste), auf Wunsch mit Kategorie
+    /// und Stichtag.
+    func addTask(_ text: String, category: String?, due: Date?) async {
+        var line = text.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespaces)
+        guard !line.isEmpty else { return }
+        if let category = category?.trimmingCharacters(in: .whitespaces), !category.isEmpty,
+           !MarkdownSyntax.tags(in: line).contains(where: { $0.caseInsensitiveCompare(category) == .orderedSame }) {
+            line += " #" + category.replacingOccurrences(of: " ", with: "-")
+        }
+        let toAdd = line
+        guard let note = await perform({ try $0.quickTask(toAdd) }) else { return }
+        await reload()
+        if let due, let task = tasks.last(where: { $0.note == note && !$0.isDone && $0.text == toAdd }) {
+            await setDueDate(due, for: task)
+        }
+    }
+
     /// Stichtag setzen oder (`nil`) entfernen. Steht nicht in der Notiz.
     func setDueDate(_ date: Date?, for task: TaskItem) async {
         // Gleich beim ersten Stichtag fragen, nicht erst wenn eine Erinnerung ansteht.
@@ -489,6 +507,19 @@ final class VaultStore {
     }
 
     // MARK: - Ordner
+
+    /// Die Unterordner des gewählten Ordners (nicht der Inbox).
+    var currentSubfolders: [FolderNode] {
+        guard case .folder(let url) = sidebarSelection else { return [] }
+        func find(_ nodes: [FolderNode]) -> FolderNode? {
+            for node in nodes {
+                if node.url.standardizedFileURL == url.standardizedFileURL { return node }
+                if let found = find(node.children) { return found }
+            }
+            return nil
+        }
+        return find(folders)?.children ?? []
+    }
 
     func newFolder(in parent: URL?, name: String) async {
         let parent = parent ?? vault.root

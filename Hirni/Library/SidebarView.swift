@@ -23,17 +23,18 @@ struct SidebarView: View {
                 .tag(SidebarItem.tasks)
 
             Section("Ordner") {
+                #if os(macOS)
                 OutlineGroup(store.folders, children: \.childrenOrNil) { folder in
-                    Label(folder.name, systemImage: "folder")
-                        .tag(SidebarItem.folder(folder.url))
-                        .draggable(VaultItemTransfer(url: folder.url)) {
-                            Label(folder.name, systemImage: "folder")
-                        }
-                        .dropDestination(for: VaultItemTransfer.self) { items, _ in
-                            drop(items, into: folder.url)
-                        }
-                        .contextMenu { folderMenu(for: folder) }
+                    folderRow(folder)
                 }
+                #else
+                // Auf dem iPhone klappt ein Tipp auf einen Ordner mit Unterordnern
+                // nur auf, statt ihn zu öffnen. Darum hier nur die obersten; die
+                // Unterordner stehen zuoberst in der Liste des Ordners.
+                ForEach(store.folders) { folder in
+                    folderRow(folder)
+                }
+                #endif
             }
 
             if !store.tagCounts.isEmpty {
@@ -75,6 +76,18 @@ struct SidebarView: View {
             Button("Abbrechen", role: .cancel) {}
             Button(prompt.confirmLabel) { submit(prompt) }
         }
+    }
+
+    private func folderRow(_ folder: FolderNode) -> some View {
+        Label(folder.name, systemImage: "folder")
+            .tag(SidebarItem.folder(folder.url))
+            .draggable(VaultItemTransfer(url: folder.url)) {
+                Label(folder.name, systemImage: "folder")
+            }
+            .dropDestination(for: VaultItemTransfer.self) { items, _ in
+                drop(items, into: folder.url)
+            }
+            .contextMenu { folderMenu(for: folder) }
     }
 
     @ViewBuilder

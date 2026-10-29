@@ -30,6 +30,12 @@ struct QuickCaptureTests {
         let snapshot = WidgetSnapshot.make(tasks: tasks, dueDates: dates, in: test.vault, limit: 3)
         #expect(snapshot.openCount == 3)
         #expect(snapshot.items.map(\.text) == ["D", "B", "A"])
+        try test.write("- [ ] Z #büro\n- [ ] Y\n- [ ] X #auto\n- [ ] W #büro\n", to: "Inbox/K.md")
+        var keyed = TaskDueDates()
+        keyed.stichtage["Inbox/K.md|W #büro"] = "2026-11-01"
+        let grouped = WidgetSnapshot.make(tasks: test.vault.allTasks(in: test.vault.root.appending(path: "Inbox/K.md")), dueDates: keyed, in: test.vault)
+        #expect(grouped.items.map(\.text) == ["X #auto", "W #büro", "Z #büro", "Y"])
+        #expect(grouped.items.map(\.category) == ["auto", "büro", "büro", nil])
         #expect(snapshot.items[0].note == "Liste")
         #expect(snapshot.items[0].notePath == "Inbox/Liste.md")
 

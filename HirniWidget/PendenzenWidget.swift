@@ -81,6 +81,45 @@ struct PendenzenView: View {
         }
     }
 
+    /// Platz in Zeilen einer Pendenz; eine Kategorie-Überschrift braucht etwa
+    /// die Hälfte.
+    private var budget: Double {
+        switch family {
+        case .systemSmall: 4.5
+        case .systemMedium: 3.6
+        default: 9.5
+        }
+    }
+
+    enum Line: Identifiable {
+        case header(String)
+        case item(WidgetSnapshot.Item)
+
+        var id: String {
+            switch self {
+            case .header(let name): "#" + name
+            case .item(let item): item.id
+            }
+        }
+    }
+
+    /// Pendenzen mit einer Überschrift pro Kategorie, so viele wie Platz haben.
+    private var lines: [Line] {
+        var result: [Line] = []
+        var used = 0.0
+        var current: String??
+        for item in entry.snapshot.items {
+            let needsHeader = current != .some(item.category)
+            let cost = 1 + (needsHeader ? 0.55 : 0)
+            guard used + cost <= budget else { break }
+            if needsHeader { result.append(.header(item.category.map { "#" + $0 } ?? "Ohne Kategorie")) }
+            result.append(.item(item))
+            current = .some(item.category)
+            used += cost
+        }
+        return result
+    }
+
     var body: some View {
         if isAccessory {
             VStack(alignment: .leading, spacing: 1) {
@@ -92,7 +131,7 @@ struct PendenzenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .widgetURL(DeepLink.tasks)
         } else {
-            VStack(alignment: .leading, spacing: family == .systemSmall ? 4 : 6) {
+            VStack(alignment: .leading, spacing: family == .systemSmall ? 3 : 4) {
                 HStack {
                     Label("Pendenzen", systemImage: "checklist")
                         .labelStyle(family == .systemSmall ? AnyLabelStyle(.titleOnly) : AnyLabelStyle(.titleAndIcon))
@@ -111,8 +150,17 @@ struct PendenzenView: View {
                         .frame(maxWidth: .infinity)
                     Spacer()
                 } else {
-                    ForEach(entry.snapshot.items.prefix(maxItems)) { item in
-                        row(item)
+                    ForEach(lines) { line in
+                        switch line {
+                        case .header(let name):
+                            Text(name)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.tint)
+                                .lineLimit(1)
+                                .padding(.top, 2)
+                        case .item(let item):
+                            row(item)
+                        }
                     }
                     Spacer(minLength: 0)
                 }
@@ -140,7 +188,7 @@ struct PendenzenView: View {
     private func text(_ item: WidgetSnapshot.Item) -> some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(item.text)
+                Text(Self.withoutCategory(item))
                     .font(family == .systemSmall ? .caption : .subheadline)
                     .lineLimit(1)
                 if family != .systemSmall {
@@ -152,6 +200,17 @@ struct PendenzenView: View {
             }
             Spacer(minLength: 0)
         }
+    }
+
+    /// Die Kategorie steht schon in der Überschrift.
+    static func withoutCategory(_ item: WidgetSnapshot.Item) -> String {
+        guard let category = item.category,
+              let range = item.text.range(of: "#" + category, options: .caseInsensitive)
+        else { return item.text }
+        var text = item.text
+        text.removeSubrange(range)
+        let trimmed = text.replacingOccurrences(of: "  ", with: " ").trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty ? item.text : trimmed
     }
 
     private func subtitle(_ item: WidgetSnapshot.Item) -> String {

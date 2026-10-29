@@ -15,6 +15,7 @@ struct TasksView: View {
     @State private var dueFor: TaskItem?
     /// Pendenz, die nach Rückfrage gelöscht wird.
     @State private var deleting: TaskItem?
+    @State private var showsNewTask = false
 
     var body: some View {
         let open = store.tasks.filter { !$0.isDone }
@@ -50,6 +51,13 @@ struct TasksView: View {
             }
         }
         .navigationTitle("Pendenzen")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Neue Pendenz", systemImage: "plus") { showsNewTask = true }
+                    .keyboardShortcut("n")
+            }
+        }
+        .sheet(isPresented: $showsNewTask) { NewTaskSheet() }
         .sheet(item: $dueFor) { task in DueDateSheet(task: task) }
         .confirmationDialog(
             "Pendenz löschen?",
@@ -187,6 +195,75 @@ struct TasksView: View {
     /// Überfällig: Stichtag vor heute.
     private func isOverdue(_ date: Date) -> Bool {
         date < Calendar.current.startOfDay(for: .now)
+    }
+}
+
+/// Neue Pendenz erfassen, ohne eine Notiz zu öffnen: Text, Kategorie, Stichtag.
+private struct NewTaskSheet: View {
+    @Environment(VaultStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+    @State private var category = ""
+    @State private var hasDueDate = false
+    @State private var due = Date.now
+    @FocusState private var focused: Bool
+
+    private var isEmpty: Bool { text.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Was ist zu tun?", text: $text)
+                        .focused($focused)
+                        .onSubmit(save)
+                }
+                Section {
+                    Picker("Kategorie", selection: $category) {
+                        Text("Ohne").tag("")
+                        ForEach(store.tags, id: \.self) { Text("#" + $0).tag($0) }
+                    }
+                    TextField("oder neue Kategorie", text: $category)
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        #endif
+                } footer: {
+                    Text("Die Kategorie wird als #tag in die Zeile geschrieben.")
+                }
+                Section {
+                    Toggle("Stichtag", isOn: $hasDueDate.animation())
+                    if hasDueDate {
+                        DatePicker("Stichtag", selection: $due, displayedComponents: .date)
+                            .datePickerStyle(.graphical)
+                            .environment(\.locale, Locale(identifier: "de_CH"))
+                    }
+                } footer: {
+                    Text("Die Pendenz landet in der Notiz «Pendenzen» in der Inbox.")
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle("Neue Pendenz")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Hinzufügen", action: save).disabled(isEmpty)
+                }
+            }
+            .onAppear { focused = true }
+        }
+        #if os(macOS)
+        .frame(minWidth: 380, minHeight: hasDueDate ? 560 : 320)
+        #endif
+    }
+
+    private func save() {
+        guard !isEmpty else { return }
+        let category = category.trimmingCharacters(in: CharacterSet(charactersIn: "# "))
+        Task { await store.addTask(text, category: category.isEmpty ? nil : category, due: hasDueDate ? due : nil) }
+        dismiss()
     }
 }
 

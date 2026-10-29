@@ -87,7 +87,14 @@ struct MenuBarQuickNote: View {
                     Spacer()
                     Text("\(snapshot.openCount)").foregroundStyle(.secondary).monospacedDigit()
                 }
-                ForEach(snapshot.items.prefix(6)) { item in
+                let items = Array(snapshot.items.prefix(6))
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    // Überschrift, sobald eine neue Kategorie beginnt (wie in der Liste).
+                    if index == 0 || items[index - 1].category != item.category {
+                        Text(item.category.map { "#" + $0 } ?? "Ohne Kategorie")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tint)
+                    }
                     taskRow(item)
                 }
             }

@@ -30,7 +30,9 @@ extension Vault {
     }
 }
 
-/// Was das Widget zeigt: die offenen Pendenzen, fällige zuerst. Die App legt
+/// Was das Widget zeigt: die offenen Pendenzen nach Kategorie wie in der
+/// Pendenzenliste (alphabetisch, ohne Kategorie zuletzt; darin fällige
+/// zuerst). Die App legt
 /// es im gemeinsamen App-Gruppen-Ordner ab, das Widget liest nur.
 public struct WidgetSnapshot: Codable, Equatable, Sendable {
     public struct Item: Codable, Equatable, Sendable, Identifiable {
@@ -41,13 +43,16 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
         public var notePath: String
         /// `yyyy-MM-dd` oder `nil`.
         public var due: String?
+        /// Erster Tag der Zeile (ohne `#`), `nil` = ohne Kategorie.
+        public var category: String?
 
-        public init(id: String, text: String, note: String, notePath: String, due: String?) {
+        public init(id: String, text: String, note: String, notePath: String, due: String?, category: String? = nil) {
             self.id = id
             self.text = text
             self.note = note
             self.notePath = notePath
             self.due = due
+            self.category = category
         }
 
         public var dueDate: Date? { due.flatMap(TaskLine.parseDate) }
@@ -72,16 +77,24 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
                 text: task.text,
                 note: Vault.title(of: task.note),
                 notePath: vault.relativePath(of: task.note) ?? task.note.lastPathComponent,
-                due: dueDates.stichtage[key]
+                due: dueDates.stichtage[key],
+                category: task.category
             ))
         }
-        // Mit Stichtag zuerst (früheste oben), sonst Reihenfolge in den Notizen.
+        // Nach Kategorie, darin mit Stichtag zuerst (früheste oben), sonst
+        // Reihenfolge in den Notizen.
         let sorted = items.sorted { a, b in
+            switch (a.1.category?.lowercased(), b.1.category?.lowercased()) {
+            case let (x?, y?) where x != y: return x.localizedStandardCompare(y) == .orderedAscending
+            case (_?, nil): return true
+            case (nil, _?): return false
+            default: break
+            }
             switch (a.1.due, b.1.due) {
-            case let (x?, y?) where x != y: x < y
-            case (_?, nil): true
-            case (nil, _?): false
-            default: a.0 < b.0
+            case let (x?, y?) where x != y: return x < y
+            case (_?, nil): return true
+            case (nil, _?): return false
+            default: return a.0 < b.0
             }
         }
         return WidgetSnapshot(openCount: open.count, items: sorted.prefix(limit).map(\.1))

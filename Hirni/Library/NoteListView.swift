@@ -5,6 +5,8 @@ struct NoteListView: View {
     @Environment(VaultStore.self) private var store
     /// Notiz, für die gerade «Verschieben nach …» offen ist.
     @State private var moving: MovingItem?
+    @State private var asksSubfolderName = false
+    @State private var subfolderName = ""
 
     @State private var query = ""
     @State private var scope = SearchScope.everywhere
@@ -55,6 +57,14 @@ struct NoteListView: View {
             hits = await store.search(query, inCurrentFolder: scope == .currentFolder)
         }
         .toolbar {
+            if case .folder = store.sidebarSelection {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Neuer Unterordner", systemImage: "folder.badge.plus") {
+                        subfolderName = ""
+                        asksSubfolderName = true
+                    }
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("Neue Datenbank", systemImage: "tablecells.badge.ellipsis") {
                     Task { await store.newDatabase() }
@@ -84,6 +94,18 @@ struct NoteListView: View {
             }
         }
         .refreshable { await store.reload() }
+        .alert("Neuer Unterordner", isPresented: $asksSubfolderName) {
+            TextField("Name", text: $subfolderName)
+            Button("Abbrechen", role: .cancel) {}
+            Button("Anlegen") {
+                let name = subfolderName.trimmingCharacters(in: .whitespaces)
+                if case .folder(let parent) = store.sidebarSelection, !name.isEmpty {
+                    Task { await store.newFolder(in: parent, name: name) }
+                }
+            }
+        } message: {
+            Text("in «\(store.currentTitle)»")
+        }
         .sheet(item: $moving) { item in
             FolderPickerView(item: item.url)
         }
@@ -95,7 +117,7 @@ struct NoteListView: View {
             if hits.isEmpty {
                 ContentUnavailableView.search(text: query)
             }
-        } else if store.notes.isEmpty {
+        } else if store.notes.isEmpty && store.currentSubfolders.isEmpty {
             ContentUnavailableView(
                 "Keine Notizen",
                 systemImage: "note.text",
@@ -104,7 +126,30 @@ struct NoteListView: View {
         }
     }
 
+    /// Unterordner zuoberst, damit man sie auch auf dem iPhone direkt erreicht.
+    @ViewBuilder
+    private var subfolderRows: some View {
+        ForEach(store.currentSubfolders) { folder in
+            Button {
+                store.sidebarSelection = .folder(folder.url)
+            } label: {
+                HStack {
+                    Image(systemName: "folder").foregroundStyle(.tint)
+                    Text(folder.name).foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
     private var noteRows: some View {
+        subfolderRows
         ForEach(store.notes) { note in
             NoteRow(note: note, hasConflict: store.hasConflict(note.url))
                 .tag(note.url)
