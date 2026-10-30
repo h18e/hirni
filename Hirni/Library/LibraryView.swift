@@ -20,11 +20,19 @@ struct LibraryView: View {
                 TrashListView()
             } else if store.sidebarSelection == .tasks {
                 TasksView()
+            } else if store.sidebarSelection == .help {
+                HelpListView()
             } else {
                 NoteListView()
             }
         } detail: {
-            if let url = store.selectedNote, Vault.isDatabase(url) {
+            if store.sidebarSelection == .help {
+                if let topic = HelpTopic.all.first(where: { $0.id == store.helpTopic }) {
+                    HelpTopicView(topic: topic)
+                } else {
+                    ContentUnavailableView("Thema wählen", systemImage: "questionmark.circle", description: Text("Links ein Thema antippen oder oben suchen."))
+                }
+            } else if let url = store.selectedNote, Vault.isDatabase(url) {
                 DatabaseView(url: url)
                     .id(url)
             } else if let url = store.selectedNote {

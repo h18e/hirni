@@ -48,6 +48,8 @@ struct SidebarView: View {
             }
 
             Section {
+                Label("Hilfe", systemImage: "questionmark.circle")
+                    .tag(SidebarItem.help)
                 Label("Zuletzt gelöscht", systemImage: "trash")
                     .tag(SidebarItem.trash)
             } footer: {

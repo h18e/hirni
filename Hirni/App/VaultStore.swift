@@ -16,6 +16,8 @@ enum SidebarItem: Hashable {
     /// Alle Checkboxen aus allen Notizen.
     case tasks
     case trash
+    /// Hilfe: alle Funktionen und Platzhalter erklärt.
+    case help
 }
 
 /// Ein Tag mit der Anzahl Notizen, für die Seitenleiste.
@@ -67,6 +69,9 @@ final class VaultStore {
         }
     }
 
+    /// Gewähltes Hilfe-Thema (`HelpTopic.id`).
+    var helpTopic: String?
+
     /// Eben angelegte Notiz: Der Editor setzt dann den Fokus auf den Titel.
     var justCreatedNote: URL?
     /// Aus einer Vorlage mit `{{cursor}}` bzw. Beispieltext: Der Editor setzt
@@ -106,7 +111,7 @@ final class VaultStore {
         switch sidebarSelection {
         case .inbox, nil: vault.inboxURL
         case .folder(let url): url
-        case .tag, .tasks, .trash: nil
+        case .tag, .tasks, .trash, .help: nil
         }
     }
 
@@ -117,6 +122,7 @@ final class VaultStore {
         case .tag(let tag): "#\(tag)"
         case .tasks: "Pendenzen"
         case .trash: "Zuletzt gelöscht"
+        case .help: "Hilfe"
         }
     }
 
@@ -251,7 +257,7 @@ final class VaultStore {
                 return
             }
         }
-        if sidebarSelection == .trash || sidebarSelection == .tasks { sidebarSelection = .inbox }
+        if sidebarSelection == .trash || sidebarSelection == .tasks || sidebarSelection == .help { sidebarSelection = .inbox }
         let folder = currentFolderURL ?? vault.inboxURL
         // In der Tag-Ansicht bekommt die neue Notiz (in der Inbox) gleich den Tag.
         let tag = if case .tag(let tag) = sidebarSelection { tag } else { String?.none }
