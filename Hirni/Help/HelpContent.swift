@@ -78,13 +78,16 @@ extension HelpTopic {
         sections: [
             .init(title: "So funktioniert's", items: [
                 "Jede Notiz im Ordner **Vorlagen** ist eine Vorlage. Du bearbeitest sie wie jede Notiz.",
-                "**Neue Notiz aus Vorlage:** Stift → Vorlage wählen. Die neue Notiz heisst wie die Vorlage.",
+                "**Neue Notiz aus Vorlage:** Stift → Vorlage wählen.",
+                "**Name und Titel:** Die Vorlage selbst hat einen kurzen Namen (z. B. «Besprechung»). Darunter steht das Feld **Titel neuer Notizen** – dort kommt der Titel mit Platzhaltern hin, z. B. `{{iso-datum}} – {{? Thema}}`. Leer = neue Notizen heissen wie die Vorlage.",
+                "Vorlagen, deren Name noch Platzhalter enthält, stellt Hirni beim Start automatisch so um.",
+                "In der Vorlage erscheinen Beispieltexte `{{? …}}` mit Klammern, damit du sie bearbeiten kannst; erst in der neuen Notiz werden sie grau.",
                 "**Zeilen-Seite aus Vorlage:** in einer Datenbank «Seite anlegen» → Vorlage wählen.",
-                "Platzhalter wie `{{datum}}` werden beim Anlegen ausgefüllt – im Text **und im Namen** der Vorlage. Alle Platzhalter stehen im Thema **Platzhalter**.",
+                "Platzhalter wie `{{datum}}` werden beim Anlegen ausgefüllt – im Text **und im Titel**. Alle Platzhalter stehen im Thema **Platzhalter**.",
                 "Tags in Vorlagen zählen in der Tag-Liste nicht, Checkboxen in Vorlagen nicht als Pendenzen.",
             ]),
             .init(title: "Beispiel «Besprechung»", items: [
-                "Name der Vorlage: `Besprechung {{frage: Mit wem?}} {{datum}}`",
+                "Name der Vorlage: `Besprechung` – Titel neuer Notizen: `Besprechung {{frage: Mit wem?}} {{datum}}`",
                 "Text: `# {{? Thema}}` – `Mit {{frage: Mit wem?}} · {{wahl: Arbeit|Privat}}` – `Letztes Mal: {{vorherige}}` – `## Notizen` – `{{cursor}}` – `## Pendenzen` – `- [ ] Protokoll verschicken {{stichtag: morgen}}` – `{{pendenzen #büro}}`",
                 "Beim Anlegen fragt Hirni «Mit wem?» und «Arbeit/Privat», füllt alles aus, setzt die Stichtage und stellt den Cursor unter «Notizen».",
             ]),
@@ -115,6 +118,7 @@ extension HelpTopic {
                 "`{{cursor}}` – hier steht nach dem Anlegen der Cursor, die Tastatur ist offen.",
                 "`{{? Thema der Besprechung}}` – Beispieltext: erscheint grau und kursiv. Ein Tipp darauf markiert ihn ganz, was du tippst, ersetzt ihn. Gibt es kein `{{cursor}}`, ist der erste Beispieltext gleich markiert.",
                 "Nicht überschriebene Beispieltexte erscheinen weder in der Vorschau der Liste noch im PDF.",
+                "**Im Titel:** `{{iso-datum}} – {{? Thema}}` ergibt «2026-10-30 – Thema» mit markiertem «Thema» – einfach lostippen. `{{cursor}}` im Titel setzt den Cursor dorthin.",
             ]),
             .init(title: "Pendenzen und Nummern", items: [
                 "`- [ ] Nachfassen {{stichtag: +7}}` – die Pendenz bekommt einen Stichtag (wie bei den relativen Daten: `morgen`, `+7`, `+2w`, `montag`, `03.11.2026` …). Der Platzhalter verschwindet aus der Zeile.",

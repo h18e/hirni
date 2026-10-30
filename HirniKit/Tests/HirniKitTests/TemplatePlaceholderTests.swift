@@ -66,4 +66,33 @@ struct TemplatePlaceholderTests {
         let secondText = try test.vault.readNote(at: second.url)
         #expect(secondText.hasPrefix("# Jour fixe 2\nLetztes: [Jour fixe 30.10.2026](hirni://notiz?pfad=Inbox/Jour%20fixe%2030.10.2026.md)\n"))
     }
+
+    @Test func titleMarksAndShortNames() {
+        let marked = TemplateFiller.titleMarks(in: "2026-10-30 – {{cursor}}{{? KURZNOTIZ}}")
+        #expect(marked.title == "2026-10-30 – KURZNOTIZ")
+        #expect(marked.selection == NSRange(location: 13, length: 9))
+        let cursor = TemplateFiller.titleMarks(in: "Besprechung {{cursor}}")
+        #expect(cursor.title == "Besprechung")
+        #expect(cursor.selection == NSRange(location: 12, length: 0))
+        #expect(TemplateFiller.titleMarks(in: "Ohne").selection == nil)
+        #expect(TemplateFiller.shortName("{{iso-datum}} – BESPRECHUNG – THEMA") == "BESPRECHUNG – THEMA")
+        #expect(TemplateFiller.shortName("{{iso-datum}} – {{cursor}}{{? KURZNOTIZ}}") == "KURZNOTIZ")
+        #expect(TemplateFiller.shortName("{{datum}}") == "Vorlage")
+    }
+
+    @Test func titlePatternInHeaderAndShortening() throws {
+        let test = try TestVault()
+        try test.write("Text {{frage: Wer?}}\n", to: "Vorlagen/{{iso-datum}} – {{? Thema}}.md")
+        #expect(test.vault.shortenTemplateNames() == 1)
+        let template = test.vault.templatesURL.appending(path: "Thema.md")
+        let source = try test.vault.readNote(at: template)
+        #expect(source == "---\nnotiztitel: \"{{iso-datum}} – {{? Thema}}\"\n---\nText {{frage: Wer?}}\n")
+        #expect(test.vault.templateQuestions(template).map(\.id) == ["frage: Wer?"])
+
+        let created = try test.vault.createNote(in: test.vault.inboxURL, fromTemplate: template, answers: ["frage: Wer?": "Lea"], now: now)
+        #expect(created.url.lastPathComponent == "2026-10-30 – Thema.md")
+        #expect(created.titleSelection == NSRange(location: 13, length: 5))
+        let text = try test.vault.readNote(at: created.url)
+        #expect(text == "Text Lea\n")
+    }
 }

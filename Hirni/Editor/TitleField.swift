@@ -12,6 +12,8 @@ struct TitleField: UIViewRepresentable {
     @Binding var text: String
     /// Jede Erhöhung setzt den Cursor ins Feld.
     let focusRequest: Int
+    /// Beim Fokus diese Stelle markieren (z. B. Beispieltext aus einer Vorlage).
+    var selection: NSRange?
     /// Fokus verloren: Titel übernehmen.
     let onEndEditing: () -> Void
     /// Return: Titel übernehmen und weiter in den Text.
@@ -38,7 +40,16 @@ struct TitleField: UIViewRepresentable {
         if field.placeholder != placeholder { field.placeholder = placeholder }
         if context.coordinator.focusRequest != focusRequest {
             context.coordinator.focusRequest = focusRequest
-            DispatchQueue.main.async { field.becomeFirstResponder() }
+            let selection = selection
+            DispatchQueue.main.async {
+                field.becomeFirstResponder()
+                guard let selection, let text = field.text else { return }
+                let length = (text as NSString).length
+                if let start = field.position(from: field.beginningOfDocument, offset: min(selection.location, length)),
+                   let end = field.position(from: start, offset: min(selection.length, length - min(selection.location, length))) {
+                    field.selectedTextRange = field.textRange(from: start, to: end)
+                }
+            }
         }
     }
 

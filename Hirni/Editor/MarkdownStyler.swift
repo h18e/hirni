@@ -31,7 +31,8 @@ enum MarkdownStyler {
         to storage: NSTextStorage,
         reservedHeight: (String) -> CGFloat = { _ in 0 },
         databaseHeight: (DatabaseEmbed) -> CGFloat = { _ in 0 },
-        tableHeight: (MarkdownTable) -> CGFloat = { _ in 0 }
+        tableHeight: (MarkdownTable) -> CGFloat = { _ in 0 },
+        hintsAsText: Bool = false
     ) {
         let text = storage.string
         let full = NSRange(location: 0, length: storage.length)
@@ -40,7 +41,12 @@ enum MarkdownStyler {
         storage.beginEditing()
         storage.setAttributes([.font: base, .foregroundColor: Colors.text], range: full)
 
-        let spans = MarkdownSyntax.spans(in: text)
+        // In Vorlagen ist ein Beispieltext gewöhnlicher Text, mit Klammern.
+        let spans = MarkdownSyntax.spans(in: text).filter { span in
+            guard hintsAsText, span.kind == .hint || span.kind == .hiddenMarker else { return true }
+            return span.kind == .hiddenMarker && !(text as NSString).substring(with: span.range).contains("{")
+                && !(text as NSString).substring(with: span.range).contains("}")
+        }
         // Erst ganze Zeilen, dann Inline-Formatierung, zuletzt die grauen Zeichen.
         for span in spans where span.kind.isLineLevel { style(span, in: storage, base: base) }
         for span in spans where !span.kind.isLineLevel && span.kind != .syntax { style(span, in: storage, base: base) }

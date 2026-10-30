@@ -192,6 +192,8 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 ### Vorlagen
 
 - **Ordner «Vorlagen»:** wird beim Start angelegt und erscheint wie jeder Ordner in der Seitenleiste. Jede Notiz darin ist eine Vorlage. Vorlagen werden wie Notizen angelegt, bearbeitet, umbenannt und gelöscht. Tags in Vorlagen zählen in der Tag-Liste nicht.
+- **Name und Titel neuer Notizen:** Die Vorlage hat einen kurzen Namen (Dateiname). Der Titel neuer Notizen steht im Kopf der Vorlage als `notiztitel: "{{iso-datum}} – {{? Thema}}"` und wird im Editor der Vorlage im Feld «Titel neuer Notizen» unter dem Namen bearbeitet (leer = Name der Vorlage). Vorlagen mit Platzhaltern im Namen stellt Hirni beim Start um: Name → `notiztitel`, Datei → Kurzname (Beispieltexte als Text, andere Platzhalter weg). In Vorlagen sind Beispieltexte gewöhnlicher Text (mit Klammern sichtbar und bearbeitbar).
+- **Titel mit `{{? …}}` bzw. `{{cursor}}`:** Der Beispieltext wird zu Text im Titel und beim Öffnen markiert (Tippen ersetzt ihn), `{{cursor}}` setzt den Cursor in den Titel.
 - **Neue Notiz:** Gibt es Vorlagen (und ist nicht gerade der Ordner «Vorlagen» gewählt), fragt «Neue Notiz» nach: «Leere Notiz» oder eine Vorlage. Die Notiz heisst wie die Vorlage.
 - **Neue Zeilen-Seite:** «Seite anlegen» fragt ebenso nach: «Leere Seite» oder eine Vorlage. Die Seite heisst wie der Eintrag.
 - **Platzhalter** (im Text und im Namen der Vorlage, Gross/klein egal; unbekannte bleiben stehen):
@@ -200,7 +202,7 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
   - `{{titel}}`: Titel der neuen Notiz. Auf Zeilen-Seiten zusätzlich `{{Feldname}}` mit dem Wert des Eintrags; ein gleichnamiges Feld (z. B. «Datum») geht vor.
   - **Rückfragen:** `{{frage: Mit wem?}}` (Textfeld) und `{{wahl: Arbeit|Privat|Verein}}` (Auswahl, erste vorbelegt). Beim Anlegen erscheint ein Blatt «Neue Notiz» mit allen Fragen; gleiche Fragen nur einmal, die Antwort steht überall (auch im Titel). Auf Zeilen-Seiten wird nicht gefragt, die Platzhalter bleiben dort leer.
   - `{{cursor}}`: Dort steht nach dem Anlegen der Cursor (Tastatur offen).
-  - **Beispieltext** `{{? Thema der Besprechung}}`: bleibt in der Notiz, bis man ihn überschreibt. Der Editor zeigt nur «Thema der Besprechung», grau und kursiv; ein Tipp darauf markiert ihn ganz, Tippen ersetzt ihn. Ohne `{{cursor}}` ist nach dem Anlegen der erste Beispieltext markiert. In Vorschau und PDF erscheint er nicht.
+  - **Beispieltext** `{{? Thema der Besprechung}}`: bleibt in der Notiz, bis man ihn überschreibt. Der Editor zeigt nur «Thema der Besprechung», grau und kursiv; ein Tipp darauf markiert ihn ganz, und jede Eingabe oder Löschung darin ersetzt ihn ganz (auch wenn der Cursor nur darin steht). Ohne `{{cursor}}` ist nach dem Anlegen der erste Beispieltext markiert. In Vorschau und PDF erscheint er nicht.
   - `- [ ] Nachfassen {{stichtag: +7}}`: Der Platzhalter verschwindet aus der Zeile, die Pendenz bekommt den Stichtag (gleiche Angaben wie bei den relativen Daten, auch `03.11.2026`).
   - `{{nr}}`: laufende Nummer pro Vorlage (1, 2, 3 …). `{{vorherige}}`: Link auf die zuletzt aus dieser Vorlage angelegte Notiz («–» beim ersten Mal). Beides gemerkt in `_Hirni/Vorlagen.json`.
   - `{{pendenzen}}` bzw. `{{pendenzen #büro}}`: offene Pendenzen (alle bzw. einer Kategorie) als Liste mit Link zur Notiz, ohne Checkbox (damit keine doppelten Pendenzen entstehen).

@@ -1,6 +1,9 @@
 import HirniKit
 import SwiftUI
 import UniformTypeIdentifiers
+#if os(macOS)
+import AppKit
+#endif
 
 /// Editor für eine Notiz: Titel (= Dateiname) und Markdown-Text.
 ///
@@ -43,6 +46,16 @@ struct NoteEditorView: View {
     @FocusState private var titleIsFocused: Bool
     /// iPhone: Erhöhen setzt den Cursor in den Titel (siehe TitleField).
     @State private var titleFocusRequest = 0
+    /// Beim nächsten Fokus im Titel diese Stelle markieren (Vorlage mit `{{? …}}`).
+    @State private var titleSelection: NSRange?
+    /// Vorlagen: Titel neuer Notizen (`notiztitel` im Kopf), mit Platzhaltern.
+    @State private var templateTitle = ""
+    @FocusState private var templateTitleIsFocused: Bool
+
+    private var isTemplate: Bool {
+        guard let fileURL else { return false }
+        return fileURL.deletingLastPathComponent().standardizedFileURL == store.vault.templatesURL.standardizedFileURL
+    }
 
     private var isLoaded: Bool { fileURL != nil }
     private var hasUnsavedChanges: Bool { text != savedText }
@@ -69,6 +82,8 @@ struct NoteEditorView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 8)
+
+            if isTemplate { templateTitleField }
 
             MarkdownTextView(text: $text, controller: controller)
             #if os(macOS)
@@ -138,6 +153,9 @@ struct NoteEditorView: View {
         }
         .onChange(of: titleIsFocused) { _, focused in
             if !focused { Task { await commitTitle() } }
+        }
+        .onChange(of: templateTitleIsFocused) { _, focused in
+            if !focused { Task { await commitTemplateTitle() } }
         }
         .onChange(of: store.revision) {
             Task {
@@ -278,13 +296,20 @@ struct NoteEditorView: View {
         // Zuerst anmelden: Die Hervorhebung braucht den Ordner der Notiz,
         // um eingebettete Bilder zu finden.
         register(for: newURL)
+        controller.hintsAsText = newURL.deletingLastPathComponent().standardizedFileURL == store.vault.templatesURL.standardizedFileURL
         self.header = header
         show(body)
         savedModified = modified
         title = Vault.title(of: newURL)
         fileURL = newURL
 
-        if store.justCreatedNote == newURL {
+        templateTitle = Frontmatter.value(Vault.templateTitleKey, in: content) ?? ""
+        if let pending = store.pendingTitleSelection, pending.url == newURL {
+            // Aus einer Vorlage mit Beispieltext oder Cursor im Titel.
+            store.pendingTitleSelection = nil
+            store.pendingCursor = nil
+            await focusTitle(selecting: pending.range)
+        } else if store.justCreatedNote == newURL {
             store.justCreatedNote = nil
             title = "" // der Platzhalter «Neue Notiz» bleibt sichtbar
             await focusTitle()
@@ -393,16 +418,64 @@ struct NoteEditorView: View {
     /// Das Feld ist erst nach dem Bildaufbau aktiv, und während die neue
     /// Notiz hereinfährt, nimmt iOS den Fokus nicht an. Darum mehrmals
     /// versuchen, bis er sitzt (höchstens etwa 2 Sekunden).
-    private func focusTitle() async {
+    private func focusTitle(selecting range: NSRange? = nil) async {
         #if os(iOS)
+        titleSelection = range
         titleFocusRequest += 1
         #else
         for _ in 0..<15 {
             try? await Task.sleep(for: .milliseconds(150))
-            if titleIsFocused { return }
+            if titleIsFocused { break }
             titleIsFocused = true
         }
+        // Am Mac bearbeitet ein gemeinsamer «Field Editor» das Titelfeld.
+        if let range {
+            try? await Task.sleep(for: .milliseconds(100))
+            if let editor = NSApp.keyWindow?.firstResponder as? NSTextView {
+                let length = (editor.string as NSString).length
+                let start = min(range.location, length)
+                editor.setSelectedRange(NSRange(location: start, length: min(range.length, length - start)))
+            }
+        }
         #endif
+    }
+
+    /// Vorlagen: Feld für den Titel neuer Notizen, direkt unter dem Namen.
+    private var templateTitleField: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Image(systemName: "text.cursor")
+                    .foregroundStyle(.secondary)
+                TextField("Titel neuer Notizen (leer = Name der Vorlage)", text: $templateTitle)
+                    .textFieldStyle(.plain)
+                    .font(.callout.monospaced())
+                    .focused($templateTitleIsFocused)
+                    .onSubmit { Task { await commitTemplateTitle() } }
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    #endif
+            }
+            Text("Platzhalter erlaubt, z. B. {{iso-datum}} – {{? Thema}}. Der Name oben bleibt kurz.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
+    }
+
+    /// Schreibt den Titel neuer Notizen in den Kopf der Vorlage.
+    private func commitTemplateTitle() async {
+        guard let fileURL, isTemplate else { return }
+        let value = templateTitle.trimmingCharacters(in: .whitespaces)
+        let current = Frontmatter.value(Vault.templateTitleKey, in: Frontmatter.join(header: header, body: "")) ?? ""
+        guard value != current else { return }
+        let quoted = value.isEmpty ? nil : "\"" + value.replacingOccurrences(of: "\"", with: "'") + "\""
+        header = Frontmatter.split(Frontmatter.setting(Vault.templateTitleKey, to: quoted, in: Frontmatter.join(header: header, body: ""))).header
+        if let modified = await store.write(Frontmatter.join(header: header, body: text), to: fileURL) {
+            savedText = text
+            savedModified = modified
+        }
     }
 
     @ViewBuilder
@@ -412,6 +485,7 @@ struct NoteEditorView: View {
             placeholder: Vault.title(of: fileURL ?? url),
             text: $title,
             focusRequest: titleFocusRequest,
+            selection: titleSelection,
             onEndEditing: { Task { await commitTitle() } },
             onSubmit: {
                 // Weiter in den Text, das Verlassen des Titels übernimmt ihn.

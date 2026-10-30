@@ -98,7 +98,8 @@ struct MarkdownTextView: UIViewRepresentable {
                 to: storage,
                 reservedHeight: { overlays.reservedHeight(for: $0, width: width) },
                 databaseHeight: overlays.databaseHeight,
-                tableHeight: { overlays.tables.height(of: $0) }
+                tableHeight: { overlays.tables.height(of: $0) },
+                hintsAsText: parent.controller.hintsAsText
             )
             scheduleLayout()
         }
@@ -124,6 +125,7 @@ struct MarkdownTextView: UIViewRepresentable {
         }
 
         func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+            if parent.controller.replaceHint(in: range, with: text) { return false }
             if text == "\n", parent.controller.handleReturn() { return false }
             return true
         }
@@ -271,7 +273,8 @@ struct MarkdownTextView: NSViewRepresentable {
                 to: storage,
                 reservedHeight: { overlays.reservedHeight(for: $0, width: width) },
                 databaseHeight: overlays.databaseHeight,
-                tableHeight: { overlays.tables.height(of: $0) }
+                tableHeight: { overlays.tables.height(of: $0) },
+                hintsAsText: parent.controller.hintsAsText
             )
             scheduleLayout()
         }
@@ -290,6 +293,11 @@ struct MarkdownTextView: NSViewRepresentable {
             guard let textView = notification.object as? NSTextView else { return }
             parent.text = textView.string
             parent.controller.updateSuggestions()
+        }
+
+        func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
+            guard let replacementString else { return true }
+            return !parent.controller.replaceHint(in: affectedCharRange, with: replacementString)
         }
 
         func textViewDidChangeSelection(_ notification: Notification) {

@@ -77,6 +77,9 @@ final class VaultStore {
     /// Aus einer Vorlage mit `{{cursor}}` bzw. Beispieltext: Der Editor setzt
     /// den Cursor an diese Stelle (Text ohne Kopf, UTF-16).
     var pendingCursor: (url: URL, offset: Int?)?
+    /// Aus einer Vorlage mit `{{? …}}` bzw. `{{cursor}}` im Titel: diese
+    /// Stelle im Titelfeld markieren.
+    var pendingTitleSelection: (url: URL, range: NSRange)?
     /// Vorlage mit Rückfragen (`{{frage: …}}`, `{{wahl: …}}`), die gerade beantwortet werden.
     var askingTemplate: AskingTemplate?
 
@@ -145,6 +148,8 @@ final class VaultStore {
             await perform { $0.removeCreatedDates() }
             UserDefaults.standard.set(true, forKey: "erfasstDatenEntfernt")
         }
+        // Vorlagen mit Platzhaltern im Namen: Kurztitel, Muster in den Kopf.
+        await perform { $0.shortenTemplateNames() }
         await importShared()
         await reload()
     }
@@ -267,10 +272,14 @@ final class VaultStore {
             let created = await perform { vault in
                 let created = try vault.createNote(in: folder, fromTemplate: template, answers: answers)
                 if let tag { try vault.writeNote("#\(tag) " + vault.readNote(at: created.url), to: created.url) }
-                return (url: created.url, cursor: created.cursor.map { $0 + (tag.map { ("#\($0) " as NSString).length } ?? 0) })
+                return (url: created.url, cursor: created.cursor.map { $0 + (tag.map { ("#\($0) " as NSString).length } ?? 0) },
+                        titleSelection: created.titleSelection)
             }
             url = created?.url
-            if let created { pendingCursor = (created.url, created.cursor) }
+            if let created {
+                pendingCursor = (created.url, created.cursor)
+                if let range = created.titleSelection { pendingTitleSelection = (created.url, range) }
+            }
         } else {
             url = await perform({ try $0.createNote(in: folder, text: tag.map { "#\($0) " } ?? "") })
         }

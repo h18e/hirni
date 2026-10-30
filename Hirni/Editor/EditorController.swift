@@ -273,10 +273,38 @@ final class EditorController {
         textView.window != nil
     }
 
+    @ObservationIgnored private var replacingHint = false
+    /// In Vorlagen sind Beispieltexte gewöhnlicher Text zum Bearbeiten.
+    @ObservationIgnored var hintsAsText = false
+
+    /// Tippen oder Löschen in einem Beispieltext (`{{? Thema}}`) ersetzt ihn
+    /// ganz, egal wo genau der Cursor steht. `true` = erledigt, die Textansicht
+    /// soll die Eingabe nicht selbst einfügen.
+    func replaceHint(in range: NSRange, with replacement: String) -> Bool {
+        guard !replacingHint, !hintsAsText, let text = currentText, text.contains("{{?") else { return false }
+        let ns = text as NSString
+        for match in TemplateFiller.hintPattern.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+            let hint = match.range
+            let touches = range.length == 0
+                ? range.location >= hint.location && range.location < NSMaxRange(hint)
+                : NSIntersectionRange(range, hint).length > 0
+            guard touches else { continue }
+            // Ein Zeilenumbruch im Beispieltext soll ihn nicht leeren, sondern danach umbrechen.
+            if replacement == "\n" { return false }
+            let target = NSUnionRange(hint, range)
+            replacingHint = true
+            defer { replacingHint = false }
+            apply(TextEdit(range: target, replacement: replacement,
+                           selection: NSRange(location: target.location + (replacement as NSString).length, length: 0)))
+            return true
+        }
+        return false
+    }
+
     /// Steht der Cursor in einem Beispieltext (`{{? Thema}}`), wird er ganz
     /// markiert: Was man tippt, ersetzt ihn.
     func selectHintIfNeeded() {
-        guard let text = currentText, let selection = currentSelection, selection.length == 0,
+        guard !hintsAsText, let text = currentText, let selection = currentSelection, selection.length == 0,
               let hint = TemplateFiller.hintRange(containing: selection.location, in: text),
               selection.location > hint.location, selection.location < NSMaxRange(hint)
         else { return }

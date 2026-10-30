@@ -113,6 +113,45 @@ extension TemplateFiller {
     /// überschreibt; der Editor zeigt nur «Thema», grau.
     public static let hintPattern = try! NSRegularExpression(pattern: #"\{\{\?\s*([^{}]*?)\s*\}\}"#)
 
+    /// Titel ohne `{{? …}}` und `{{cursor}}`: Beispieltext bleibt als Text
+    /// stehen und wird markiert (bzw. der Cursor gesetzt).
+    public static func titleMarks(in title: String) -> (title: String, selection: NSRange?) {
+        var result = title
+        var selection: NSRange?
+        let ns = { (result as NSString) }
+        if let match = hintPattern.firstMatch(in: result, range: NSRange(location: 0, length: ns().length)) {
+            let inner = ns().substring(with: match.range(at: 1))
+            result = ns().replacingCharacters(in: match.range, with: inner)
+            selection = NSRange(location: match.range.location, length: (inner as NSString).length)
+        }
+        result = hintPattern.stringByReplacingMatches(in: result, range: NSRange(location: 0, length: ns().length), withTemplate: "$1")
+        let cursor = try! NSRegularExpression(pattern: #"\{\{\s*cursor\s*\}\}"#, options: .caseInsensitive)
+        if let match = cursor.firstMatch(in: result, range: NSRange(location: 0, length: ns().length)) {
+            if selection == nil {
+                selection = NSRange(location: match.range.location, length: 0)
+            } else if let current = selection, match.range.location < current.location {
+                selection = NSRange(location: current.location - match.range.length, length: current.length)
+            }
+            result = ns().replacingCharacters(in: match.range, with: "")
+        }
+        // Leerzeichen am Anfang fallen im Dateinamen weg.
+        let leading = result.prefix { $0 == " " }.count
+        if leading > 0, let current = selection {
+            selection = NSRange(location: max(0, current.location - leading), length: current.length)
+        }
+        return (result.trimmingCharacters(in: .whitespaces), selection)
+    }
+
+    /// Kurzer Name für eine Vorlage aus einem Namen mit Platzhaltern:
+    /// Beispieltexte bleiben als Text, andere Platzhalter fallen weg.
+    public static func shortName(_ name: String) -> String {
+        var result = hintPattern.stringByReplacingMatches(in: name, range: NSRange(location: 0, length: (name as NSString).length), withTemplate: "$1")
+        result = result.replacingOccurrences(of: #"\{\{[^{}]*\}\}"#, with: "", options: .regularExpression)
+        result = result.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        let trimmed = result.trimmingCharacters(in: CharacterSet(charactersIn: " –-·|,"))
+        return trimmed.isEmpty ? "Vorlage" : trimmed
+    }
+
     /// Text ohne Beispieltexte (für Vorschau, PDF).
     public static func removingHints(_ text: String) -> String {
         guard text.contains("{{?") else { return text }
@@ -200,6 +239,8 @@ public struct TemplateBuild: Equatable, Sendable {
     public var cursor: Int?
     /// `{{stichtag: …}}`: Zeilennummer (im ganzen Text) und Stichtag.
     public var dueDates: [Int: Date]
+    /// `{{? …}}` bzw. `{{cursor}}` im Titel: diese Stelle im Titel markieren.
+    public var titleSelection: NSRange? = nil
 }
 
 /// Was sich die Vorlagen merken: laufende Nummer und letzte Notiz pro
@@ -231,9 +272,24 @@ extension Vault {
         try Coordinated.write(templateStateURL) { try data.write(to: $0, options: .atomic) }
     }
 
-    /// Rückfragen einer Vorlage (im Namen und im Text).
+    /// Kopfzeile einer Vorlage mit dem Titel neuer Notizen (mit Platzhaltern).
+    /// So bleibt der Name der Vorlage selbst kurz.
+    public static let templateTitleKey = "notiztitel"
+
+    /// Titel für neue Notizen aus dieser Vorlage: `notiztitel` im Kopf, sonst
+    /// der Name der Vorlage.
+    public func templateTitlePattern(_ template: URL, source: String? = nil) -> String {
+        let text = source ?? (try? readNote(at: template)) ?? ""
+        if let pattern = Frontmatter.value(Self.templateTitleKey, in: text), !pattern.trimmingCharacters(in: .whitespaces).isEmpty {
+            return pattern
+        }
+        return Self.title(of: template)
+    }
+
+    /// Rückfragen einer Vorlage (im Titel und im Text).
     public func templateQuestions(_ template: URL) -> [TemplateQuestion] {
-        TemplateQuestion.all(in: [Self.title(of: template), (try? readNote(at: template)) ?? ""])
+        let source = (try? readNote(at: template)) ?? ""
+        return TemplateQuestion.all(in: [templateTitlePattern(template, source: source), source])
     }
 
     /// Füllt eine Vorlage aus, ohne etwas zu speichern. `title` = `nil`: Titel
@@ -241,7 +297,7 @@ extension Vault {
     public func buildFromTemplate(_ template: URL, title: String? = nil, values: [String: String] = [:],
                                   answers: [String: String] = [:], now: Date = .now) throws -> TemplateBuild {
         let source = try readNote(at: template)
-        let name = Self.title(of: template)
+        let name = templateTitlePattern(template, source: source)
         let everything = name + "\n" + source
         var context = TemplateContext(date: now, values: values, answers: answers)
         let key = relativePath(of: template) ?? template.lastPathComponent
@@ -259,11 +315,18 @@ extension Vault {
             context.events = CalendarSync.items(in: self)
         }
 
-        let finalTitle = title ?? TemplateFiller.fill(name, context: context)
+        var titleSelection: NSRange?
+        let finalTitle: String
+        if let title {
+            finalTitle = title
+        } else {
+            (finalTitle, titleSelection) = TemplateFiller.titleMarks(in: TemplateFiller.fill(name, context: context))
+        }
         context.title = finalTitle
         var text = TemplateFiller.fill(source, context: context)
         text = Frontmatter.setting(Frontmatter.pinnedKey, to: nil, in: text)
         text = Frontmatter.setting(Self.rowKey, to: nil, in: text)
+        text = Frontmatter.setting(Self.templateTitleKey, to: nil, in: text)
 
         // {{stichtag: …}} aus Pendenzen-Zeilen herausnehmen und merken.
         var dueDates: [Int: Date] = [:]
@@ -282,16 +345,38 @@ extension Vault {
         let body = Frontmatter.split(text).body
         let cursor = cursorPattern.firstMatch(in: body, range: NSRange(location: 0, length: (body as NSString).length))?.range.location
         text = cursorPattern.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: (text as NSString).length), withTemplate: "")
-        return TemplateBuild(title: finalTitle, text: text, cursor: cursor, dueDates: dueDates)
+        return TemplateBuild(title: finalTitle, text: text, cursor: cursor, dueDates: dueDates, titleSelection: titleSelection)
     }
 
     /// Neue Notiz aus einer Vorlage, mit Antworten auf die Rückfragen. Merkt
     /// sich Nummer und letzte Notiz der Vorlage und setzt die Stichtage.
-    public func createNote(in folder: URL, fromTemplate template: URL, answers: [String: String], now: Date = .now) throws -> (url: URL, cursor: Int?) {
+    public func createNote(in folder: URL, fromTemplate template: URL, answers: [String: String], now: Date = .now) throws -> (url: URL, cursor: Int?, titleSelection: NSRange?) {
         let build = try buildFromTemplate(template, answers: answers, now: now)
         let url = try createNote(in: folder, title: build.title, text: build.text)
         try finishTemplateNote(url, build: build, template: template)
-        return (url, build.cursor)
+        // Der Dateiname kann kürzer sein (Leerzeichen am Ende, Längengrenze).
+        let selection = build.titleSelection.map {
+            let length = (Self.title(of: url) as NSString).length
+            let start = min($0.location, length)
+            return NSRange(location: start, length: min($0.length, length - start))
+        }
+        return (url, build.cursor, selection)
+    }
+
+    /// Vorlagen, deren Name noch Platzhalter enthält, bekommen einen Kurztitel:
+    /// Der lange Name wandert als `notiztitel` in den Kopf. Liefert die Anzahl.
+    @discardableResult
+    public func shortenTemplateNames() -> Int {
+        var count = 0
+        for template in templates() where template.name.contains("{{") {
+            guard let text = try? readNote(at: template.url) else { continue }
+            if Frontmatter.value(Self.templateTitleKey, in: text) == nil {
+                let quoted = "\"" + template.name.replacingOccurrences(of: "\"", with: "'") + "\""
+                guard (try? writeNote(Frontmatter.setting(Self.templateTitleKey, to: quoted, in: text), to: template.url)) != nil else { continue }
+            }
+            if (try? renameNote(at: template.url, to: TemplateFiller.shortName(template.name))) != nil { count += 1 }
+        }
+        return count
     }
 
     func finishTemplateNote(_ url: URL, build: TemplateBuild, template: URL) throws {
