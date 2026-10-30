@@ -45,6 +45,7 @@ extension HelpTopic {
                 "**iPhone:** Leiste über der Tastatur (Überschrift, fett, kursiv, Liste, Checkliste, Tag, Büroklammer).",
                 "**Mac:** Überschrift ⇧⌘H (wechselt # → ## → ### → keine), fett ⌘B, kursiv ⌘I, Liste ⇧⌘8, Checkliste ⇧⌘L.",
                 "Listen und Checklisten setzt Return fort; Return in einem leeren Punkt beendet die Liste.",
+                "**Tab** springt zum nächsten Beispieltext, **Shift+Tab** fügt ein Tabulatorzeichen ein (Mac und iPhone mit Tastatur).",
             ]),
             .init(title: "Checklisten", items: [
                 "`- [ ] Text` ist eine Checkbox; ein Tipp auf `[ ]` hakt ab und schreibt das Datum dazu (`✅ 2026-10-30`).",
@@ -117,6 +118,7 @@ extension HelpTopic {
             .init(title: "Cursor und Beispieltext", items: [
                 "`{{cursor}}` – hier steht nach dem Anlegen der Cursor, die Tastatur ist offen.",
                 "`{{? Thema der Besprechung}}` – Beispieltext: erscheint grau und kursiv. Ein Tipp darauf markiert ihn ganz, was du tippst, ersetzt ihn. Gibt es kein `{{cursor}}`, ist der erste Beispieltext gleich markiert.",
+                "**Tab** springt zum nächsten Beispieltext und markiert ihn (nach dem letzten wieder zum ersten). Ein Tabulatorzeichen gibt es mit **Shift+Tab**. Am Mac übernimmt Tab weiterhin zuerst einen Tag-Vorschlag, falls einer angezeigt wird.",
                 "Nicht überschriebene Beispieltexte erscheinen weder in der Vorschau der Liste noch im PDF.",
                 "**Im Titel:** `{{iso-datum}} – {{? Thema}}` ergibt «2026-10-30 – Thema» mit markiertem «Thema» – einfach lostippen. `{{cursor}}` im Titel setzt den Cursor dorthin.",
             ]),

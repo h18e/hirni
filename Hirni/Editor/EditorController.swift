@@ -301,6 +301,31 @@ final class EditorController {
         return false
     }
 
+    /// Tab: zum nächsten Beispieltext nach der Auswahl springen und ihn
+    /// markieren, nach dem letzten wieder zum ersten. Ohne Beispieltext
+    /// passiert nichts (ein Tabulatorzeichen gibt es mit Shift+Tab).
+    func jumpToNextHint() {
+        guard let textView, let text = currentText, let selection = currentSelection, text.contains("{{?") else { return }
+        let hints = TemplateFiller.hintPattern
+            .matches(in: text, range: NSRange(location: 0, length: (text as NSString).length))
+            .map(\.range)
+        guard let target = hints.first(where: { $0.location >= NSMaxRange(selection) && $0 != selection }) ?? hints.first
+        else { return }
+        #if os(iOS)
+        textView.selectedRange = target
+        #else
+        textView.setSelectedRange(target)
+        #endif
+        textView.scrollRangeToVisible(target)
+    }
+
+    /// Shift+Tab: ein Tabulatorzeichen einfügen.
+    func insertTabCharacter() {
+        perform { _, selection in
+            TextEdit(range: selection, replacement: "\t", selection: NSRange(location: selection.location + 1, length: 0))
+        }
+    }
+
     /// Steht der Cursor in einem Beispieltext (`{{? Thema}}`), wird er ganz
     /// markiert: Was man tippt, ersetzt ihn.
     func selectHintIfNeeded() {

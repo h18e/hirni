@@ -71,6 +71,8 @@ struct MarkdownTextView: UIViewRepresentable {
             controller.overlays.tables.onLayoutChange = { [weak self] in self?.restyle() }
             controller.textView = textView
             controller.onTextChange = { [weak self] in self?.parent.text = $0 }
+            textView.onTab = { [weak controller] in controller?.jumpToNextHint() }
+            textView.onShiftTab = { [weak controller] in controller?.insertTabCharacter() }
         }
 
         /// Hervorhebung neu berechnen, ohne den Text zu ändern (z. B. wenn ein
@@ -187,7 +189,21 @@ struct MarkdownTextView: UIViewRepresentable {
 /// Dann müssen die Bildgrössen neu berechnet werden.
 final class EditorTextView: UITextView {
     var onWidthChange: (() -> Void)?
+    /// Tab (Hardware-Tastatur): zum nächsten Beispieltext. Shift+Tab: Tabulator.
+    var onTab: (() -> Void)?
+    var onShiftTab: (() -> Void)?
     private var lastWidth: CGFloat = 0
+
+    override var keyCommands: [UIKeyCommand]? {
+        let tab = UIKeyCommand(input: "\t", modifierFlags: [], action: #selector(tabPressed))
+        let shiftTab = UIKeyCommand(input: "\t", modifierFlags: .shift, action: #selector(shiftTabPressed))
+        tab.wantsPriorityOverSystemBehavior = true
+        shiftTab.wantsPriorityOverSystemBehavior = true
+        return [tab, shiftTab] + (super.keyCommands ?? [])
+    }
+
+    @objc private func tabPressed() { onTab?() }
+    @objc private func shiftTabPressed() { onShiftTab?() }
 
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -310,9 +326,16 @@ struct MarkdownTextView: NSViewRepresentable {
             case #selector(NSResponder.insertNewline(_:)):
                 return parent.controller.handleReturn()
             case #selector(NSResponder.insertTab(_:)):
-                // Tab übernimmt den ersten Tag-Vorschlag.
-                guard let first = parent.controller.suggestions.first else { return false }
-                parent.controller.accept(first)
+                // Tab übernimmt den ersten Tag-Vorschlag, sonst springt er
+                // zum nächsten Beispieltext. Ein Tabulatorzeichen: Shift+Tab.
+                if let first = parent.controller.suggestions.first {
+                    parent.controller.accept(first)
+                } else {
+                    parent.controller.jumpToNextHint()
+                }
+                return true
+            case #selector(NSResponder.insertBacktab(_:)):
+                parent.controller.insertTabCharacter()
                 return true
             default:
                 return false
