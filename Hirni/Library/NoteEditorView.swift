@@ -288,6 +288,12 @@ struct NoteEditorView: View {
             store.justCreatedNote = nil
             title = "" // der Platzhalter «Neue Notiz» bleibt sichtbar
             await focusTitle()
+        } else if let pending = store.pendingCursor, pending.url == newURL {
+            // Aus einer Vorlage: an {{cursor}} bzw. zum ersten Beispieltext.
+            store.pendingCursor = nil
+            if pending.offset != nil || body.contains("{{?") {
+                await controller.placeCursor(at: pending.offset)
+            }
         }
     }
 

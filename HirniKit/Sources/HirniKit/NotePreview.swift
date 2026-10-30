@@ -5,7 +5,7 @@ public enum NotePreview {
     public static let maxLength = 140
 
     public static func make(from text: String) -> String {
-        var lines = replacingEmbeds(in: text).components(separatedBy: .newlines)[...]
+        var lines = replacingEmbeds(in: TemplateFiller.removingHints(text)).components(separatedBy: .newlines)[...]
 
         // YAML-Kopf (--- … ---) überspringen
         if lines.first?.trimmingCharacters(in: .whitespaces) == "---" {

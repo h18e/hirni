@@ -69,6 +69,17 @@ final class VaultStore {
 
     /// Eben angelegte Notiz: Der Editor setzt dann den Fokus auf den Titel.
     var justCreatedNote: URL?
+    /// Aus einer Vorlage mit `{{cursor}}` bzw. Beispieltext: Der Editor setzt
+    /// den Cursor an diese Stelle (Text ohne Kopf, UTF-16).
+    var pendingCursor: (url: URL, offset: Int?)?
+    /// Vorlage mit Rückfragen (`{{frage: …}}`, `{{wahl: …}}`), die gerade beantwortet werden.
+    var askingTemplate: AskingTemplate?
+
+    struct AskingTemplate: Identifiable {
+        let url: URL
+        let questions: [TemplateQuestion]
+        var id: URL { url }
+    }
 
     var errorMessage: String?
 
@@ -229,19 +240,31 @@ final class VaultStore {
         !templates.isEmpty && currentFolderURL?.standardizedFileURL != vault.templatesURL.standardizedFileURL
     }
 
-    /// Neue Notiz, leer oder aus einer Vorlage.
-    func newNote(template: URL? = nil) async {
+    /// Neue Notiz, leer oder aus einer Vorlage. Hat die Vorlage Rückfragen,
+    /// erscheint zuerst das Blatt dafür (`askingTemplate`).
+    func newNote(template: URL? = nil, answers: [String: String]? = nil) async {
+        if let template, answers == nil {
+            let vault = vault
+            let questions = await Task.detached { vault.templateQuestions(template) }.value
+            if !questions.isEmpty {
+                askingTemplate = AskingTemplate(url: template, questions: questions)
+                return
+            }
+        }
         if sidebarSelection == .trash || sidebarSelection == .tasks { sidebarSelection = .inbox }
         let folder = currentFolderURL ?? vault.inboxURL
         // In der Tag-Ansicht bekommt die neue Notiz (in der Inbox) gleich den Tag.
         let tag = if case .tag(let tag) = sidebarSelection { tag } else { String?.none }
         let url: URL?
         if let template {
-            url = await perform { vault in
-                let url = try vault.createNote(in: folder, fromTemplate: template)
-                if let tag { try vault.writeNote("#\(tag) " + vault.readNote(at: url), to: url) }
-                return url
+            let answers = answers ?? [:]
+            let created = await perform { vault in
+                let created = try vault.createNote(in: folder, fromTemplate: template, answers: answers)
+                if let tag { try vault.writeNote("#\(tag) " + vault.readNote(at: created.url), to: created.url) }
+                return (url: created.url, cursor: created.cursor.map { $0 + (tag.map { ("#\($0) " as NSString).length } ?? 0) })
             }
+            url = created?.url
+            if let created { pendingCursor = (created.url, created.cursor) }
         } else {
             url = await perform({ try $0.createNote(in: folder, text: tag.map { "#\($0) " } ?? "") })
         }

@@ -120,6 +120,7 @@ struct MarkdownTextView: UIViewRepresentable {
 
         func textViewDidChangeSelection(_ textView: UITextView) {
             parent.controller.updateSuggestions()
+            parent.controller.selectHintIfNeeded()
         }
 
         func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
@@ -293,6 +294,7 @@ struct MarkdownTextView: NSViewRepresentable {
 
         func textViewDidChangeSelection(_ notification: Notification) {
             parent.controller.updateSuggestions()
+            parent.controller.selectHintIfNeeded()
         }
 
         func textView(_ textView: NSTextView, doCommandBy selector: Selector) -> Bool {

@@ -33,6 +33,10 @@ struct LibraryView: View {
                 ContentUnavailableView("Keine Notiz ausgewählt", systemImage: "note.text")
             }
         }
+        .sheet(item: Binding(get: { store.askingTemplate }, set: { store.askingTemplate = $0 })) { asking in
+            TemplateQuestionsSheet(asking: asking)
+                .environment(store)
+        }
         .environment(store)
         .task {
             AppRouter.shared.handler = { [store] in store.open($0) }

@@ -18,20 +18,26 @@ public struct NoteTemplate: Identifiable, Hashable, Sendable {
 /// Gross-/Kleinschreibung spielt keine Rolle, unbekannte Platzhalter bleiben stehen.
 public enum TemplateFiller {
     public static func fill(_ text: String, title: String?, date: Date, values: [String: String] = [:]) -> String {
-        var known = builtIns(date: date)
+        var context = TemplateContext(date: date, title: title, values: values)
+        context.title = title
+        return fill(text, context: context)
+    }
+
+    static func fill(_ text: String, context: TemplateContext) -> String {
+        var known = builtIns(date: context.date)
         // Felder des Eintrags gehen vor: Heisst ein Feld «Datum», meint
         // {{Datum}} auf einer Zeilen-Seite dessen Wert, nicht heute.
-        for (key, value) in values { known[key.lowercased()] = value }
-        if let title { known["titel"] = title }
+        for (key, value) in context.values { known[key.lowercased()] = value }
+        if let title = context.title { known["titel"] = title }
 
-        let pattern = try! NSRegularExpression(pattern: #"\{\{\s*([^{}]+?)\s*\}\}"#)
+        let pattern = try! NSRegularExpression(pattern: #"\{\{\s*([^{}?][^{}]*?)\s*\}\}"#)
         let ns = text as NSString
         var result = ""
         var last = 0
         for match in pattern.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
             result += ns.substring(with: NSRange(last..<match.range.location))
-            let key = ns.substring(with: match.range(at: 1)).lowercased()
-            result += known[key] ?? ns.substring(with: match.range)
+            let key = ns.substring(with: match.range(at: 1))
+            result += resolve(key, context: context, known: known) ?? ns.substring(with: match.range)
             last = NSMaxRange(match.range)
         }
         return result + ns.substring(from: last)
@@ -53,7 +59,16 @@ public enum TemplateFiller {
             "iso-datum": format("yyyy-MM-dd"),
             "zeit": format("HH:mm"),
             "wochentag": format("EEEE"),
+            "kw": String(isoWeek(of: date)),
+            "monat": format("LLLL"),
+            "quartal": "Q\((calendar.component(.month, from: date) - 1) / 3 + 1)",
+            "jahr": format("yyyy"),
         ]
+    }
+
+    /// Kalenderwoche nach ISO 8601, wie in der Schweiz üblich.
+    static func isoWeek(of date: Date) -> Int {
+        Calendar(identifier: .iso8601).component(.weekOfYear, from: date)
     }
 
     /// Text der Vorlage für eine neue Notiz: Platzhalter ausgefüllt,
@@ -78,11 +93,9 @@ extension Vault {
             .map { NoteTemplate(url: $0.url) }
     }
 
-    /// Neue Notiz aus einer Vorlage. Der Titel kommt vom Namen der Vorlage,
-    /// ebenfalls mit ausgefüllten Platzhaltern.
+    /// Neue Notiz aus einer Vorlage (ohne Rückfragen). Der Titel kommt vom
+    /// Namen der Vorlage, ebenfalls mit ausgefüllten Platzhaltern.
     public func createNote(in folder: URL, fromTemplate template: URL, now: Date = .now) throws -> URL {
-        let title = TemplateFiller.fill(Self.title(of: template), title: nil, date: now)
-        let text = TemplateFiller.noteText(fromTemplate: try readNote(at: template), title: title, date: now)
-        return try createNote(in: folder, title: title, text: text)
+        try createNote(in: folder, fromTemplate: template, answers: [:], now: now).url
     }
 }

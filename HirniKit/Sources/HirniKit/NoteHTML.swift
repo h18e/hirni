@@ -26,7 +26,7 @@ public enum NoteHTML {
         image: (String) -> Image? = { _ in nil },
         database: (DatabaseEmbed) -> String? = { _ in nil }
     ) -> String {
-        let body = Frontmatter.split(markdown).body
+        let body = TemplateFiller.removingHints(Frontmatter.split(markdown).body)
         // Beginnt die Notiz schon mit dem Titel als Überschrift, nicht doppelt zeigen.
         let firstLine = body.split(separator: "\n", omittingEmptySubsequences: true).first.map(String.init) ?? ""
         let startsWithTitle = headingLevel(firstLine) != nil

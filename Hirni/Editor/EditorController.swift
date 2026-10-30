@@ -234,6 +234,62 @@ final class EditorController {
     }
     #endif
 
+    // MARK: - Vorlagen: Cursor und Beispieltext
+
+    /// Setzt den Cursor an `offset`, oder markiert den Beispieltext dort.
+    /// Ohne `offset` den ersten Beispieltext. Wie beim Titel mehrmals
+    /// versuchen: Die Textansicht nimmt den Fokus erst an, wenn sie bereit ist.
+    func placeCursor(at offset: Int?) async {
+        for _ in 0..<15 {
+            if let textView, let text = currentText, Self.isReady(textView) {
+                var range: NSRange
+                if let offset {
+                    range = NSRange(location: min(offset, (text as NSString).length), length: 0)
+                } else if let first = TemplateFiller.hintPattern.firstMatch(in: text, range: NSRange(location: 0, length: (text as NSString).length)) {
+                    range = first.range
+                } else {
+                    return
+                }
+                if let hint = TemplateFiller.hintRange(containing: range.location, in: text), range.length == 0, range.location > hint.location {
+                    range = hint
+                }
+                #if os(iOS)
+                textView.becomeFirstResponder()
+                textView.selectedRange = range
+                textView.scrollRangeToVisible(range)
+                if textView.isFirstResponder { return }
+                #else
+                textView.window?.makeFirstResponder(textView)
+                textView.setSelectedRange(range)
+                textView.scrollRangeToVisible(range)
+                if textView.window?.firstResponder === textView { return }
+                #endif
+            }
+            try? await Task.sleep(for: .milliseconds(150))
+        }
+    }
+
+    private static func isReady(_ textView: PlatformTextView) -> Bool {
+        textView.window != nil
+    }
+
+    /// Steht der Cursor in einem Beispieltext (`{{? Thema}}`), wird er ganz
+    /// markiert: Was man tippt, ersetzt ihn.
+    func selectHintIfNeeded() {
+        guard let text = currentText, let selection = currentSelection, selection.length == 0,
+              let hint = TemplateFiller.hintRange(containing: selection.location, in: text),
+              selection.location > hint.location, selection.location < NSMaxRange(hint)
+        else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let textView = self?.textView else { return }
+            #if os(iOS)
+            textView.selectedRange = hint
+            #else
+            textView.setSelectedRange(hint)
+            #endif
+        }
+    }
+
     // MARK: - Anwenden
 
     private func perform(keepingScroll: Bool = false, _ makeEdit: (String, NSRange) -> TextEdit) {

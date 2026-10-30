@@ -193,7 +193,18 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Ordner «Vorlagen»:** wird beim Start angelegt und erscheint wie jeder Ordner in der Seitenleiste. Jede Notiz darin ist eine Vorlage. Vorlagen werden wie Notizen angelegt, bearbeitet, umbenannt und gelöscht. Tags in Vorlagen zählen in der Tag-Liste nicht.
 - **Neue Notiz:** Gibt es Vorlagen (und ist nicht gerade der Ordner «Vorlagen» gewählt), fragt «Neue Notiz» nach: «Leere Notiz» oder eine Vorlage. Die Notiz heisst wie die Vorlage.
 - **Neue Zeilen-Seite:** «Seite anlegen» fragt ebenso nach: «Leere Seite» oder eine Vorlage. Die Seite heisst wie der Eintrag.
-- **Platzhalter** (im Text und im Namen der Vorlage, Gross/klein egal): `{{datum}}` 26.10.2026, `{{iso-datum}}` 2026-10-26, `{{zeit}}` 14:30, `{{wochentag}}` Montag, `{{titel}}` Titel der neuen Notiz. Auf Zeilen-Seiten zusätzlich `{{Feldname}}` mit dem Wert des Eintrags; ein gleichnamiges Feld (z. B. «Datum») geht dabei vor. Unbekannte Platzhalter bleiben stehen.
+- **Platzhalter** (im Text und im Namen der Vorlage, Gross/klein egal; unbekannte bleiben stehen):
+  - **Datum und Zeit:** `{{datum}}` 30.10.2026, `{{iso-datum}}` 2026-10-30, `{{zeit}}` 14:30, `{{wochentag}}` Freitag, `{{kw}}` 44 (ISO-Kalenderwoche), `{{monat}}` Oktober, `{{quartal}}` Q4, `{{jahr}}` 2026.
+  - **Relative Daten:** `{{morgen}}`, `{{übermorgen}}`, `{{gestern}}`, `{{datum+7}}`, `{{datum-1}}`, `{{datum+2w}}` (Wochen), `{{datum+1m}}` (Monate), `{{iso-datum+7}}`, `{{nächster montag}}` bzw. `{{montag}}` (nächster solcher Tag nach heute).
+  - `{{titel}}`: Titel der neuen Notiz. Auf Zeilen-Seiten zusätzlich `{{Feldname}}` mit dem Wert des Eintrags; ein gleichnamiges Feld (z. B. «Datum») geht vor.
+  - **Rückfragen:** `{{frage: Mit wem?}}` (Textfeld) und `{{wahl: Arbeit|Privat|Verein}}` (Auswahl, erste vorbelegt). Beim Anlegen erscheint ein Blatt «Neue Notiz» mit allen Fragen; gleiche Fragen nur einmal, die Antwort steht überall (auch im Titel). Auf Zeilen-Seiten wird nicht gefragt, die Platzhalter bleiben dort leer.
+  - `{{cursor}}`: Dort steht nach dem Anlegen der Cursor (Tastatur offen).
+  - **Beispieltext** `{{? Thema der Besprechung}}`: bleibt in der Notiz, bis man ihn überschreibt. Der Editor zeigt nur «Thema der Besprechung», grau und kursiv; ein Tipp darauf markiert ihn ganz, Tippen ersetzt ihn. Ohne `{{cursor}}` ist nach dem Anlegen der erste Beispieltext markiert. In Vorschau und PDF erscheint er nicht.
+  - `- [ ] Nachfassen {{stichtag: +7}}`: Der Platzhalter verschwindet aus der Zeile, die Pendenz bekommt den Stichtag (gleiche Angaben wie bei den relativen Daten, auch `03.11.2026`).
+  - `{{nr}}`: laufende Nummer pro Vorlage (1, 2, 3 …). `{{vorherige}}`: Link auf die zuletzt aus dieser Vorlage angelegte Notiz («–» beim ersten Mal). Beides gemerkt in `_Hirni/Vorlagen.json`.
+  - `{{pendenzen}}` bzw. `{{pendenzen #büro}}`: offene Pendenzen (alle bzw. einer Kategorie) als Liste mit Link zur Notiz, ohne Checkbox (damit keine doppelten Pendenzen entstehen).
+  - `{{termine heute}}` bzw. `{{termine morgen}}`: Einträge aus Datenbanken mit eingeschaltetem Apple Kalender an diesem Tag, mit Uhrzeit und Link.
+  - Links `hirni://…` öffnen die Notiz in Hirni.
 - `angepinnt` und `hirni-zeile` aus dem Kopf der Vorlage werden nicht übernommen, andere Kopfzeilen schon.
 
 ### Teilen und Export

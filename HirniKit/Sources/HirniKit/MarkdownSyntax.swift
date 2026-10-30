@@ -29,6 +29,8 @@ public struct MarkdownSpan: Equatable, Sendable {
         case taskDate
         /// Eingebetteter Anhang `![](pfad)`, Pfad relativ zur Notiz.
         case embed(path: String)
+        /// Beispieltext aus einer Vorlage, `{{? Thema}}`: nur «Thema», grau.
+        case hint
     }
 
     public let kind: Kind
@@ -64,6 +66,15 @@ public enum MarkdownSyntax {
             }
             spans += lineSpans(in: text, line: line)
         }
+        // Beispieltexte: Klammern ausblenden, den Text grau zeigen.
+        if text.contains("{{?") {
+            for match in TemplateFiller.hintPattern.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+                let inner = match.range(at: 1)
+                spans.append(MarkdownSpan(.hiddenMarker, NSRange(match.range.location..<inner.location)))
+                spans.append(MarkdownSpan(.hint, inner))
+                spans.append(MarkdownSpan(.hiddenMarker, NSRange(NSMaxRange(inner)..<NSMaxRange(match.range))))
+            }
+        }
         return spans
     }
 
@@ -72,7 +83,7 @@ public enum MarkdownSyntax {
         let trimmed = address.trimmingCharacters(in: .whitespaces)
         let full = trimmed.lowercased().hasPrefix("www.") ? "https://" + trimmed : trimmed
         guard let url = URL(string: full), let scheme = url.scheme?.lowercased(),
-              ["http", "https", "mailto"].contains(scheme) else { return nil }
+              ["http", "https", "mailto", "hirni"].contains(scheme) else { return nil }
         return url
     }
 
