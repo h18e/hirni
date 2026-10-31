@@ -63,6 +63,13 @@ struct CellEditor: View {
             MultiSelectCell(field: field, options: options, raw: $raw)
         case .date:
             DateCell(field: field, raw: $raw, compact: compact)
+        case .formula:
+            // Berechnet, nicht von Hand änderbar.
+            Text(raw == Formula.errorText ? raw : CellValue.display(raw, for: field))
+                .foregroundStyle(raw == Formula.errorText ? Color.red : .secondary)
+                .lineLimit(compact ? 1 : nil)
+                .frame(maxWidth: .infinity, alignment: compact ? .trailing : .leading)
+                .help(field.formula ?? "")
         }
     }
 

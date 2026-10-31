@@ -352,7 +352,7 @@ private struct DatabaseTable: View {
         case .multiSelect: 170
         case .date: (field.includesTime ?? false) ? 190 : 150
         case .checkbox: 80
-        case .number, .select: 130
+        case .number, .select, .formula: 130
         }
     }
 

@@ -27,6 +27,7 @@ public enum DatabaseQuery {
     /// den Filter (noch) nicht erfüllen. Sonst verschwände ein neuer Eintrag
     /// sofort wieder.
     public static func run(_ view: SavedView?, on database: Database, alwaysShowing: Set<String> = []) -> QueryResult {
+        let database = Formula.computing(database)
         var rows = database.rows.filter { row in
             alwaysShowing.contains(row.id) || (view?.filters ?? []).allSatisfy { rule in
                 guard let field = database.field(named: rule.field) else { return true }
@@ -95,6 +96,27 @@ public enum DatabaseQuery {
             case .notContains: return !list.contains(value.lowercased())
             default: return true
             }
+        case .formula:
+            // Zahlen als Zahlen vergleichen, sonst als Text.
+            if let a = CellValue.number(raw), let b = CellValue.number(value), CellValue.date(raw) == nil {
+                switch rule.condition {
+                case .equals: return a == b
+                case .notEquals: return a != b
+                case .greater: return a > b
+                case .less: return a < b
+                case .greaterOrEqual: return a >= b
+                case .lessOrEqual: return a <= b
+                default: break
+                }
+            }
+            let a = raw.lowercased(), b = value.lowercased()
+            switch rule.condition {
+            case .equals: return a == b
+            case .notEquals: return a != b
+            case .contains: return a.contains(b)
+            case .notContains: return !a.contains(b)
+            default: return true
+            }
         case .text, .url, .select, .checkbox:
             let a = raw.lowercased(), b = value.lowercased()
             switch rule.condition {
@@ -131,6 +153,10 @@ public enum DatabaseQuery {
                 ?? a.localizedStandardCompare(b)
         case .text, .url, .multiSelect:
             result = a.localizedStandardCompare(b)
+        case .formula:
+            result = compareValues(CellValue.date(a)?.start, CellValue.date(b)?.start)
+                ?? compareValues(CellValue.number(a), CellValue.number(b))
+                ?? a.localizedStandardCompare(b)
         }
         guard descending else { return result }
         switch result {

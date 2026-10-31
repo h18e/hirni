@@ -35,7 +35,8 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ fertig
 ## Version 2 (Ideen-Speicher)
 
 - Verknüpfte Notizen `[[…]]` mit Rückverweisen
-- Formeln, Verknüpfungen und Rollups zwischen Datenbanken
+- ✅ Formeln (Feldtyp «Formel», pro Zeile, mit Spaltenfunktionen)
+- Verknüpfungen und Rollups zwischen Datenbanken, Formeln über mehrere Zeilen
 - Board- und Galerie-Ansicht
 - Live-Vorschau im Editor
 - Feldtypen Datei/Bild, erstellt/geändert am

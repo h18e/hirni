@@ -168,7 +168,7 @@ extension HelpTopic {
         sections: [
             .init(title: "Anlegen und Felder", items: [
                 "**Neue Datenbank:** Tabellen-Symbol über der Notizliste.",
-                "**Felder** (Regler-Knopf): Text, Zahl (mit Format wie CHF), Auswahl, Mehrfachauswahl, Datum (auch Zeitraum, mit Uhrzeit), Checkbox, URL.",
+                "**Felder** (Regler-Knopf): Text, Zahl (mit Format wie CHF), Auswahl, Mehrfachauswahl, Datum (auch Zeitraum, mit Uhrzeit), Checkbox, URL, **Formel**.",
                 "Das **erste Feld** ist der Titel eines Eintrags. Reihenfolge: Spaltenkopf ziehen oder unter Felder → Reihenfolge.",
             ]),
             .init(title: "Einträge", items: [
@@ -182,6 +182,17 @@ extension HelpTopic {
             ]),
             .init(title: "In Notizen einbetten", items: [
                 "Mac ⇧⌘D bzw. iPhone Büroklammer → «Datenbank-Ansicht». Die Ansicht erscheint mitten im Text und bleibt bearbeitbar.",
+            ]),
+            .init(title: "Formeln", items: [
+                "**Feldtyp «Formel»** (unter Felder): rechnet in jeder Zeile aus anderen Feldern, z. B. `[Preis] * [Menge]`. Wie in Excel, aber mit Feldnamen in eckigen Klammern statt Zellen wie B2.",
+                "Das Ergebnis erscheint grau und lässt sich nicht von Hand ändern. Format wählbar (CHF, Prozent …). Filtern, Sortieren, Gruppieren, Berechnen und Diagramme gehen wie bei anderen Feldern.",
+                "**Rechnen:** `+ - * /`, Klammern; Text verbinden mit `&`; vergleichen mit `= <> < > <= >=`. Datum ± Zahl = Tage, Datum − Datum = Anzahl Tage.",
+                "**Ganze Spalte:** `SUMME([Betrag])`, `MITTELWERT([Betrag])`, `ANZAHL([Name])`, `MIN([…])`, `MAX([…])` – z. B. Anteil: `[Betrag] / SUMME([Betrag]) * 100` mit Format Prozent.",
+                "**Mehrere Werte einer Zeile:** `SUMME([A]; [B]; 5)`, ebenso `MIN`, `MAX`, `MITTELWERT`.",
+                "**Weitere Funktionen:** `RUNDEN([x]; 2)`, `ABS([x])`, `WENN([Bezahlt]; \"ok\"; \"offen\")`, `UND(…)`, `ODER(…)`, `NICHT(…)`, `HEUTE()`, `TAGE([Bis]; [Von])`, `JAHR([Datum])`, `MONAT([Datum])`, `LÄNGE([Text])`, `ISTLEER([Feld])`. Konstanten `WAHR`, `FALSCH`. Englische Namen (`SUM`, `IF` …) gehen auch.",
+                "Argumente mit `;` (oder `,`) trennen, Dezimalzeichen ist der Punkt (`2.5`).",
+                "Im Felder-Editor helfen «Feld einfügen» und «Funktion einfügen»; eine fehlerhafte Formel wird dort gemeldet. In der Tabelle steht dann `#FEHLER`.",
+                "Formelwerte stehen nicht in der Datei, nur die Formel – Hirni rechnet sie beim Anzeigen aus. Benennst du ein Feld um, passt Hirni die Formeln an.",
             ]),
         ]
     )

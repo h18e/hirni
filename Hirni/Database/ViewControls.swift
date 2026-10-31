@@ -303,8 +303,8 @@ private struct FilterValueEditor: View {
                 #if os(iOS)
                 .keyboardType(.decimalPad)
                 #endif
-        case .text, .url, .checkbox:
-            TextField("Text", text: $value)
+        case .text, .url, .checkbox, .formula:
+            TextField("Wert", text: $value)
                 .multilineTextAlignment(.trailing)
                 .autocorrectionDisabled()
                 #if os(iOS)

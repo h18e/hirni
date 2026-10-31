@@ -232,7 +232,7 @@ struct DatabaseGrid: View {
         case .multiSelect: 140
         case .date: (field.includesTime ?? false) ? 210 : 140
         case .checkbox: 64
-        case .number, .select: 115
+        case .number, .select, .formula: 115
         }
         #else
         switch field.type {
@@ -240,7 +240,7 @@ struct DatabaseGrid: View {
         case .multiSelect: 160
         case .date: (field.includesTime ?? false) ? 190 : 150
         case .checkbox: 80
-        case .number, .select: 130
+        case .number, .select, .formula: 130
         }
         #endif
     }

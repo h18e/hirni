@@ -191,11 +191,17 @@ final class DatabaseDocument {
     // MARK: - Ändern
 
     func value(row id: String, field: String) -> String {
-        database.rows.first { $0.id == id }?[field] ?? ""
+        guard let row = database.rows.first(where: { $0.id == id }) else { return "" }
+        // Formeln stehen nicht in der Datei: hier ausrechnen.
+        if let definition = database.field(named: field), definition.type == .formula {
+            return Formula.rawValue(of: definition, row: row, in: database)
+        }
+        return row[field]
     }
 
     func setValue(_ raw: String, row id: String, field: String) {
-        guard let index = database.rows.firstIndex(where: { $0.id == id }), database.rows[index][field] != raw else { return }
+        guard database.field(named: field)?.type != .formula,
+              let index = database.rows.firstIndex(where: { $0.id == id }), database.rows[index][field] != raw else { return }
         database.rows[index][field] = raw
         scheduleSave()
     }
@@ -286,6 +292,14 @@ final class DatabaseDocument {
         if let name = result.calendarField {
             let edit = edits.first { $0.originalName == name }
             result.calendarField = edit?.field.type == .date ? edit?.field.name : nil
+        }
+        // Formeln nachführen: [Alt] → [Neu].
+        for (old, new) in edits.compactMap({ edit in edit.originalName.map { ($0, edit.field.name) } }) where old != new {
+            for index in result.fields.indices {
+                if let formula = result.fields[index].formula {
+                    result.fields[index].formula = Formula.renamingField(old, to: new, in: formula)
+                }
+            }
         }
         // Ansichten nachführen: umbenannte Felder in Regeln anpassen, gelöschte entfernen.
         let renames = edits.compactMap { edit in edit.originalName.map { ($0, edit.field.name) } }

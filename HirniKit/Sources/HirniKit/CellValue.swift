@@ -142,6 +142,13 @@ public enum CellValue {
             return list(raw).joined(separator: ", ")
         case .text, .select, .url:
             return raw
+        case .formula:
+            // Ergebnis: Datum, Zahl (mit Format) oder Text.
+            if let value = date(raw), raw.contains("-") { return display(date: value) }
+            if let value = number(raw), raw.allSatisfy({ $0.isNumber || $0 == "." || $0 == "-" }) {
+                return display(number: value, format: field.format)
+            }
+            return raw
         }
     }
 
@@ -157,6 +164,7 @@ public enum CellValue {
         case .select: return field.options?.contains(raw) ?? true
         case .multiSelect: return list(raw).allSatisfy { field.options?.contains($0) ?? true }
         case .url: return URL(string: raw)?.scheme != nil
+        case .formula: return true
         }
     }
 

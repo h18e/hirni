@@ -59,13 +59,16 @@ public struct Field: Codable, Equatable, Hashable, Identifiable, Sendable {
     public var options: [String]?
     /// Nur bei Datum: mit Uhrzeit.
     public var includesTime: Bool?
+    /// Nur bei Formel: der Ausdruck, z. B. `[Preis] * [Menge]` (siehe `Formula`).
+    public var formula: String?
 
-    public init(name: String, type: FieldType, format: NumberFormat? = nil, options: [String]? = nil, includesTime: Bool? = nil) {
+    public init(name: String, type: FieldType, format: NumberFormat? = nil, options: [String]? = nil, includesTime: Bool? = nil, formula: String? = nil) {
         self.name = name
         self.type = type
         self.format = format
         self.options = options
         self.includesTime = includesTime
+        self.formula = formula
     }
 
     enum CodingKeys: String, CodingKey {
@@ -74,6 +77,7 @@ public struct Field: Codable, Equatable, Hashable, Identifiable, Sendable {
         case format
         case options = "optionen"
         case includesTime = "zeit"
+        case formula = "formel"
     }
 }
 
@@ -86,6 +90,8 @@ public enum FieldType: String, Codable, CaseIterable, Sendable {
     case date = "datum"
     case checkbox
     case url
+    /// Berechnet aus anderen Feldern, nicht von Hand eingegeben.
+    case formula = "formel"
 
     public var label: String {
         switch self {
@@ -96,6 +102,7 @@ public enum FieldType: String, Codable, CaseIterable, Sendable {
         case .date: "Datum"
         case .checkbox: "Checkbox"
         case .url: "URL"
+        case .formula: "Formel"
         }
     }
 
@@ -108,6 +115,7 @@ public enum FieldType: String, Codable, CaseIterable, Sendable {
         case .date: "calendar"
         case .checkbox: "checkmark.square"
         case .url: "link"
+        case .formula: "function"
         }
     }
 }
@@ -327,7 +335,8 @@ public enum DatabaseFile {
         let columns = [idColumn] + database.fields.map(\.name)
         var table = [line(columns), "|" + String(repeating: "---|", count: columns.count)]
         for row in database.rows {
-            table.append(line([row.id] + database.fields.map { row[$0.name] }))
+            // Formeln stehen nicht in der Datei, Hirni rechnet sie beim Anzeigen aus.
+            table.append(line([row.id] + database.fields.map { $0.type == .formula ? "" : row[$0.name] }))
         }
 
         var parts: [String] = []

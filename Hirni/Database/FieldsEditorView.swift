@@ -30,7 +30,8 @@ struct FieldsEditorView: View {
                     }
                 }
                 ForEach(edits) { edit in
-                    FieldSection(edit: .element(edit.id, in: $edits, fallback: edit)) {
+                    FieldSection(edit: .element(edit.id, in: $edits, fallback: edit),
+                                 otherFields: edits.filter { $0.id != edit.id }.map(\.field)) {
                         edits.removeAll { $0.id == edit.id }
                     }
                 }
@@ -130,6 +131,8 @@ struct FieldsEditorView: View {
 
 private struct FieldSection: View {
     @Binding var edit: FieldEdit
+    /// Die anderen Felder (für Formeln).
+    var otherFields: [Field] = []
     let delete: () -> Void
     @FocusState private var focusedOption: Int?
 
@@ -172,6 +175,8 @@ private struct FieldSection: View {
                 }
                 Button("Option hinzufügen", systemImage: "plus.circle.fill", action: addOption)
                     .buttonStyle(.borderless)
+            case .formula:
+                FormulaEditor(field: $edit.field, otherFields: otherFields)
             case .text, .checkbox, .url:
                 EmptyView()
             }
@@ -187,7 +192,8 @@ private struct FieldSection: View {
             get: { edit.field.type },
             set: { newType in
                 edit.field.type = newType
-                if newType != .number { edit.field.format = nil }
+                if newType != .number && newType != .formula { edit.field.format = nil }
+                if newType != .formula { edit.field.formula = nil }
                 if newType != .date { edit.field.includesTime = nil }
                 if newType == .select || newType == .multiSelect {
                     edit.field.options = edit.field.options ?? []
@@ -247,4 +253,58 @@ private extension Array {
     subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil
     }
+}
+
+/// Formel eines Felds: Ausdruck, Felder zum Einfügen, Format, Prüfung.
+private struct FormulaEditor: View {
+    @Binding var field: Field
+    let otherFields: [Field]
+
+    private var formula: Binding<String> {
+        Binding(get: { field.formula ?? "" }, set: { field.formula = $0.isEmpty ? nil : $0 })
+    }
+
+    var body: some View {
+        TextField("Formel", text: formula, prompt: Text("z. B. [Preis] * [Menge]"), axis: .vertical)
+            .font(.body.monospaced())
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            #endif
+        if let problem = Formula.check(field.formula ?? "", fields: otherFields + [field]), !(field.formula ?? "").isEmpty {
+            Label(problem, systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+                .font(.callout)
+        }
+        Menu("Feld einfügen", systemImage: "plus.square.on.square") {
+            ForEach(otherFields) { other in
+                Button(other.name, systemImage: other.type.systemImage) {
+                    let current = field.formula ?? ""
+                    field.formula = current + (current.isEmpty || current.hasSuffix(" ") ? "" : " ") + "[\(other.name)]"
+                }
+            }
+        }
+        Menu("Funktion einfügen", systemImage: "function") {
+            ForEach(Self.functions, id: \.self) { function in
+                Button(function) {
+                    let current = field.formula ?? ""
+                    field.formula = current + (current.isEmpty || current.hasSuffix(" ") ? "" : " ") + function
+                }
+            }
+        }
+        Picker("Format", selection: Binding(
+            get: { field.format ?? .plain },
+            set: { field.format = $0 == .plain ? nil : $0 }
+        )) {
+            ForEach(NumberFormat.allCases, id: \.self) { Text($0.label).tag($0) }
+        }
+        Text("Rechnen mit + − * / und Klammern, Text verbinden mit &, vergleichen mit = <> < >. SUMME([Feld]) rechnet über die ganze Spalte. Alle Funktionen: Hilfe → Datenbanken.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+    }
+
+    static let functions = [
+        "SUMME()", "MITTELWERT()", "ANZAHL()", "MIN()", "MAX()", "RUNDEN(; 2)", "ABS()",
+        "WENN(; ; )", "UND()", "ODER()", "NICHT()", "HEUTE()", "TAGE(; )", "JAHR()", "MONAT()", "LÄNGE()", "ISTLEER()",
+    ]
 }

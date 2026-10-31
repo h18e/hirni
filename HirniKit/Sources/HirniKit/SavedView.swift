@@ -197,6 +197,7 @@ public enum FilterCondition: String, Codable, CaseIterable, Sendable {
         case .multiSelect: [.contains, .notContains, .isEmpty, .isNotEmpty]
         case .date: [.equals, .before, .after, .isEmpty, .isNotEmpty]
         case .checkbox: [.checked, .unchecked]
+        case .formula: [.equals, .notEquals, .greater, .less, .greaterOrEqual, .lessOrEqual, .contains, .isEmpty, .isNotEmpty]
         }
     }
 }
