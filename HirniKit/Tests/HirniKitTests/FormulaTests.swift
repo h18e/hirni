@@ -80,4 +80,17 @@ struct FormulaTests {
         #expect(!text.contains("| 75 |"))
         #expect(try DatabaseFile.parse(text).fields[6].formula == "=[Preis] * [Menge]")
     }
+
+    @Test func columnWidthsRoundTripAndRename() throws {
+        var view = SavedView(name: "Alle")
+        view.columnWidths = ["Preis": 180]
+        let data = try JSONEncoder().encode(view)
+        #expect(String(decoding: data, as: UTF8.self).contains(#""breiten":{"Preis":180}"#))
+        var decoded = try JSONDecoder().decode(SavedView.self, from: data)
+        #expect(decoded.columnWidths == ["Preis": 180])
+        decoded.renameField("Preis", to: "Kosten")
+        #expect(decoded.columnWidths == ["Kosten": 180])
+        decoded.renameField("Kosten", to: nil)
+        #expect(decoded.columnWidths == nil)
+    }
 }

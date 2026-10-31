@@ -59,6 +59,32 @@ final class DatabaseDocument {
         return fields.isEmpty ? Array(database.fields.prefix(1)) : fields
     }
 
+    // MARK: - Spaltenbreiten
+
+    /// Breiten, die gerade gezogen werden (noch nicht gespeichert).
+    var liveWidths: [String: CGFloat] = [:]
+
+    /// Breite einer Spalte: gerade gezogen, in der Ansicht gespeichert oder
+    /// die Vorgabe je Feldtyp.
+    func columnWidth(_ field: Field, default value: CGFloat) -> CGFloat {
+        liveWidths[field.name] ?? currentView.columnWidths?[field.name].map { CGFloat($0) } ?? value
+    }
+
+    /// Während des Ziehens (`done` = false) nur anzeigen, beim Loslassen in
+    /// der Ansicht speichern. `nil` = zurück zur Vorgabe.
+    func resizeColumn(_ name: String, to width: CGFloat?, done: Bool) {
+        guard done else {
+            liveWidths[name] = width
+            return
+        }
+        liveWidths[name] = nil
+        updateView { view in
+            var widths = view.columnWidths ?? [:]
+            widths[name] = width.map { Double($0.rounded()) }
+            view.columnWidths = widths.isEmpty ? nil : widths
+        }
+    }
+
     func selectView(_ name: String) {
         selectedViewName = name
         recentlyAdded = []

@@ -112,7 +112,8 @@ struct DatabaseGrid: View {
         HStack(spacing: 0) {
             Color.clear.frame(width: Self.handleWidth)
             ForEach(fields) { field in
-                ColumnHeader(field: field, width: Self.width(of: field), height: Self.headerHeight) { dragged in
+                ColumnHeader(field: field, width: width(field), height: Self.headerHeight,
+                             resize: { document.resizeColumn(field.name, to: $0, done: $1) }) { dragged in
                     document.moveField(dragged, before: field.name)
                 }
                 Divider()
@@ -148,7 +149,7 @@ struct DatabaseGrid: View {
             ForEach(fields) { field in
                 CellEditor(field: field, raw: binding(row: row.id, field: field.name), compact: true)
                     .padding(.horizontal, 8)
-                    .frame(width: Self.width(of: field), height: Self.rowHeight, alignment: field.type.isNumeric ? .trailing : .leading)
+                    .frame(width: width(field), height: Self.rowHeight, alignment: field.type.isNumeric ? .trailing : .leading)
                 Divider()
             }
         }
@@ -214,7 +215,7 @@ struct DatabaseGrid: View {
                     .font(.caption)
                     .lineLimit(1)
                     .padding(.horizontal, 8)
-                    .frame(width: Self.width(of: field), alignment: field.type.isNumeric ? .trailing : .leading)
+                    .frame(width: width(field), alignment: field.type.isNumeric ? .trailing : .leading)
                     Divider()
                 }
             }
@@ -222,6 +223,11 @@ struct DatabaseGrid: View {
             .background(.bar)
             .overlay(alignment: .top) { Divider() }
         }
+    }
+
+    /// Breite einer Spalte: gezogen oder Vorgabe je Feldtyp.
+    private func width(_ field: Field) -> CGFloat {
+        document.columnWidth(field, default: Self.width(of: field))
     }
 
     /// Spaltenbreite je Feldtyp, auf dem iPhone schmaler.
@@ -251,8 +257,14 @@ struct ColumnHeader: View {
     let field: Field
     let width: CGFloat
     var height: CGFloat = 28
+    /// Breite ändern: neue Breite (`nil` = Vorgabe), `true` beim Loslassen.
+    var resize: ((CGFloat?, Bool) -> Void)?
     let drop: (String) -> Void
     @State private var isTargeted = false
+    @State private var dragStart: CGFloat?
+
+    static let minWidth: CGFloat = 50
+    static let maxWidth: CGFloat = 800
 
     var body: some View {
         Label(field.name, systemImage: field.type.systemImage)
@@ -280,5 +292,36 @@ struct ColumnHeader: View {
             #if os(macOS)
             .help("Ziehen, um die Spalte zu verschieben")
             #endif
+            .overlay(alignment: .trailing) { resizeHandle }
+    }
+
+    /// Griff am rechten Rand: ziehen ändert die Breite, Doppelklick bzw.
+    /// Doppeltipp setzt sie zurück.
+    @ViewBuilder
+    private var resizeHandle: some View {
+        if let resize {
+            Color.clear
+                .frame(width: 12)
+                .contentShape(Rectangle())
+                #if os(macOS)
+                .pointerStyle(.columnResize)
+                .help("Ziehen ändert die Breite, Doppelklick setzt sie zurück")
+                #endif
+                .highPriorityGesture(
+                    DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                        .onChanged { value in
+                            let start = dragStart ?? width
+                            dragStart = start
+                            resize(min(Self.maxWidth, max(Self.minWidth, start + value.translation.width)), false)
+                        }
+                        .onEnded { value in
+                            let start = dragStart ?? width
+                            dragStart = nil
+                            resize(min(Self.maxWidth, max(Self.minWidth, start + value.translation.width)), true)
+                        }
+                )
+                .onTapGesture(count: 2) { resize(nil, true) }
+                .offset(x: 6)
+        }
     }
 }

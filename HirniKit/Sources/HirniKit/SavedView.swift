@@ -26,6 +26,8 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
     public var colorField: String?
     /// Diagramm: Achsen und Darstellung.
     public var chart: ChartSettings?
+    /// Tabelle: von Hand gezogene Spaltenbreiten (Punkte), nach Feldname.
+    public var columnWidths: [String: Double]?
 
     public init(name: String, kind: ViewKind = .table) {
         self.name = name
@@ -43,6 +45,7 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
         case dateField = "datumsfeld"
         case colorField = "farbfeld"
         case chart = "diagramm"
+        case columnWidths = "breiten"
     }
 
     public init(from decoder: Decoder) throws {
@@ -57,6 +60,7 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
         dateField = try container.decodeIfPresent(String.self, forKey: .dateField)
         colorField = try container.decodeIfPresent(String.self, forKey: .colorField)
         chart = try? container.decodeIfPresent(ChartSettings.self, forKey: .chart)
+        columnWidths = try? container.decodeIfPresent([String: Double].self, forKey: .columnWidths)
     }
 
     /// Leere Listen nicht schreiben, damit die Datei kurz bleibt.
@@ -72,6 +76,7 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
         try container.encodeIfPresent(dateField, forKey: .dateField)
         try container.encodeIfPresent(colorField, forKey: .colorField)
         try container.encodeIfPresent(chart, forKey: .chart)
+        if let columnWidths, !columnWidths.isEmpty { try container.encode(columnWidths, forKey: .columnWidths) }
     }
 
     /// Filterwerte anpassen, wenn Optionen eines Felds umbenannt wurden.
@@ -99,6 +104,8 @@ public struct SavedView: Codable, Equatable, Hashable, Identifiable, Sendable {
             guard let new else { return nil }
             return SortRule(field: new, descending: rule.descending)
         }
+        if let width = columnWidths?.removeValue(forKey: old), let new { columnWidths?[new] = width }
+        if columnWidths?.isEmpty == true { columnWidths = nil }
         if groupBy == old { groupBy = new }
         if dateField == old { dateField = new }
         if colorField == old { colorField = new }

@@ -170,6 +170,7 @@ extension HelpTopic {
                 "**Neue Datenbank:** Tabellen-Symbol über der Notizliste.",
                 "**Felder** (Regler-Knopf): Text, Zahl (mit Format wie CHF), Auswahl, Mehrfachauswahl, Datum (auch Zeitraum, mit Uhrzeit), Checkbox, URL, **Formel**.",
                 "Das **erste Feld** ist der Titel eines Eintrags. Reihenfolge: Spaltenkopf ziehen oder unter Felder → Reihenfolge.",
+                "**Spaltenbreite:** den rechten Rand eines Spaltenkopfs ziehen (am Mac wird der Zeiger zum Doppelpfeil). Doppelklick bzw. Doppeltipp auf den Rand setzt die Breite zurück. Die Breite gilt pro Ansicht und auf allen Geräten.",
             ]),
             .init(title: "Einträge", items: [
                 "**+** (Mac ⇧⌘N) legt einen Eintrag an. Zellen direkt bearbeiten oder das Formular öffnen.",

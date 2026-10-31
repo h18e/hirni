@@ -236,7 +236,8 @@ private struct DatabaseTable: View {
         HStack(spacing: 0) {
             Color.clear.frame(width: handleWidth)
             ForEach(fields) { field in
-                ColumnHeader(field: field, width: width(of: field)) { dragged in
+                ColumnHeader(field: field, width: width(of: field),
+                             resize: { document.resizeColumn(field.name, to: $0, done: $1) }) { dragged in
                     document.moveField(dragged, before: field.name)
                 }
                 Divider()
@@ -346,7 +347,12 @@ private struct DatabaseTable: View {
         }
     }
 
+    /// Breite einer Spalte: gezogen oder Vorgabe je Feldtyp.
     private func width(of field: Field) -> CGFloat {
+        document.columnWidth(field, default: defaultWidth(of: field))
+    }
+
+    private func defaultWidth(of field: Field) -> CGFloat {
         switch field.type {
         case .text, .url: 220
         case .multiSelect: 170
