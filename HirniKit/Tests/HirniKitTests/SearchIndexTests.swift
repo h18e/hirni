@@ -27,6 +27,17 @@ struct SearchIndexTests {
         #expect(snippet.contains("\u{1}Milch\u{2}"))
     }
 
+    @Test func templateTagsDoNotCount() async throws {
+        let test = try TestVault()
+        try test.write("Notiz #haus", to: "Inbox/A.md")
+        try test.write("Vorlage #vorlage #haus", to: "Vorlagen/Besprechung.md")
+        let index = try makeIndex()
+        _ = try await index.update(from: test.vault)
+        let tags = try await index.tags()
+        #expect(tags.map(\.name) == ["haus"])
+        #expect(tags.first?.count == 1)
+    }
+
     @Test func titleMatchesRankFirst() async throws {
         let test = try TestVault()
         try test.write("Ferien Ferien Ferien", to: "Inbox/Notiz.md")

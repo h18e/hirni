@@ -488,8 +488,9 @@ struct NoteEditorView: View {
             selection: titleSelection,
             onEndEditing: { Task { await commitTitle() } },
             onSubmit: {
-                // Weiter in den Text, das Verlassen des Titels übernimmt ihn.
-                controller.focusText()
+                // Weiter in den Text (zum ersten Beispieltext), das Verlassen
+                // des Titels übernimmt ihn.
+                controller.focusFirstHint()
             }
         )
         .frame(height: 44)
@@ -499,6 +500,11 @@ struct NoteEditorView: View {
             .textFieldStyle(.plain)
             .focused($titleIsFocused)
             .onSubmit { Task { await commitTitle() } }
+            // Tab: weiter in den Text, zum ersten Beispieltext.
+            .onKeyPress(.tab) {
+                controller.focusFirstHint()
+                return .handled
+            }
         #endif
     }
 

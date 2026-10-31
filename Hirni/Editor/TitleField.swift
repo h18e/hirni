@@ -22,7 +22,9 @@ struct TitleField: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeUIView(context: Context) -> UITextField {
-        let field = UITextField()
+        let field = TabTextField()
+        // Tab (Hardware-Tastatur): wie Return weiter in den Text.
+        field.onTab = { [weak coordinator = context.coordinator] in coordinator?.parent.onSubmit() }
         let base = UIFont.preferredFont(forTextStyle: .title1)
         field.font = UIFont(descriptor: base.fontDescriptor.withSymbolicTraits(.traitBold) ?? base.fontDescriptor, size: 0)
         field.adjustsFontForContentSizeCategory = true
@@ -51,6 +53,19 @@ struct TitleField: UIViewRepresentable {
                 }
             }
         }
+    }
+
+    /// Textfeld, das Tab selbst behandelt, statt den Fokus weiterzureichen.
+    final class TabTextField: UITextField {
+        var onTab: (() -> Void)?
+
+        override var keyCommands: [UIKeyCommand]? {
+            let tab = UIKeyCommand(input: "\t", modifierFlags: [], action: #selector(tabPressed))
+            tab.wantsPriorityOverSystemBehavior = true
+            return [tab] + (super.keyCommands ?? [])
+        }
+
+        @objc private func tabPressed() { onTab?() }
     }
 
     final class Coordinator: NSObject, UITextFieldDelegate {

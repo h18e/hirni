@@ -71,13 +71,19 @@ public actor SearchIndex {
                     try store(path: path, title: Vault.title(of: url), body: Self.searchableText(ofDatabase: text), tags: [], modified: modified)
                 } else {
                     let body = Frontmatter.split(text).body
-                    try store(path: path, title: Vault.title(of: url), body: body, tags: MarkdownSyntax.tags(in: body), modified: modified)
+                    // Tags in Vorlagen zählen nicht (sonst stünden sie in der Tag-Liste).
+                    let tags = url.isInside(vault.templatesURL) ? [] : MarkdownSyntax.tags(in: body)
+                    try store(path: path, title: Vault.title(of: url), body: body, tags: tags, modified: modified)
                 }
                 changed += 1
             }
             for path in known.keys where !seen.contains(path) {
                 try remove(path: path)
                 changed += 1
+            }
+            // Ältere Index-Stände enthalten noch Tags aus Vorlagen.
+            if let templates = vault.relativePath(of: vault.templatesURL) {
+                try run("DELETE FROM tags WHERE path LIKE ? ESCAPE '\\'", Self.likePrefix(templates))
             }
             try Self.exec(db, "COMMIT")
         } catch {

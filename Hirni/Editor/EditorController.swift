@@ -319,6 +319,23 @@ final class EditorController {
         textView.scrollRangeToVisible(target)
     }
 
+    /// Aus dem Titel weiter in den Text (Tab bzw. Return): zum ersten
+    /// Beispieltext, ohne Beispieltext ans Ende.
+    func focusFirstHint() {
+        guard let textView, let text = currentText else { return }
+        let length = (text as NSString).length
+        let target = TemplateFiller.hintPattern.firstMatch(in: text, range: NSRange(location: 0, length: length))?.range
+            ?? NSRange(location: length, length: 0)
+        #if os(iOS)
+        textView.becomeFirstResponder()
+        textView.selectedRange = target
+        #else
+        textView.window?.makeFirstResponder(textView)
+        textView.setSelectedRange(target)
+        #endif
+        textView.scrollRangeToVisible(target)
+    }
+
     /// Shift+Tab: ein Tabulatorzeichen einfügen.
     func insertTabCharacter() {
         perform { _, selection in
