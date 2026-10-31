@@ -161,7 +161,7 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 
 - **Mac:** drei Spalten (Ordner | Liste | Inhalt). In der Seitenleiste stehen Inbox, Pendenzen, Ordnerbaum, Tags, Hilfe und «Zuletzt gelöscht».
 - **iPhone:** dieselbe Hierarchie zum Durchtippen. Die App startet direkt in der Inbox. Der Knopf **Neue Notiz** (Stift oben rechts, am Mac auch ⌘N) legt die Notiz im gerade offenen Ordner an, also standardmässig in der Inbox.
-- **Hilfe** (Seitenleiste, unten): 12 Themen mit allen Funktionen, Platzhaltern, Tastenkürzeln, Siri-Sätzen und häufigen Stolpersteinen, durchsuchbar. Inhalt in `Hirni/Help/HelpContent.swift`; bei neuen Funktionen dort nachführen.
+- **Hilfe** (Seitenleiste, unten): 13 Themen (darunter «Formeln» mit allen Operatoren und Funktionen) mit allen Funktionen, Platzhaltern, Tastenkürzeln, Siri-Sätzen und häufigen Stolpersteinen, durchsuchbar. Inhalt in `Hirni/Help/HelpContent.swift`; bei neuen Funktionen dort nachführen.
 - **Notizliste:** sortiert nach «zuletzt geändert». Angepinnte Notizen stehen oben. Jede Zeile zeigt Titel, Vorschau und Datum.
 
 ### Ordner

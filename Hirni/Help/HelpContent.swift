@@ -1,7 +1,7 @@
 /// Inhalt der Hilfe. Bei neuen Funktionen hier nachführen (wie docs/spec.md).
 extension HelpTopic {
     static let all: [HelpTopic] = [
-        basics, notes, templates, placeholders, tasks, databases,
+        basics, notes, templates, placeholders, tasks, databases, formulas,
         search, sharing, quickCapture, calendar, sync, troubleshooting,
     ]
 
@@ -184,15 +184,7 @@ extension HelpTopic {
                 "Mac ⇧⌘D bzw. iPhone Büroklammer → «Datenbank-Ansicht». Die Ansicht erscheint mitten im Text und bleibt bearbeitbar.",
             ]),
             .init(title: "Formeln", items: [
-                "**Feldtyp «Formel»** (unter Felder): rechnet in jeder Zeile aus anderen Feldern, z. B. `[Preis] * [Menge]`. Wie in Excel, aber mit Feldnamen in eckigen Klammern statt Zellen wie B2.",
-                "Das Ergebnis erscheint grau und lässt sich nicht von Hand ändern. Format wählbar (CHF, Prozent …). Filtern, Sortieren, Gruppieren, Berechnen und Diagramme gehen wie bei anderen Feldern.",
-                "**Rechnen:** `+ - * /`, Klammern; Text verbinden mit `&`; vergleichen mit `= <> < > <= >=`. Datum ± Zahl = Tage, Datum − Datum = Anzahl Tage.",
-                "**Ganze Spalte:** `SUMME([Betrag])`, `MITTELWERT([Betrag])`, `ANZAHL([Name])`, `MIN([…])`, `MAX([…])` – z. B. Anteil: `[Betrag] / SUMME([Betrag]) * 100` mit Format Prozent.",
-                "**Mehrere Werte einer Zeile:** `SUMME([A]; [B]; 5)`, ebenso `MIN`, `MAX`, `MITTELWERT`.",
-                "**Weitere Funktionen:** `RUNDEN([x]; 2)`, `ABS([x])`, `WENN([Bezahlt]; \"ok\"; \"offen\")`, `UND(…)`, `ODER(…)`, `NICHT(…)`, `HEUTE()`, `TAGE([Bis]; [Von])`, `JAHR([Datum])`, `MONAT([Datum])`, `LÄNGE([Text])`, `ISTLEER([Feld])`. Konstanten `WAHR`, `FALSCH`. Englische Namen (`SUM`, `IF` …) gehen auch.",
-                "Argumente mit `;` (oder `,`) trennen, Dezimalzeichen ist der Punkt (`2.5`).",
-                "Im Felder-Editor helfen «Feld einfügen» und «Funktion einfügen»; eine fehlerhafte Formel wird dort gemeldet. In der Tabelle steht dann `#FEHLER`.",
-                "Formelwerte stehen nicht in der Datei, nur die Formel – Hirni rechnet sie beim Anzeigen aus. Benennst du ein Feld um, passt Hirni die Formeln an.",
+                "Feldtyp **«Formel»** rechnet aus anderen Feldern, z. B. `[Preis] * [Menge]`. Alle Operatoren und Funktionen mit Beispielen stehen im Thema **Formeln**.",
             ]),
         ]
     )
@@ -300,6 +292,84 @@ extension HelpTopic {
                 "**Kein Kalender «Hirni»:** in den Einstellungen → Datenschutz → Kalender Hirni vollen Zugriff geben.",
                 "**Stichtag weg:** Wird der Text einer Pendenz geändert oder die Notiz umbenannt/verschoben, geht der Stichtag verloren – neu setzen.",
                 "**Datei lässt sich nicht öffnen:** Ist sie keine Textdatei (UTF-8), zeigt Hirni einen Hinweis und verändert sie nicht.",
+            ]),
+        ]
+    )
+
+    static let formulas = HelpTopic(
+        id: "formeln", title: "Formeln", systemImage: "function",
+        summary: "Alle Operatoren und Funktionen für Formelfelder in Datenbanken, mit Beispielen.",
+        sections: [
+            .init(title: "Grundlagen", items: [
+                "In einer Datenbank unter **Felder** ein Feld mit Typ **Formel** anlegen und den Ausdruck eintippen. «Feld einfügen» und «Funktion einfügen» helfen dabei.",
+                "Felder stehen in eckigen Klammern: `[Preis]`. Gross/klein spielt keine Rolle, Leerzeichen im Namen sind erlaubt: `[Preis pro Stück]`.",
+                "Die Formel gilt für die ganze Spalte und rechnet in jeder Zeile mit den Werten dieser Zeile – wie in Excel eine Formel, die man nach unten zieht.",
+                "Ein `=` am Anfang ist erlaubt, aber nicht nötig: `=[Preis] * [Menge]` und `[Preis] * [Menge]` sind gleich.",
+                "Argumente mit `;` trennen (`,` geht auch). Dezimalzeichen ist der Punkt: `2.5`. Tausender dürfen mit `'` geschrieben werden: `1'200`.",
+                "Texte in Anführungszeichen: `\"offen\"`. Wahr und falsch: `WAHR`, `FALSCH`.",
+                "Das Ergebnis ist grau und lässt sich nicht von Hand ändern. Unter **Format** (CHF, EUR, USD, Prozent) wird eine Zahl schön dargestellt.",
+            ]),
+            .init(title: "Rechnen", items: [
+                "`+` plus, `-` minus, `*` mal, `/` geteilt, Klammern wie gewohnt: `([Preis] + 5) * [Menge]`",
+                "`-[Betrag]` – Vorzeichen umkehren",
+                "Leere Zahlenfelder zählen als 0.",
+                "Checkboxen zählen als 1 (angehakt) bzw. 0: `[Menge] * [Bezahlt]`",
+                "Division durch 0 ergibt `#FEHLER`.",
+            ]),
+            .init(title: "Text", items: [
+                "`&` verbindet Texte: `[Vorname] & \" \" & [Name]` → «Lea Muster»",
+                "`[Artikel] & \" (\" & [Menge] & \" Stk.)\"` → «Pizza (2 Stk.)»",
+                "`LÄNGE([Text])` – Anzahl Zeichen",
+                "`ISTLEER([Feld])` – WAHR, wenn das Feld leer ist",
+            ]),
+            .init(title: "Vergleichen und Bedingungen", items: [
+                "`=` gleich, `<>` ungleich, `<` kleiner, `>` grösser, `<=` kleiner oder gleich, `>=` grösser oder gleich",
+                "`WENN(Bedingung; dann; sonst)` – `WENN([Bezahlt]; \"ok\"; \"offen\")`, `WENN([Betrag] > 100; \"gross\"; \"klein\")`",
+                "`UND(a; b; …)` – alle wahr: `WENN(UND([Bezahlt]; [Menge] > 0); \"erledigt\"; \"\")`",
+                "`ODER(a; b; …)` – mindestens eines wahr",
+                "`NICHT(a)` – kehrt um: `WENN(NICHT([Bezahlt]); \"mahnen\"; \"\")`",
+                "Verschachteln geht: `WENN([Punkte] >= 90; \"A\"; WENN([Punkte] >= 70; \"B\"; \"C\"))`",
+            ]),
+            .init(title: "Zahlen-Funktionen", items: [
+                "`RUNDEN(Zahl; Stellen)` – `RUNDEN([Total] * 1.081; 2)` (Mehrwertsteuer, auf Rappen gerundet). Ohne Stellen auf ganze Zahlen.",
+                "`ABS(Zahl)` – ohne Vorzeichen: `ABS([Differenz])`",
+                "`MIN(a; b; …)`, `MAX(a; b; …)` – kleinster bzw. grösster Wert: `MAX([Budget] - [Ausgaben]; 0)`",
+                "`SUMME(a; b; …)` – Summe mehrerer Werte einer Zeile: `SUMME([Miete]; [Strom]; [Internet])`",
+                "`MITTELWERT(a; b; …)` – Durchschnitt: `MITTELWERT([Note 1]; [Note 2]; [Note 3])`",
+                "`ANZAHL(a; b; …)` – wie viele der Werte nicht leer sind",
+            ]),
+            .init(title: "Ganze Spalte", items: [
+                "Mit **genau einem Feld** rechnen diese Funktionen über alle Einträge der Datenbank (nicht nur die gefilterten):",
+                "`SUMME([Betrag])` – Summe der ganzen Spalte",
+                "`MITTELWERT([Betrag])` – Durchschnitt der Spalte",
+                "`ANZAHL([Name])` – Anzahl Einträge, in denen das Feld nicht leer ist",
+                "`MIN([Betrag])`, `MAX([Betrag])` – kleinster bzw. grösster Wert der Spalte",
+                "Anteil in Prozent: `RUNDEN([Betrag] / SUMME([Betrag]) * 100; 1)` mit Format **Prozent**",
+                "Abweichung vom Durchschnitt: `[Betrag] - MITTELWERT([Betrag])`",
+            ]),
+            .init(title: "Datum", items: [
+                "`HEUTE()` – das heutige Datum",
+                "`TAGE(bis; von)` – Anzahl Tage dazwischen: `TAGE([Rückgabe]; [Ausleihe])`",
+                "`[Bis] - [Von]` – dasselbe, kürzer",
+                "`[Datum] + 30` – Datum 30 Tage später (z. B. Zahlungsfrist), `[Datum] - 7` eine Woche früher",
+                "`TAGE([Fällig]; HEUTE())` – Tage bis zur Frist (negativ = überfällig)",
+                "`WENN([Fällig] < HEUTE(); \"überfällig\"; \"ok\")`",
+                "`JAHR([Datum])`, `MONAT([Datum])` – z. B. zum Gruppieren nach Jahr",
+                "Bei Zeiträumen (`2026-10-03/2026-10-05`) zählt der erste Tag.",
+            ]),
+            .init(title: "Formeln mit Formeln", items: [
+                "Eine Formel darf ein anderes Formelfeld verwenden: `[Total] * 1.081`, wenn «Total» selbst eine Formel ist.",
+                "Bezieht sich eine Formel (auch über Umwege) auf sich selbst, erscheint `#FEHLER`.",
+            ]),
+            .init(title: "Englische Namen", items: [
+                "Auch erlaubt: `SUM` = SUMME, `AVERAGE` = MITTELWERT, `COUNT` = ANZAHL, `ROUND` = RUNDEN, `IF` = WENN, `AND` = UND, `OR` = ODER, `NOT` = NICHT, `TODAY` = HEUTE, `DAYS` = TAGE, `YEAR` = JAHR, `MONTH` = MONAT, `LEN` = LÄNGE, `ISBLANK` = ISTLEER, `TRUE`/`FALSE`.",
+            ]),
+            .init(title: "Fehler und Grenzen", items: [
+                "`#FEHLER` in der Tabelle: Im Felder-Editor steht unter der Formel, was nicht stimmt, z. B. «Unbekanntes Feld [Prei]» oder «Es fehlt eine schliessende Klammer».",
+                "Rechnen mit Text geht nicht: `[Name] * 2` ergibt `#FEHLER`.",
+                "Benennst du ein Feld um, passt Hirni alle Formeln an, die es verwenden.",
+                "In der Datei steht nur die Formel, nicht das Ergebnis – Hirni rechnet beim Anzeigen. So stimmt auch `HEUTE()` jeden Tag.",
+                "**Noch nicht möglich:** Bezüge auf andere Zeilen (z. B. laufender Saldo «vorige Zeile + Betrag») und auf andere Datenbanken.",
             ]),
         ]
     )
