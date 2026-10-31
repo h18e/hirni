@@ -300,7 +300,7 @@ public enum NoteHTML {
             for row in group.rows {
                 rows += "<tr>" + fields.map { field in
                     let value = field.type == .checkbox ? (CellValue.bool(row[field.name]) ? "☑" : "☐") : CellValue.display(row[field.name], for: field)
-                    return "<td\(field.type == .number ? " class=\"number\"" : "")>\(escape(value))</td>"
+                    return "<td\(field.type.isNumeric ? " class=\"number\"" : "")>\(escape(value))</td>"
                 }.joined() + "</tr>"
             }
         }
@@ -308,7 +308,7 @@ public enum NoteHTML {
         if let aggregates = view?.aggregates, !aggregates.isEmpty {
             footer = "<tfoot><tr>" + fields.map { field in
                 guard let aggregate = aggregates[field.name] else { return "<td></td>" }
-                return "<td\(field.type == .number ? " class=\"number\"" : "")>\(escape(aggregate.label)) \(escape(DatabaseQuery.display(aggregate, field: field, rows: result.rows)))</td>"
+                return "<td\(field.type.isNumeric ? " class=\"number\"" : "")>\(escape(aggregate.label)) \(escape(DatabaseQuery.display(aggregate, field: field, rows: result.rows)))</td>"
             }.joined() + "</tr></tfoot>"
         }
         let head = "<thead><tr>" + fields.map { "<th>\(escape($0.name))</th>" }.joined() + "</tr></thead>"

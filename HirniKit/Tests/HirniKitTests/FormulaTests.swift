@@ -70,6 +70,9 @@ struct FormulaTests {
         #expect(result.rows.map(\.id) == ["b", "a"])
         #expect(result.rows.first?["Total"] == "75")
         #expect(DatabaseQuery.compute(.sum, field: database.fields[6], rows: result.rows) == 100)
+        #expect(DatabaseQuery.compute(.average, field: database.fields[6], rows: result.rows) == 50)
+        #expect(DatabaseQuery.compute(.max, field: database.fields[6], rows: result.rows) == 75)
+        #expect(Aggregate.available(for: .formula) == Aggregate.allCases)
         #expect(CellValue.display("75", for: database.fields[6]).contains("75.00"))
         // In der Datei bleibt die Formel, die Werte nicht.
         let text = DatabaseFile.serialize(Formula.computing(database))

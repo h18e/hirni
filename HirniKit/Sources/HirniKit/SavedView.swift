@@ -241,7 +241,7 @@ public enum Aggregate: String, Codable, CaseIterable, Sendable {
     }
 
     public static func available(for type: FieldType) -> [Aggregate] {
-        type == .number ? allCases : [.count]
+        type.isNumeric ? allCases : [.count]
     }
 }
 

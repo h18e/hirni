@@ -148,7 +148,7 @@ struct DatabaseGrid: View {
             ForEach(fields) { field in
                 CellEditor(field: field, raw: binding(row: row.id, field: field.name), compact: true)
                     .padding(.horizontal, 8)
-                    .frame(width: Self.width(of: field), height: Self.rowHeight, alignment: field.type == .number ? .trailing : .leading)
+                    .frame(width: Self.width(of: field), height: Self.rowHeight, alignment: field.type.isNumeric ? .trailing : .leading)
                 Divider()
             }
         }
@@ -214,7 +214,7 @@ struct DatabaseGrid: View {
                     .font(.caption)
                     .lineLimit(1)
                     .padding(.horizontal, 8)
-                    .frame(width: Self.width(of: field), alignment: field.type == .number ? .trailing : .leading)
+                    .frame(width: Self.width(of: field), alignment: field.type.isNumeric ? .trailing : .leading)
                     Divider()
                 }
             }

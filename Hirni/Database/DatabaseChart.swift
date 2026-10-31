@@ -95,7 +95,7 @@ struct DatabaseChart: View {
         if settings.xField.flatMap(document.database.field(named:)) == nil {
             return "Unter «Achse» ein Feld für die waagrechte Achse wählen."
         }
-        if settings.measure != .count, settings.valueField.flatMap(document.database.field(named:))?.type != .number {
+        if settings.measure != .count, settings.valueField.flatMap(document.database.field(named:))?.type.isNumeric != true {
             return "Für Summe oder Durchschnitt braucht es ein Zahlenfeld."
         }
         return "Keine passenden Einträge, oder das Achsenfeld ist überall leer."
@@ -135,7 +135,7 @@ struct ChartOptions: View {
 
         Menu {
             Button("Anzahl Einträge") { update(settings) { $0.measure = .count; $0.valueField = nil } }
-            ForEach(fields.filter { $0.type == .number }) { field in
+            ForEach(fields.filter { $0.type.isNumeric }) { field in
                 Button("Summe \(field.name)") { update(settings) { $0.measure = .sum; $0.valueField = field.name } }
                 Button("Durchschnitt \(field.name)") { update(settings) { $0.measure = .average; $0.valueField = field.name } }
             }

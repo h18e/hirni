@@ -93,6 +93,10 @@ public enum FieldType: String, Codable, CaseIterable, Sendable {
     /// Berechnet aus anderen Feldern, nicht von Hand eingegeben.
     case formula = "formel"
 
+    /// Mit Werten dieses Typs lässt sich rechnen (Summe, Durchschnitt,
+    /// Diagramm): Zahlen und Formeln.
+    public var isNumeric: Bool { self == .number || self == .formula }
+
     public var label: String {
         switch self {
         case .text: "Text"

@@ -28,7 +28,7 @@ public enum ChartModel {
     public static func data(for settings: ChartSettings, rows: [Row], in database: Database) -> ChartData? {
         guard let xField = settings.xField.flatMap(database.field(named:)) else { return nil }
         let valueField = settings.valueField.flatMap(database.field(named:))
-        if settings.measure != .count, valueField?.type != .number { return nil }
+        if settings.measure != .count, valueField?.type.isNumeric != true { return nil }
         let splitField = settings.splitField.flatMap(database.field(named:))
 
         // 1. Zeilen auf die Achse verteilen

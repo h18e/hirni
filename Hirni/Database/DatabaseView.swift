@@ -277,7 +277,7 @@ private struct DatabaseTable: View {
                     .font(.caption)
                     .lineLimit(1)
                     .padding(.horizontal, 8)
-                    .frame(width: width(of: field), alignment: field.type == .number ? .trailing : .leading)
+                    .frame(width: width(of: field), alignment: field.type.isNumeric ? .trailing : .leading)
                     Divider()
                 }
             }

@@ -308,6 +308,7 @@ extension HelpTopic {
                 "Argumente mit `;` trennen (`,` geht auch). Dezimalzeichen ist der Punkt: `2.5`. Tausender dürfen mit `'` geschrieben werden: `1'200`.",
                 "Texte in Anführungszeichen: `\"offen\"`. Wahr und falsch: `WAHR`, `FALSCH`.",
                 "Das Ergebnis ist grau und lässt sich nicht von Hand ändern. Unter **Format** (CHF, EUR, USD, Prozent) wird eine Zahl schön dargestellt.",
+                "Wie bei Zahlen: Berechnungen unter der Spalte (Summe, Durchschnitt, Minimum, Maximum, Anzahl), Diagramme mit Summe oder Durchschnitt, rechtsbündige Anzeige.",
             ]),
             .init(title: "Rechnen", items: [
                 "`+` plus, `-` minus, `*` mal, `/` geteilt, Klammern wie gewohnt: `([Preis] + 5) * [Menge]`",
