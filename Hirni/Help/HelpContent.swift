@@ -21,6 +21,7 @@ extension HelpTopic {
                 "Unterordner stehen zuoberst in der Liste ihres Ordners. Am Mac zeigt die Seitenleiste den ganzen Baum zum Aufklappen.",
                 "**Verschieben:** Kontextmenü «Verschieben nach …», iPhone auch nach rechts wischen, Mac auch Drag'n'Drop auf einen Ordner.",
                 "Umbenennen und Löschen: Kontextmenü auf dem Ordner (lange drücken bzw. Rechtsklick).",
+                "**Unterordner löschen:** im übergeordneten Ordner den Unterordner nach links wischen oder lange drücken bzw. Rechtsklick → «Löschen». Er landet samt Inhalt in «Zuletzt gelöscht».",
             ]),
             .init(title: "Wo die Daten liegen", items: [
                 "Alles liegt in **iCloud Drive → Hirni** als gewöhnliche Dateien: Notizen als Markdown (`.md`), Datenbanken als `.hirnidb.md`, Bilder im Ordner `_Anhänge`.",
@@ -229,6 +230,9 @@ extension HelpTopic {
             .init(title: "Widget «Pendenzen»", items: [
                 "iPhone: Home-Bildschirm lange drücken → Bearb. → Widget hinzufügen → Hirni. Mac: Rechtsklick auf den Schreibtisch → Widgets bearbeiten.",
                 "Zeigt die offenen Pendenzen nach Kategorie. **Kreis** = direkt abhaken, **Text** = Notiz öffnen.",
+                "**Kategorie zuklappen:** auf die Kategorie-Überschrift tippen. Zugeklappt steht dort nur noch die Anzahl, ein weiterer Tipp klappt sie wieder auf.",
+                "**Blättern:** Bei vielen Pendenzen erscheinen oben rechts die Seitenzahl und zwei Pfeile. Scrollen geht in Widgets nicht, das erlaubt Apple nicht.",
+                "Zugeklappte Kategorien und die Seite merkt sich jedes Gerät für sich; alle Hirni-Widgets auf dem Gerät zeigen dieselbe Einstellung.",
                 "Grössen: klein, mittel, gross; auf dem iPhone auch für den Sperrbildschirm.",
             ]),
             .init(title: "Siri und Kurzbefehle", items: [

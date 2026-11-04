@@ -39,3 +39,49 @@ struct CompleteTaskIntent: AppIntent {
         }
     }
 }
+
+/// Kategorie im Widget auf- oder zuklappen. `category` leer = «Ohne Kategorie».
+struct ToggleCategoryIntent: AppIntent {
+    static let title: LocalizedStringResource = "Kategorie auf- oder zuklappen"
+    static let isDiscoverable = false
+
+    @Parameter(title: "Kategorie")
+    var category: String
+
+    init() {}
+
+    init(category: String?) {
+        self.category = category ?? ""
+    }
+
+    func perform() async throws -> some IntentResult {
+        guard let folder = AppGroup.folder else { return .result() }
+        var display = WidgetDisplay.load(from: folder)
+        display.toggle(category.isEmpty ? nil : category)
+        try? display.save(to: folder)
+        return .result()
+    }
+}
+
+/// Im Widget zu einer anderen Seite blättern.
+struct WidgetPageIntent: AppIntent {
+    static let title: LocalizedStringResource = "Pendenzen blättern"
+    static let isDiscoverable = false
+
+    @Parameter(title: "Seite")
+    var page: Int
+
+    init() {}
+
+    init(page: Int) {
+        self.page = page
+    }
+
+    func perform() async throws -> some IntentResult {
+        guard let folder = AppGroup.folder else { return .result() }
+        var display = WidgetDisplay.load(from: folder)
+        display.page = max(0, page)
+        try? display.save(to: folder)
+        return .result()
+    }
+}

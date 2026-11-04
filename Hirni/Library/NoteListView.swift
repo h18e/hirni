@@ -144,6 +144,26 @@ struct NoteListView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .swipeActions(edge: .leading) {
+                Button("Verschieben", systemImage: "folder") {
+                    moving = MovingItem(url: folder.url)
+                }
+                .tint(.indigo)
+            }
+            .swipeActions(edge: .trailing) {
+                Button("Löschen", systemImage: "trash", role: .destructive) {
+                    Task { await store.deleteFolder(folder.url) }
+                }
+            }
+            .contextMenu {
+                Button("Verschieben nach …", systemImage: "folder") {
+                    moving = MovingItem(url: folder.url)
+                }
+                Divider()
+                Button("Löschen", systemImage: "trash", role: .destructive) {
+                    Task { await store.deleteFolder(folder.url) }
+                }
+            }
         }
     }
 

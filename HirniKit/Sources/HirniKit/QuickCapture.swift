@@ -68,7 +68,7 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
         self.items = items
     }
 
-    public static func make(tasks: [TaskItem], dueDates: TaskDueDates, in vault: Vault, limit: Int = 12) -> WidgetSnapshot {
+    public static func make(tasks: [TaskItem], dueDates: TaskDueDates, in vault: Vault, limit: Int = 300) -> WidgetSnapshot {
         let open = tasks.filter { !$0.isDone }
         let items = open.enumerated().map { index, task in
             let key = task.dueKey(in: vault)

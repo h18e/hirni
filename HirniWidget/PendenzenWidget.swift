@@ -31,6 +31,7 @@ struct PendenzenWidget: Widget {
 struct SnapshotEntry: TimelineEntry {
     let date: Date
     let snapshot: WidgetSnapshot
+    var display = WidgetDisplay()
 }
 
 struct SnapshotProvider: TimelineProvider {
@@ -55,7 +56,11 @@ struct SnapshotProvider: TimelineProvider {
 
     private func entry() -> SnapshotEntry {
         let folder = AppGroup.folder
-        return SnapshotEntry(date: .now, snapshot: folder.flatMap(WidgetSnapshot.load) ?? WidgetSnapshot())
+        return SnapshotEntry(
+            date: .now,
+            snapshot: folder.flatMap(WidgetSnapshot.load) ?? WidgetSnapshot(),
+            display: folder.map(WidgetDisplay.load) ?? WidgetDisplay()
+        )
     }
 }
 
@@ -72,65 +77,42 @@ struct PendenzenView: View {
         #endif
     }
 
-    private var maxItems: Int {
-        if isAccessory { return 2 }
-        switch family {
-        case .systemSmall: return 3
-        case .systemMedium: return 3
-        default: return 8
-        }
-    }
-
     /// Platz in Zeilen einer Pendenz; eine Kategorie-Überschrift braucht etwa
     /// die Hälfte.
     private var budget: Double {
+        #if os(macOS)
+        // Mac-Widgets sind etwas niedriger.
+        switch family {
+        case .systemSmall: 4.5
+        case .systemMedium: 3.1
+        default: 8
+        }
+        #else
         switch family {
         case .systemSmall: 4.5
         case .systemMedium: 3.6
-        default: 9.5
+        default: 9
         }
+        #endif
     }
 
-    enum Line: Identifiable {
-        case header(String)
-        case item(WidgetSnapshot.Item)
-
-        var id: String {
-            switch self {
-            case .header(let name): "#" + name
-            case .item(let item): item.id
-            }
-        }
-    }
-
-    /// Pendenzen mit einer Überschrift pro Kategorie, so viele wie Platz haben.
-    private var lines: [Line] {
-        var result: [Line] = []
-        var used = 0.0
-        var current: String??
-        for item in entry.snapshot.items {
-            let needsHeader = current != .some(item.category)
-            let cost = 1 + (needsHeader ? 0.55 : 0)
-            guard used + cost <= budget else { break }
-            if needsHeader { result.append(.header(item.category.map { "#" + $0 } ?? "Ohne Kategorie")) }
-            result.append(.item(item))
-            current = .some(item.category)
-            used += cost
-        }
-        return result
+    private var pages: [[WidgetLine]] {
+        WidgetLayout.pages(entry.snapshot, display: entry.display, budget: budget)
     }
 
     var body: some View {
         if isAccessory {
             VStack(alignment: .leading, spacing: 1) {
                 Text("\(entry.snapshot.openCount) Pendenzen").font(.headline)
-                ForEach(entry.snapshot.items.prefix(maxItems)) { item in
+                ForEach(entry.snapshot.items.prefix(2)) { item in
                     Text(item.text).lineLimit(1)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .widgetURL(DeepLink.tasks)
         } else {
+            let pages = pages
+            let current = min(entry.display.page, max(0, pages.count - 1))
             VStack(alignment: .leading, spacing: family == .systemSmall ? 3 : 4) {
                 HStack {
                     Label("Pendenzen", systemImage: "checklist")
@@ -139,9 +121,13 @@ struct PendenzenView: View {
                         .foregroundStyle(.tint)
                         .lineLimit(1)
                     Spacer()
-                    Text("\(entry.snapshot.openCount)")
-                        .font(.headline.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                    if pages.count > 1 {
+                        pager(current: current, count: pages.count)
+                    } else {
+                        Text("\(entry.snapshot.openCount)")
+                            .font(.headline.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 if entry.snapshot.items.isEmpty {
                     Spacer()
@@ -150,14 +136,10 @@ struct PendenzenView: View {
                         .frame(maxWidth: .infinity)
                     Spacer()
                 } else {
-                    ForEach(lines) { line in
+                    ForEach(pages.indices.contains(current) ? pages[current] : []) { line in
                         switch line {
-                        case .header(let name):
-                            Text(name)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.tint)
-                                .lineLimit(1)
-                                .padding(.top, 2)
+                        case .header(let category, let count, let collapsed):
+                            categoryHeader(category, count: count, collapsed: collapsed)
                         case .item(let item):
                             row(item)
                         }
@@ -167,6 +149,54 @@ struct PendenzenView: View {
             }
             .widgetURL(DeepLink.tasks)
         }
+    }
+
+    /// Kategorie: ein Tipp klappt sie auf oder zu.
+    private func categoryHeader(_ category: String?, count: Int, collapsed: Bool) -> some View {
+        Button(intent: ToggleCategoryIntent(category: category)) {
+            HStack(spacing: 4) {
+                Image(systemName: collapsed ? "chevron.right" : "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .frame(width: 10)
+                Text(category.map { "#" + $0 } ?? "Ohne Kategorie")
+                    .lineLimit(1)
+                if collapsed {
+                    Text("\(count)").foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.tint)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 2)
+    }
+
+    /// Blättern: WidgetKit kennt kein Scrollen.
+    private func pager(current: Int, count: Int) -> some View {
+        HStack(spacing: 8) {
+            if family != .systemSmall {
+                Text("\(current + 1)/\(count)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            pageButton("chevron.up", to: current - 1, enabled: current > 0)
+            pageButton("chevron.down", to: current + 1, enabled: current + 1 < count)
+        }
+    }
+
+    private func pageButton(_ symbol: String, to page: Int, enabled: Bool) -> some View {
+        Button(intent: WidgetPageIntent(page: page)) {
+            Image(systemName: symbol)
+                .font(.caption.weight(.bold))
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.tint)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.3)
     }
 
     private func row(_ item: WidgetSnapshot.Item) -> some View {
