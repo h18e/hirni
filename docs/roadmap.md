@@ -34,7 +34,8 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ fertig
 
 ## Version 2 (Ideen-Speicher)
 
-- Verknüpfte Notizen `[[…]]` mit Rückverweisen
+- ✅ Links auf Notizen mit fester Kennung (überstehen Umbenennen und Verschieben)
+- Rückverweise (welche Notizen zeigen hierher), Links per `[[…]]` tippen
 - ✅ Formeln (Feldtyp «Formel», pro Zeile, mit Spaltenfunktionen)
 - Verknüpfungen und Rollups zwischen Datenbanken, Formeln über mehrere Zeilen
 - Board- und Galerie-Ansicht

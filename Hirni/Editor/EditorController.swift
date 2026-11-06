@@ -16,6 +16,9 @@ final class EditorController {
     /// Passende Tags, während `#…` getippt wird.
     private(set) var suggestions: [String] = []
 
+    /// Auswahl «Link auf Notiz» ist offen.
+    var showsNotePicker = false
+
     /// Anhang, der gerade in der Vorschau (QuickLook) offen ist.
     var previewURL: URL?
 
@@ -35,6 +38,8 @@ final class EditorController {
     @ObservationIgnored let overlays = EmbedOverlays()
     /// Automatisches Speichern kurz nach der letzten Eingabe (siehe NoteEditorView).
     @ObservationIgnored var autosave: Task<Void, Never>?
+    /// Ein Link auf eine Notiz wurde angetippt.
+    @ObservationIgnored var onInternalLink: ((URL) -> Void)?
     /// Mac: Dateien wurden in den Text gezogen.
     @ObservationIgnored var onFileDrop: (([URL]) -> Void)?
 
@@ -91,6 +96,10 @@ final class EditorController {
 
     func bold() { perform { MarkdownEditing.toggleWrap("**", in: $0, selection: $1) } }
     func italic() { perform { MarkdownEditing.toggleWrap("*", in: $0, selection: $1) } }
+    func underline() { perform { MarkdownEditing.toggleTag("u", in: $0, selection: $1) } }
+    func strikethrough() { perform { MarkdownEditing.toggleWrap("~~", in: $0, selection: $1) } }
+    func highlight() { perform { MarkdownEditing.toggleTag("mark", in: $0, selection: $1) } }
+    func setColor(_ color: TextColor?) { perform { MarkdownEditing.setColor(color, in: $0, selection: $1) } }
     func heading() { perform { MarkdownEditing.cycleHeading(in: $0, selection: $1) } }
     func bulletList() { perform { MarkdownEditing.toggleLineStyle(.bullet, in: $0, selection: $1) } }
     func checklist() { perform { MarkdownEditing.cycleChecklist(in: $0, selection: $1) } }
@@ -233,6 +242,55 @@ final class EditorController {
         textView?.resignFirstResponder()
     }
     #endif
+
+    // MARK: - Links auf Notizen
+
+    /// Die Auswahl wird zur eigenen Beschriftung des Links.
+    var selectedText: String? {
+        guard let text = currentText, let selection = currentSelection, selection.length > 0 else { return nil }
+        let selected = (text as NSString).substring(with: selection)
+        return selected.contains("\n") ? nil : selected
+    }
+
+    func insertNoteLink(_ markdown: String) {
+        perform { _, selection in
+            TextEdit(range: selection, replacement: markdown,
+                     selection: NSRange(location: selection.location + (markdown as NSString).length, length: 0))
+        }
+    }
+
+    /// Löschen in ausgeblendeten Zeichen: Ein Notiz-Link verschwindet als
+    /// Ganzes, bei Formaten fällt das Format weg, der Text bleibt.
+    func deleteHiddenMarks(in range: NSRange) -> Bool {
+        guard !replacingHint, let text = currentText, text.contains("<") || text.contains("hirni:") else { return false }
+        let ns = text as NSString
+        let line = ns.lineRange(for: NSRange(location: range.location, length: 0))
+        func inMarks(_ inner: NSRange, of whole: NSRange) -> Bool {
+            NSIntersectionRange(range, whole).length > 0 && NSIntersectionRange(range, inner).length == 0
+        }
+        func replace(_ whole: NSRange, with replacement: String) {
+            replacingHint = true
+            defer { replacingHint = false }
+            apply(TextEdit(range: whole, replacement: replacement,
+                           selection: NSRange(location: whole.location + (replacement as NSString).length, length: 0)))
+        }
+        for m in NoteLink.pattern.matches(in: text, range: line) where inMarks(m.range(at: 1), of: m.range) {
+            replace(m.range, with: "")
+            return true
+        }
+        let plain = MarkdownSyntax.plainText(ns.substring(with: range))
+        guard plain.isEmpty || plain == ns.substring(with: range) else { return false }
+        for span in MarkdownSyntax.spans(in: ns.substring(with: line)) where span.kind == .hiddenMarker {
+            let hidden = NSRange(location: line.location + span.range.location, length: span.range.length)
+            guard NSIntersectionRange(range, hidden).length > 0 else { continue }
+            let lineText = ns.substring(with: line)
+            let stripped = MarkdownSyntax.removingFormat(at: span.range.location, in: lineText)
+            guard stripped != lineText else { return false }
+            replace(line, with: stripped)
+            return true
+        }
+        return false
+    }
 
     // MARK: - Inhaltsverzeichnis
 

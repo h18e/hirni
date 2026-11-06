@@ -8,6 +8,8 @@ enum AppDestination: Equatable {
     case tasks
     /// Notiz, Pfad ab dem Hirni-Ordner.
     case note(String)
+    /// Link auf eine Notiz mit fester Kennung (siehe `NoteLink`).
+    case link(URL)
 
     /// `hirni://pendenzen`, `hirni://notiz?pfad=Inbox/Einkauf.md`
     init?(url: URL) {
@@ -15,6 +17,10 @@ enum AppDestination: Equatable {
         switch url.host() {
         case "pendenzen": self = .tasks
         case "notiz":
+            if NoteLink.id(in: url) != nil {
+                self = .link(url)
+                return
+            }
             guard let path = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?.first(where: { $0.name == "pfad" })?.value else { return nil }
             self = .note(path)

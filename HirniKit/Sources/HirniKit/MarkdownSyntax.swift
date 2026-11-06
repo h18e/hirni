@@ -33,6 +33,12 @@ public struct MarkdownSpan: Equatable, Sendable {
         case embed(path: String)
         /// Beispieltext aus einer Vorlage, `{{? Thema}}`: nur «Thema», grau.
         case hint
+        /// `<u>…</u>`
+        case underline
+        /// `<mark>…</mark>`
+        case highlight
+        /// `<span style="color:red">…</span>`
+        case textColor(TextColor)
     }
 
     public let kind: Kind
@@ -111,6 +117,32 @@ public enum MarkdownSyntax {
         return result
     }
 
+    /// Hebt das Format auf, zu dem die Stelle `location` gehört; der Text bleibt.
+    public static func removingFormat(at location: Int, in line: String) -> String {
+        let ns = line as NSString
+        for format in TextFormat.all {
+            for m in format.pattern.matches(in: line, range: NSRange(location: 0, length: ns.length))
+            where NSLocationInRange(location, m.range) {
+                return ns.replacingCharacters(in: m.range, with: ns.substring(with: m.range(at: m.numberOfRanges - 1)))
+            }
+        }
+        return line
+    }
+
+    /// Text ohne Format-Tags und mit der Beschriftung statt Notiz-Links (für
+    /// Vorschau, Pendenzen, Inhaltsverzeichnis).
+    public static func plainText(_ text: String) -> String {
+        guard text.contains("<") || text.contains("hirni:") else { return text }
+        var result = text
+        for format in TextFormat.all {
+            result = format.pattern.stringByReplacingMatches(
+                in: result, range: NSRange(location: 0, length: (result as NSString).length),
+                withTemplate: "$\(format.pattern.numberOfCaptureGroups)")
+        }
+        return NoteLink.pattern.stringByReplacingMatches(
+            in: result, range: NSRange(location: 0, length: (result as NSString).length), withTemplate: "$1")
+    }
+
     /// Eine Überschrift, für das Inhaltsverzeichnis.
     public struct Heading: Equatable, Identifiable, Sendable {
         public let level: Int
@@ -130,7 +162,7 @@ public enum MarkdownSyntax {
             title = String(title.drop { $0 == "#" }).trimmingCharacters(in: .whitespaces)
             title = TemplateFiller.hintPattern.stringByReplacingMatches(
                 in: title, range: NSRange(location: 0, length: (title as NSString).length), withTemplate: "$1")
-            title = title.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "~~", with: "")
+            title = plainText(title).replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "~~", with: "")
             return title.isEmpty ? nil : Heading(level: level, title: title, location: span.range.location)
         }
     }
@@ -216,9 +248,12 @@ public enum MarkdownSyntax {
             let label = m.range(at: 1)
             // Nur die Adresse schützen: Die Beschriftung darf fett oder kursiv sein.
             protected.append(NSRange(NSMaxRange(label)..<NSMaxRange(m.range)))
-            spans.append(MarkdownSpan(.link(url: ns.substring(with: m.range(at: 2))), label))
-            spans.append(MarkdownSpan(.syntax, NSRange(location: m.range.location, length: 1)))
-            spans.append(MarkdownSpan(.syntax, NSRange(NSMaxRange(label)..<NSMaxRange(m.range))))
+            let address = ns.substring(with: m.range(at: 2))
+            spans.append(MarkdownSpan(.link(url: address), label))
+            // Links auf Notizen zeigen nur die Beschriftung.
+            let marks: MarkdownSpan.Kind = address.hasPrefix("hirni:") ? .hiddenMarker : .syntax
+            spans.append(MarkdownSpan(marks, NSRange(location: m.range.location, length: 1)))
+            spans.append(MarkdownSpan(marks, NSRange(NSMaxRange(label)..<NSMaxRange(m.range))))
         }
         for m in Patterns.bareURL.matches(in: text, range: range) where isFree(m.range) {
             var found = m.range
@@ -233,6 +268,16 @@ public enum MarkdownSyntax {
             }
             protected.append(found)
             spans.append(MarkdownSpan(.link(url: ns.substring(with: found)), found))
+        }
+
+        // Unterstrichen, markiert, Farbe: nur die Wirkung zeigen, nicht die Tags.
+        for format in TextFormat.all {
+            for m in format.pattern.matches(in: text, range: range) where isFree(m.range) {
+                let inner = m.range(at: m.numberOfRanges - 1)
+                spans.append(MarkdownSpan(format.kind(ns, m), inner))
+                spans.append(MarkdownSpan(.hiddenMarker, NSRange(m.range.location..<inner.location)))
+                spans.append(MarkdownSpan(.hiddenMarker, NSRange(NSMaxRange(inner)..<NSMaxRange(m.range))))
+            }
         }
 
         var boldMarkers: [NSRange] = []

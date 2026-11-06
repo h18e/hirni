@@ -1,3 +1,4 @@
+import HirniKit
 import SwiftUI
 #if os(iOS)
 import UIKit
@@ -21,10 +22,14 @@ struct FormattingBar: View {
     }
 
     private var buttons: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             button("Überschrift", "textformat.size", action: controller.heading)
             button("Fett", "bold", action: controller.bold)
             button("Kursiv", "italic", action: controller.italic)
+            FormatMenu(controller: controller)
+                .labelStyle(.iconOnly)
+                .font(.title3)
+                .frame(width: 38, height: 44)
             button("Liste", "list.bullet", action: controller.bulletList)
             button("Checkliste", "checklist", action: controller.checklist)
             button("Tag", "number", action: controller.insertTag)
@@ -36,13 +41,14 @@ struct FormattingBar: View {
                 }
                 Button("Datei", systemImage: "folder") { controller.attachmentRequest = .files }
                 Divider()
+                Button("Link auf Notiz", systemImage: "link") { controller.showsNotePicker = true }
                 Button("Tabelle", systemImage: "squareshape.split.3x3") { controller.insertTable() }
                 Button("Datenbank-Ansicht", systemImage: "tablecells") { controller.showsDatabasePicker = true }
             } label: {
                 Label("Anhang", systemImage: "paperclip")
                     .labelStyle(.iconOnly)
                     .font(.title3)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 38, height: 44)
             }
             #endif
             Spacer()
@@ -57,7 +63,7 @@ struct FormattingBar: View {
         Button(title, systemImage: systemImage, action: action)
             .labelStyle(.iconOnly)
             .font(.title3)
-            .frame(width: 44, height: 44)
+            .frame(width: 38, height: 44)
             .contentShape(Rectangle())
     }
 }
@@ -76,6 +82,25 @@ struct TagSuggestions: View {
                 }
             }
             .padding(.horizontal, 12)
+        }
+    }
+}
+
+/// Weitere Formate: unterstrichen, durchgestrichen, markiert, Textfarbe.
+struct FormatMenu: View {
+    let controller: EditorController
+
+    var body: some View {
+        Menu("Format", systemImage: "paintpalette") {
+            Button("Unterstrichen", systemImage: "underline", action: controller.underline)
+            Button("Durchgestrichen", systemImage: "strikethrough", action: controller.strikethrough)
+            Button("Markieren", systemImage: "highlighter", action: controller.highlight)
+            Section("Textfarbe") {
+                ForEach(TextColor.allCases, id: \.self) { color in
+                    Button(color.label) { controller.setColor(color) }
+                }
+                Button("Farbe entfernen", systemImage: "xmark.circle") { controller.setColor(nil) }
+            }
         }
     }
 }

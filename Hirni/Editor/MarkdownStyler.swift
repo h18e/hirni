@@ -165,6 +165,12 @@ enum MarkdownStyler {
                 .foregroundColor: Colors.syntax,
                 .font: PlatformFont.systemFont(ofSize: base.pointSize * 0.75),
             ], range: range)
+        case .underline:
+            storage.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range)
+        case .highlight:
+            storage.addAttribute(.backgroundColor, value: PlatformColor.systemYellow.withAlphaComponent(0.35), range: range)
+        case .textColor(let color):
+            storage.addAttribute(.foregroundColor, value: Colors.text(color), range: range)
         case .hint:
             storage.addAttributes([
                 .foregroundColor: Colors.syntax,
@@ -202,6 +208,18 @@ enum MarkdownStyler {
     }
 
     enum Colors {
+        /// Textfarbe, passend zu hell und dunkel.
+        static func text(_ color: TextColor) -> PlatformColor {
+            switch color {
+            case .red: .systemRed
+            case .orange: .systemOrange
+            case .green: .systemGreen
+            case .blue: .systemBlue
+            case .purple: .systemPurple
+            case .gray: .systemGray
+            }
+        }
+
         #if os(iOS)
         static let text = UIColor.label
         static let secondary = UIColor.secondaryLabel

@@ -248,6 +248,11 @@ public enum NoteHTML {
         }
         text = replace(#"[ \t]*(➕|✅)[ \t]*(\d{4}-\d{2}-\d{2})"#, in: text) { _ in "" }
         text = escape(text)
+        text = replace(#"&lt;u&gt;(.+?)&lt;/u&gt;"#, in: text) { "<u>\($0[1])</u>" }
+        text = replace(#"&lt;mark&gt;(.+?)&lt;/mark&gt;"#, in: text) { "<mark>\($0[1])</mark>" }
+        text = replace(#"&lt;span style=(?:&quot;|")color:([a-z]+)(?:&quot;|")&gt;(.+?)&lt;/span&gt;"#, in: text) {
+            "<span style=\"color:\(TextColor(rawValue: $0[1])?.rawValue ?? "inherit")\">\($0[2])</span>"
+        }
         text = replace(#"(\*\*|__)(?=\S)(.+?)(?<=\S)\1"#, in: text) { "<strong>\($0[2])</strong>" }
         text = replace(#"(?<![*_\w])([*_])(?=\S)(.+?)(?<=\S)\1(?![*_\w])"#, in: text) { "<em>\($0[2])</em>" }
         text = replace(#"~~(?=\S)(.+?)(?<=\S)~~"#, in: text) { "<del>\($0[1])</del>" }

@@ -113,6 +113,16 @@ struct NoteEditorView: View {
             defaultFilename: Vault.title(of: fileURL ?? url)
         ) { _ in exportedPDF = nil }
         #endif
+        .sheet(isPresented: Binding(get: { controller.showsNotePicker }, set: { controller.showsNotePicker = $0 })) {
+            NoteLinkPicker(excluding: fileURL ?? url) { target in
+                let label = controller.selectedText
+                Task {
+                    if let markdown = await store.linkMarkdown(to: target.url, label: label) {
+                        controller.insertNoteLink(markdown)
+                    }
+                }
+            }
+        }
         .modifier(AttachmentPickers(
             controller: controller,
             importFiles: { await importFiles($0) },
@@ -234,6 +244,17 @@ struct NoteEditorView: View {
             Button("Kursiv", systemImage: "italic", action: controller.italic)
                 .keyboardShortcut("i")
                 .help("Kursiv (⌘I)")
+            Button("Unterstrichen", systemImage: "underline", action: controller.underline)
+                .keyboardShortcut("u")
+                .help("Unterstrichen (⌘U)")
+            Button("Durchgestrichen", systemImage: "strikethrough", action: controller.strikethrough)
+                .keyboardShortcut("x", modifiers: [.command, .shift])
+                .help("Durchgestrichen (⇧⌘X)")
+            FormatMenu(controller: controller)
+                .help("Markieren und Textfarbe")
+            Button("Link auf Notiz", systemImage: "link") { controller.showsNotePicker = true }
+                .keyboardShortcut("k")
+                .help("Link auf eine andere Notiz (⌘K)")
             Button("Liste", systemImage: "list.bullet", action: controller.bulletList)
                 .keyboardShortcut("8", modifiers: [.command, .shift])
                 .help("Liste (⇧⌘8)")
@@ -320,12 +341,21 @@ struct NoteEditorView: View {
         // Zuerst anmelden: Die Hervorhebung braucht den Ordner der Notiz,
         // um eingebettete Bilder zu finden.
         register(for: newURL)
+        controller.onInternalLink = { [store] link in
+            if let destination = AppDestination(url: link) { store.open(destination) }
+        }
         controller.hintsAsText = newURL.deletingLastPathComponent().standardizedFileURL == store.vault.templatesURL.standardizedFileURL
         self.header = header
         show(body)
         savedModified = modified
         title = Vault.title(of: newURL)
         fileURL = newURL
+        // Ziele von Links können umbenannt oder verschoben sein.
+        let refreshed = await store.refreshingLinks(in: body)
+        if refreshed != body, text == body {
+            text = refreshed
+            controller.setText(refreshed)
+        }
 
         templateTitle = Frontmatter.value(Vault.templateTitleKey, in: content) ?? ""
         if let pending = store.pendingTitleSelection, pending.url == newURL {

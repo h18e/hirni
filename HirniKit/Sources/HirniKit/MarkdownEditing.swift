@@ -27,6 +27,7 @@ public enum MarkdownEditing {
     /// `**` um die Auswahl setzen oder wieder entfernen. Ohne Auswahl werden
     /// zwei Marker eingefügt und der Cursor dazwischen gesetzt.
     public static func toggleWrap(_ marker: String, in text: String, selection: NSRange) -> TextEdit {
+        if let edit = wrapLines(open: marker, close: marker, in: text, selection: selection) { return edit }
         let ns = text as NSString
         let m = (marker as NSString).length
 
@@ -60,6 +61,118 @@ public enum MarkdownEditing {
             range: selection, replacement: marker + selected + marker,
             selection: NSRange(location: selection.location + m, length: selection.length)
         )
+    }
+
+    // MARK: - Unterstrichen, markiert, Farbe
+
+    /// `<u>` bzw. `<mark>` um die Auswahl setzen oder wieder entfernen. Steht
+    /// der Cursor in so einem Bereich, wird er aufgehoben.
+    public static func toggleTag(_ tag: String, in text: String, selection: NSRange) -> TextEdit {
+        let open = "<\(tag)>", close = "</\(tag)>"
+        if let edit = wrapLines(open: open, close: close, in: text, selection: selection) { return edit }
+        let ns = text as NSString
+        let line = ns.lineRange(for: NSRange(location: selection.location, length: 0))
+        let format = tag == "u" ? TextFormat.underline : TextFormat.highlight
+        // Auswahl oder Cursor liegt in einem bestehenden Bereich: aufheben.
+        for m in format.pattern.matches(in: text, range: line) {
+            let inner = m.range(at: 1)
+            if selection.location >= inner.location, NSMaxRange(selection) <= NSMaxRange(inner) {
+                let content = ns.substring(with: inner)
+                return TextEdit(range: m.range, replacement: content,
+                                selection: NSRange(location: selection.location - (open as NSString).length, length: selection.length))
+            }
+        }
+        let selected = ns.substring(with: selection)
+        return TextEdit(range: selection, replacement: open + selected + close,
+                        selection: NSRange(location: selection.location + (open as NSString).length, length: selection.length))
+    }
+
+    /// Färbt die Auswahl ein (`nil` = Farbe entfernen). Mit dem Cursor in einem
+    /// farbigen Bereich gilt die Änderung für den ganzen Bereich.
+    public static func setColor(_ color: TextColor?, in text: String, selection: NSRange) -> TextEdit {
+        let ns = text as NSString
+        let open = color.map { "<span style=\"color:\($0.rawValue)\">" } ?? ""
+        let close = color == nil ? "" : "</span>"
+        let lines = lineBlock(in: ns, selection: selection)
+        if isLineSelection(selection, in: ns) {
+            var fenced = false
+            let parts = lines.text.components(separatedBy: "\n").map { line -> String in
+                guard canFormat(line, fenced: &fenced) else { return line }
+                let prefix = linePrefix(line)
+                let rest = uncolored(String(line.dropFirst(prefix.count)))
+                return prefix + open + rest + close
+            }
+            let replacement = parts.joined(separator: "\n")
+            return TextEdit(range: lines.range, replacement: replacement,
+                            selection: NSRange(location: lines.range.location, length: (replacement as NSString).length))
+        }
+        let line = ns.lineRange(for: NSRange(location: selection.location, length: 0))
+        for m in TextFormat.color.pattern.matches(in: text, range: line) {
+            let inner = m.range(at: 2)
+            if selection.location >= inner.location, NSMaxRange(selection) <= NSMaxRange(inner) {
+                let content = ns.substring(with: inner)
+                let replacement = open + content + close
+                let shift = (open as NSString).length - (inner.location - m.range.location)
+                return TextEdit(range: m.range, replacement: replacement,
+                                selection: NSRange(location: selection.location + shift, length: selection.length))
+            }
+        }
+        guard color != nil else { return TextEdit(range: selection, replacement: uncolored(ns.substring(with: selection)), selection: selection) }
+        let selected = uncolored(ns.substring(with: selection))
+        return TextEdit(range: selection, replacement: open + selected + close,
+                        selection: NSRange(location: selection.location + (open as NSString).length, length: (selected as NSString).length))
+    }
+
+    private static func uncolored(_ text: String) -> String {
+        TextFormat.color.pattern.stringByReplacingMatches(
+            in: text, range: NSRange(location: 0, length: (text as NSString).length), withTemplate: "$2")
+    }
+
+    /// Geht die Auswahl über mehrere Zeilen oder beginnt sie am Zeilenanfang
+    /// einer Liste oder Überschrift? Dann gilt das Format zeilenweise.
+    private static func isLineSelection(_ selection: NSRange, in ns: NSString) -> Bool {
+        guard selection.length > 0 else { return false }
+        if ns.substring(with: selection).contains("\n") { return true }
+        let line = ns.lineRange(for: NSRange(location: selection.location, length: 0))
+        return selection.location == line.location && !linePrefix(ns.substring(with: line)).isEmpty
+    }
+
+    /// `# `, `- `, `- [ ] ` … am Zeilenanfang.
+    private static func linePrefix(_ line: String) -> String {
+        if let hashes = line.firstRange(of: /^#{1,6}[ \t]+/) { return String(line[hashes]) }
+        let parsed = LinePrefix(line)
+        return parsed.indent + parsed.markerText
+    }
+
+    /// Tabellen, Codeblöcke und Leerzeilen bleiben unformatiert.
+    private static func canFormat(_ line: String, fenced: inout Bool) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        if trimmed.hasPrefix("```") { fenced.toggle(); return false }
+        return !fenced && !trimmed.isEmpty && !MarkdownTable.isRow(trimmed)
+    }
+
+    /// Format über ganze Zeilen; `nil`, wenn die Auswahl nur Text in einer Zeile ist.
+    private static func wrapLines(open: String, close: String, in text: String, selection: NSRange) -> TextEdit? {
+        let ns = text as NSString
+        guard isLineSelection(selection, in: ns) else { return nil }
+        let lines = lineBlock(in: ns, selection: selection)
+        var fenced = false
+        let all = lines.text.components(separatedBy: "\n")
+        let wrapped = all.map { line -> (line: String, can: Bool, rest: String, prefix: String) in
+            let can = canFormat(line, fenced: &fenced)
+            let prefix = linePrefix(line)
+            return (line, can, String(line.dropFirst(prefix.count)), prefix)
+        }
+        let formatted = wrapped.filter(\.can)
+        let remove = !formatted.isEmpty && formatted.allSatisfy { $0.rest.hasPrefix(open) && $0.rest.hasSuffix(close) }
+        let parts = wrapped.map { item -> String in
+            guard item.can else { return item.line }
+            if remove { return item.prefix + item.rest.dropFirst(open.count).dropLast(close.count) }
+            return item.prefix + open + item.rest + close
+        }
+        let replacement = parts.joined(separator: "\n")
+        return TextEdit(range: lines.range, replacement: replacement,
+                        selection: NSRange(location: lines.range.location, length: (replacement as NSString).length))
     }
 
     // MARK: - Zeilen

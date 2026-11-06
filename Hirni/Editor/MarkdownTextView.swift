@@ -128,6 +128,7 @@ struct MarkdownTextView: UIViewRepresentable {
 
         func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
             if parent.controller.replaceHint(in: range, with: text) { return false }
+            if text.isEmpty, parent.controller.deleteHiddenMarks(in: range) { return false }
             if text == "\n", parent.controller.handleReturn() { return false }
             return true
         }
@@ -158,7 +159,11 @@ struct MarkdownTextView: UIViewRepresentable {
             let point = recognizer.location(in: textView)
             for candidate in [index, index - 1] {
                 if let url = parent.controller.link(at: candidate), rect(ofCharacterAt: candidate, in: textView).contains(point) {
-                    UIApplication.shared.open(url)
+                    if url.scheme == "hirni" {
+                        parent.controller.onInternalLink?(url)
+                    } else {
+                        UIApplication.shared.open(url)
+                    }
                     return
                 }
             }
@@ -313,7 +318,16 @@ struct MarkdownTextView: NSViewRepresentable {
 
         func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
             guard let replacementString else { return true }
-            return !parent.controller.replaceHint(in: affectedCharRange, with: replacementString)
+            if parent.controller.replaceHint(in: affectedCharRange, with: replacementString) { return false }
+            if replacementString.isEmpty, parent.controller.deleteHiddenMarks(in: affectedCharRange) { return false }
+            return true
+        }
+
+        /// Links auf Notizen öffnet Hirni selbst, nicht über das System.
+        func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
+            guard let url = link as? URL, url.scheme == "hirni" else { return false }
+            parent.controller.onInternalLink?(url)
+            return true
         }
 
         func textViewDidChangeSelection(_ notification: Notification) {

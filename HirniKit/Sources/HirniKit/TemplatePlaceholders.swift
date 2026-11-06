@@ -339,6 +339,7 @@ extension Vault {
         text = Frontmatter.setting(Frontmatter.pinnedKey, to: nil, in: text)
         text = Frontmatter.setting(Self.rowKey, to: nil, in: text)
         text = Frontmatter.setting(Self.templateTitleKey, to: nil, in: text)
+        text = Frontmatter.setting(NoteLink.idKey, to: nil, in: text)
 
         // {{stichtag: …}} aus Pendenzen-Zeilen herausnehmen und merken.
         var dueDates: [Int: Date] = [:]

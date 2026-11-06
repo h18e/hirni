@@ -460,15 +460,51 @@ final class VaultStore {
         WidgetData.publish(WidgetSnapshot.make(tasks: tasks, dueDates: dueDates, in: vault))
     }
 
+    // MARK: - Links auf Notizen
+
+    func linkTargets(excluding note: URL?) async -> [NoteLink.Target] {
+        let vault = vault
+        return await Task.detached { vault.linkTargets(excluding: note) }.value
+    }
+
+    /// Markdown für einen Link; die Zielnotiz bekommt nötigenfalls ihre Kennung.
+    func linkMarkdown(to note: URL, label: String?) async -> String? {
+        await perform { try $0.linkMarkdown(to: note, label: label) }
+    }
+
+    /// Beschriftung und Pfad der Links nachführen (Ziel umbenannt oder verschoben).
+    func refreshingLinks(in text: String) async -> String {
+        guard text.contains("hirni://notiz?id=") else { return text }
+        let vault = vault
+        return await Task.detached { vault.refreshingNoteLinks(in: text) }.value
+    }
+
     /// Sprung aus Mitteilung, Widget, Kurzbefehl oder Kalender: eine Notiz
     /// (bzw. Datenbank) in ihrem Ordner öffnen oder die Pendenzen zeigen.
     func open(_ destination: AppDestination) {
-        guard case .note(let path) = destination else {
+        switch destination {
+        case .tasks:
             sidebarSelection = .tasks
-            return
+        case .note(let path):
+            let url = vault.root.appending(path: path)
+            guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else {
+                errorMessage = "Diese Notiz gibt es nicht mehr."
+                return
+            }
+            show(url)
+        case .link(let link):
+            let vault = vault
+            Task {
+                guard let url = await Task.detached(operation: { vault.resolve(link: link) }).value else {
+                    errorMessage = "Diese Notiz gibt es nicht mehr. Vielleicht liegt sie in «Zuletzt gelöscht»."
+                    return
+                }
+                show(url)
+            }
         }
-        let url = vault.root.appending(path: path)
-        guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else { return }
+    }
+
+    private func show(_ url: URL) {
         // Den Ordner der Notiz zeigen, damit die Liste daneben passt.
         let folder = url.deletingLastPathComponent()
         sidebarSelection = folder.standardizedFileURL == vault.inboxURL.standardizedFileURL ? .inbox : .folder(folder)

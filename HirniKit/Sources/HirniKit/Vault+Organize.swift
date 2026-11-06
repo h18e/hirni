@@ -43,7 +43,9 @@ extension Vault {
 
     /// Legt «Titel Kopie» im selben Ordner an. Die Kopie ist nicht angepinnt.
     public func duplicateNote(at url: URL) throws -> URL {
-        let text = Frontmatter.setting(Frontmatter.pinnedKey, to: nil, in: try readNote(at: url))
+        // Die Kopie bekommt keine Kennung: Links zeigen weiter aufs Original.
+        var text = Frontmatter.setting(Frontmatter.pinnedKey, to: nil, in: try readNote(at: url))
+        text = Frontmatter.setting(NoteLink.idKey, to: nil, in: text)
         let title = "\(Self.title(of: url)) Kopie"
         guard Self.isDatabase(url) else {
             return try createNote(in: url.deletingLastPathComponent(), title: title, text: text)

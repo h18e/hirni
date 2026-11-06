@@ -80,7 +80,7 @@ public enum TaskLine {
     static func content(of line: String) -> String {
         let ns = line as NSString
         guard let m = checkbox.firstMatch(in: line, range: NSRange(location: 0, length: ns.length)) else { return line }
-        let rest = ns.substring(from: NSMaxRange(m.range))
+        let rest = MarkdownSyntax.plainText(ns.substring(from: NSMaxRange(m.range)))
         return datePattern.stringByReplacingMatches(in: rest, range: NSRange(location: 0, length: (rest as NSString).length), withTemplate: "")
             .trimmingCharacters(in: .whitespaces)
     }
