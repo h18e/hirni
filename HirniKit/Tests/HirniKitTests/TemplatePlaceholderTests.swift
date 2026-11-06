@@ -181,4 +181,25 @@ struct TemplatePlaceholderTests {
         #expect(q?.row == 2 && q?.column == 1)
         #expect(table.cell(at: ns.range(of: "Nachher").location, in: text) == nil)
     }
+
+    @Test func tabOrderLeavesTableForNextHint() throws {
+        let text = "| A | B |\n|---|---|\n| {{? a}} | {{? b}} |\n\n{{? Text}}\n\n| C |\n|---|\n| {{? c}} |\n"
+        let ns = text as NSString
+        let tables = MarkdownTable.tables(in: text)
+        let first = try #require(tables.first)
+
+        #expect(first.nextCell(afterRow: 1, column: 0)?.column == 1)
+        let wrap = first.nextCell(afterRow: 0, column: 1)
+        #expect(wrap?.row == 1 && wrap?.column == 0)
+        #expect(first.nextCell(afterRow: 1, column: 1) == nil)
+
+        // Aus der letzten Zelle: der Beispieltext dahinter, nicht die nächste Tabelle.
+        let next = try #require(TemplateFiller.nextHint(from: NSMaxRange(first.range), in: text))
+        #expect(ns.substring(with: next) == "{{? Text}}")
+        let then = try #require(TemplateFiller.nextHint(from: NSMaxRange(next), in: text))
+        #expect(ns.substring(with: then) == "{{? c}}")
+        let back = try #require(TemplateFiller.nextHint(from: NSMaxRange(then), in: text))
+        #expect(ns.substring(with: back) == "{{? a}}")
+        #expect(TemplateFiller.nextHint(from: 0, in: "kein Beispieltext") == nil)
+    }
 }

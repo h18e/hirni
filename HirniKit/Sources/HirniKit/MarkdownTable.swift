@@ -53,6 +53,12 @@ public struct MarkdownTable: Equatable, Sendable {
         return result
     }
 
+    /// Die Zelle nach dieser (zeilenweise); `nil` nach der letzten.
+    public func nextCell(afterRow row: Int, column: Int) -> (row: Int, column: Int)? {
+        if column + 1 < columnCount { return (row, column + 1) }
+        return row + 1 < rows.count ? (row + 1, 0) : nil
+    }
+
     /// Zeile und Spalte der Zelle an Stelle `location` im Text (Zeile 0 = Kopf).
     /// `nil` ausserhalb der Tabelle und in der Trennzeile.
     public func cell(at location: Int, in text: String) -> (row: Int, column: Int)? {

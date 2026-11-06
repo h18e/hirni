@@ -47,6 +47,7 @@ final class EditorController {
         overlays.onTap = { [weak self] url in self?.previewURL = url }
         // Änderungen im Tabellen-Raster zurück in den Markdown-Text.
         overlays.tables.onChange = { [weak self] index, table in self?.replaceTable(at: index, with: table) }
+        overlays.tables.onTabOut = { [weak self] index in self?.tabOut(ofTable: index) }
         #if os(iOS)
         overlays.tables.onDragging = { [weak self] dragging in
             self?.textView?.panGestureRecognizer.isEnabled = !dragging
@@ -431,6 +432,33 @@ final class EditorController {
         textView.setSelectedRange(target)
         #endif
         textView.scrollRangeToVisible(target)
+    }
+
+    /// Tab aus der letzten Zelle einer Tabelle: zum nächsten Beispieltext
+    /// dahinter. Ohne Beispieltext auf die Zeile nach der Tabelle.
+    private func tabOut(ofTable index: Int) {
+        guard let text = currentText else { return }
+        let tables = MarkdownTable.tables(in: text)
+        guard tables.indices.contains(index) else { return }
+        let end = NSMaxRange(tables[index].range)
+        guard let hint = TemplateFiller.nextHint(from: end, in: text) else {
+            selectInText(NSRange(location: min(end + 1, (text as NSString).length), length: 0))
+            return
+        }
+        if !focusCell(at: hint.location, in: text) { selectInText(hint) }
+    }
+
+    /// Fokus in den Text, Auswahl setzen.
+    private func selectInText(_ range: NSRange) {
+        guard let textView else { return }
+        #if os(iOS)
+        textView.becomeFirstResponder()
+        textView.selectedRange = range
+        #else
+        textView.window?.makeFirstResponder(textView)
+        textView.setSelectedRange(range)
+        #endif
+        textView.scrollRangeToVisible(range)
     }
 
     /// Liegt `location` in einer Tabelle, kommt die Zelle in den Fokus: Der Text

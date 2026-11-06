@@ -167,6 +167,12 @@ extension TemplateFiller {
         return ns.substring(with: match.range(at: 1))
     }
 
+    /// Der nächste Beispieltext ab `location`, nach dem letzten wieder der erste.
+    public static func nextHint(from location: Int, in text: String) -> NSRange? {
+        let hints = hintPattern.matches(in: text, range: NSRange(location: 0, length: (text as NSString).length)).map(\.range)
+        return hints.first { $0.location >= location } ?? hints.first
+    }
+
     /// Zelle zur Anzeige: Beispieltexte als Text, ohne Klammern.
     public static func displayCell(_ cell: String) -> String {
         guard cell.contains("{{?") else { return cell }

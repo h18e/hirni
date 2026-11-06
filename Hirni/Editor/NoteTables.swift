@@ -1,6 +1,9 @@
 import HirniKit
 import Observation
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 /// Die gewöhnlichen Markdown-Tabellen einer Notiz, als bearbeitbare Raster.
 ///
@@ -19,6 +22,34 @@ final class NoteTables {
 
     /// In Vorlagen sind Beispieltexte gewöhnlicher Text, mit Klammern.
     var hintsAsText = false
+    /// Tab in der letzten Zelle der Tabelle an Position `index`.
+    var onTabOut: (_ index: Int) -> Void = { _ in }
+    /// Die Zelle mit dem Fokus. Tab behandelt Hirni selbst: Das System würde
+    /// aus der letzten Zelle zum nächsten Eingabefeld springen, also in die
+    /// nächste Tabelle, und Beispieltexte im Text dazwischen auslassen.
+    var focused: (model: TableModel, cell: TableCell)?
+
+    #if os(macOS)
+    /// Am Mac verarbeitet das Textfeld Tab selbst, bevor SwiftUI es sieht.
+    private var tabMonitor: Any?
+
+    init() {
+        tabMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let isTab = event.keyCode == 48 && !event.modifierFlags.contains(.shift)
+            guard isTab else { return event }
+            let handled = MainActor.assumeIsolated {
+                guard let self, let focused = self.focused else { return false }
+                focused.model.tab(from: focused.cell)
+                return true
+            }
+            return handled ? nil : event
+        }
+    }
+
+    deinit {
+        if let tabMonitor { NSEvent.removeMonitor(tabMonitor) }
+    }
+    #endif
 
     private var models: [TableModel] = []
 
@@ -38,6 +69,10 @@ final class NoteTables {
 
     func height(of table: MarkdownTable) -> CGFloat {
         TableGrid.height(rows: table.rows.count)
+    }
+
+    fileprivate func tabOut(of model: TableModel) {
+        onTabOut(model.index)
     }
 
     fileprivate func changed(_ model: TableModel, rowCountChanged: Bool) {
@@ -64,6 +99,25 @@ final class TableModel {
     init(index: Int, owner: NoteTables) {
         self.index = index
         self.owner = owner
+    }
+
+    /// Tab: zur nächsten Zelle, aus der letzten weiter im Text.
+    func tab(from cell: TableCell) {
+        if let next = table.nextCell(afterRow: cell.row, column: cell.column) {
+            focusRequest = TableCell(row: next.row, column: next.column)
+        } else {
+            owner?.tabOut(of: self)
+        }
+    }
+
+    /// Meldet die Zelle mit dem Fokus (`nil` = keine mehr in dieser Tabelle).
+    func setFocused(_ cell: TableCell?) {
+        guard let owner else { return }
+        if let cell {
+            owner.focused = (self, cell)
+        } else if owner.focused?.model === self {
+            owner.focused = nil
+        }
     }
 
     func setDragging(_ dragging: Bool) {
@@ -148,6 +202,8 @@ struct TableGrid: View {
             focusedCell = request
             model.focusRequest = nil
         }
+        .onChange(of: focusedCell) { _, cell in model.setFocused(cell) }
+        .onDisappear { model.setFocused(nil) }
     }
 
     private func rowView(_ row: Int, table: MarkdownTable) -> some View {
@@ -159,6 +215,12 @@ struct TableGrid: View {
             ForEach(0..<table.columnCount, id: \.self) { column in
                 TextField(row == 0 ? "Titel" : "", text: cell(row, column), prompt: prompt(row, column))
                     .focused($focusedCell, equals: TableCell(row: row, column: column))
+                    #if os(iOS)
+                    .onKeyPress(.tab) {
+                        model.tab(from: TableCell(row: row, column: column))
+                        return .handled
+                    }
+                    #endif
                     .textFieldStyle(.plain)
                     .font(row == 0 ? .body.bold() : .body)
                     .padding(.horizontal, 8)
