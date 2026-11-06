@@ -67,6 +67,18 @@ public enum MarkdownEditing {
     public enum LineStyle: Sendable {
         case bullet
         case checkbox
+        /// `- ( ) `: einfache Checkbox, keine Pendenz.
+        case plainCheckbox
+    }
+
+    /// Checklisten-Knopf: Text → Pendenz `- [ ]` → einfache Checkbox `- ( )` → Text.
+    public static func cycleChecklist(in text: String, selection: NSRange) -> TextEdit {
+        let lines = lineBlock(in: text as NSString, selection: selection)
+        let parsed = lines.text.components(separatedBy: "\n").map(LinePrefix.init)
+            .filter { !$0.rest.isEmpty || $0.marker != nil }
+        let isTask = !parsed.isEmpty && parsed.allSatisfy { $0.style == .checkbox }
+        let isPlain = !parsed.isEmpty && parsed.allSatisfy { $0.style == .plainCheckbox }
+        return toggleLineStyle(isTask || isPlain ? .plainCheckbox : .checkbox, in: text, selection: selection)
     }
 
     /// Macht die ausgewählten Zeilen zur Liste bzw. Checkliste – oder wieder
@@ -87,6 +99,7 @@ public enum MarkdownEditing {
             switch style {
             case .bullet: return line.indent + "- " + line.rest
             case .checkbox: return line.indent + "- [ ] " + line.rest
+            case .plainCheckbox: return line.indent + "- ( ) " + line.rest
             }
         }
         let replacement = newLines.joined(separator: "\n")
@@ -127,6 +140,13 @@ public enum MarkdownEditing {
         let ns = text as NSString
         guard index >= 0, index <= ns.length else { return nil }
         let lineRange = ns.lineRange(for: NSRange(location: min(index, max(ns.length - 1, 0)), length: 0))
+        // Einfache Checkbox: nur umschalten, ohne Datum.
+        if let m = MarkdownSyntax.Patterns.plainCheckbox.firstMatch(in: text, range: lineRange) {
+            let box = m.range(at: 3)
+            guard index >= box.location, index <= NSMaxRange(box) else { return nil }
+            let checked = ns.substring(with: box).lowercased() == "(x)"
+            return TextEdit(range: box, replacement: checked ? "( )" : "(x)", selection: selection)
+        }
         guard let m = MarkdownSyntax.Patterns.checkbox.firstMatch(in: text, range: lineRange) else { return nil }
         let box = m.range(at: 3)
         // Ein Tipp knapp daneben zählt auch.
@@ -160,7 +180,7 @@ public enum MarkdownEditing {
                 selection: NSRange(location: lineStart, length: 0)
             )
         }
-        let marker = prefix.indent + (prefix.style == .checkbox ? "- [ ] " : prefix.markerText)
+        let marker = prefix.indent + (prefix.style == .checkbox ? "- [ ] " : prefix.style == .plainCheckbox ? "- ( ) " : prefix.markerText)
         let insertion = "\n" + marker
         return TextEdit(
             range: selection, replacement: insertion,
@@ -265,14 +285,16 @@ public enum MarkdownEditing {
 
         var style: LineStyle? {
             guard let marker else { return nil }
-            return marker.contains("[") ? .checkbox : .bullet
+            if marker.contains("[") { return .checkbox }
+            return marker.contains("(") ? .plainCheckbox : .bullet
         }
 
         init(_ line: String) {
             original = line
             let ns = line as NSString
             let full = NSRange(location: 0, length: ns.length)
-            if let m = MarkdownSyntax.Patterns.checkbox.firstMatch(in: line, range: full) {
+            if let m = MarkdownSyntax.Patterns.checkbox.firstMatch(in: line, range: full)
+                ?? MarkdownSyntax.Patterns.plainCheckbox.firstMatch(in: line, range: full) {
                 indent = ns.substring(with: m.range(at: 1))
                 marker = ns.substring(with: NSRange(location: m.range(at: 2).location, length: NSMaxRange(m.range) - m.range(at: 2).location))
                 rest = ns.substring(from: NSMaxRange(m.range))

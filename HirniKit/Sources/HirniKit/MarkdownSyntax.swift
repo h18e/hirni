@@ -20,6 +20,8 @@ public struct MarkdownSpan: Equatable, Sendable {
         case hiddenMarker
         /// `[ ]` bzw. `[x]` einer Checkliste.
         case checkbox(checked: Bool)
+        /// `( )` bzw. `(x)`: einfache Checkbox, keine Pendenz.
+        case plainCheckbox(checked: Bool)
         /// Text eines erledigten Checklisten-Punkts.
         case doneItem
         /// Link: Beschriftung von `[Text](Adresse)` oder eine eingetippte Adresse.
@@ -109,6 +111,30 @@ public enum MarkdownSyntax {
         return result
     }
 
+    /// Eine Überschrift, für das Inhaltsverzeichnis.
+    public struct Heading: Equatable, Identifiable, Sendable {
+        public let level: Int
+        public let title: String
+        /// Anfang der Zeile im Text (UTF-16).
+        public let location: Int
+
+        public var id: Int { location }
+    }
+
+    /// Alle Überschriften im Text, ohne leere und ohne solche in Codeblöcken.
+    public static func headings(in text: String) -> [Heading] {
+        let ns = text as NSString
+        return spans(in: text).compactMap { span in
+            guard case .heading(let level) = span.kind else { return nil }
+            var title = ns.substring(with: span.range)
+            title = String(title.drop { $0 == "#" }).trimmingCharacters(in: .whitespaces)
+            title = TemplateFiller.hintPattern.stringByReplacingMatches(
+                in: title, range: NSRange(location: 0, length: (title as NSString).length), withTemplate: "$1")
+            title = title.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "~~", with: "")
+            return title.isEmpty ? nil : Heading(level: level, title: title, location: span.range.location)
+        }
+    }
+
     // MARK: - Zeilen
 
     private static func lineSpans(in text: String, line: NSRange) -> [MarkdownSpan] {
@@ -129,6 +155,15 @@ public enum MarkdownSyntax {
             let checked = (text as NSString).substring(with: box).lowercased() == "[x]"
             spans.append(MarkdownSpan(.hiddenMarker, NSRange(m.range(at: 2).location..<box.location)))
             spans.append(MarkdownSpan(.checkbox(checked: checked), box))
+            contentStart = NSMaxRange(m.range)
+            if checked, NSMaxRange(line) > contentStart {
+                spans.append(MarkdownSpan(.doneItem, NSRange(contentStart..<NSMaxRange(line))))
+            }
+        } else if let m = Patterns.plainCheckbox.firstMatch(in: text, range: line) {
+            let box = m.range(at: 3)
+            let checked = (text as NSString).substring(with: box).lowercased() == "(x)"
+            spans.append(MarkdownSpan(.hiddenMarker, NSRange(m.range(at: 2).location..<box.location)))
+            spans.append(MarkdownSpan(.plainCheckbox(checked: checked), box))
             contentStart = NSMaxRange(m.range)
             if checked, NSMaxRange(line) > contentStart {
                 spans.append(MarkdownSpan(.doneItem, NSRange(contentStart..<NSMaxRange(line))))
@@ -237,6 +272,7 @@ public enum MarkdownSyntax {
         static let heading = regex(#"^(#{1,6})[ \t]+"#)
         static let quote = regex(#"^\s*(>)[ \t]?"#)
         static let checkbox = regex(#"^(\s*)([-*+])[ \t]+(\[[ xX]\])(?=[ \t]|$)[ \t]?"#)
+        static let plainCheckbox = regex(#"^(\s*)([-*+])[ \t]+(\([ xX]\))(?=[ \t]|$)[ \t]?"#)
         static let list = regex(#"^(\s*)([-*+]|\d+[.)])[ \t]+"#)
         static let inlineCode = regex(#"`[^`\n]+`"#)
         static let bold = regex(#"(\*\*|__)(?=\S)(.+?)(?<=\S)\1"#)

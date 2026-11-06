@@ -44,13 +44,20 @@ extension HelpTopic {
                 "Hirni schreibt Markdown: Die Zeichen bleiben sichtbar, aber grau.",
                 "`# Titel`, `## Untertitel` – **fett** mit `**…**`, *kursiv* mit `*…*`, durchgestrichen mit `~~…~~`.",
                 "**iPhone:** Leiste über der Tastatur (Überschrift, fett, kursiv, Liste, Checkliste, Tag, Büroklammer).",
-                "**Mac:** Überschrift ⇧⌘H (wechselt # → ## → ### → keine), fett ⌘B, kursiv ⌘I, Liste ⇧⌘8, Checkliste ⇧⌘L.",
+                "**Mac:** Überschrift ⇧⌘H (wechselt # → ## → ### → keine), fett ⌘B, kursiv ⌘I, Liste ⇧⌘8, Checkliste ⇧⌘L, Inhaltsverzeichnis ⇧⌘I.",
                 "Listen und Checklisten setzt Return fort; Return in einem leeren Punkt beendet die Liste.",
                 "**Tab** springt zum nächsten Beispieltext, **Shift+Tab** fügt ein Tabulatorzeichen ein (Mac und iPhone mit Tastatur).",
             ]),
             .init(title: "Checklisten", items: [
                 "`- [ ] Text` ist eine Checkbox; ein Tipp auf `[ ]` hakt ab und schreibt das Datum dazu (`✅ 2026-10-30`).",
-                "Jede Checkbox erscheint automatisch in der Liste **Pendenzen**.",
+                "Jede Checkbox `[ ]` erscheint automatisch in der Liste **Pendenzen**.",
+                "**Einfache Checkbox** `- ( ) Text`: mit runden Klammern, grau. Sie lässt sich genauso abhaken, ist aber **keine Pendenz** – ideal für Packlisten oder Einkaufszettel. Ohne Datum, nicht in Pendenzenliste, Widget und Erinnerungen.",
+                "Der Checklisten-Knopf (Mac ⇧⌘L) wechselt reihum: Text → Pendenz `[ ]` → einfache Checkbox `( )` → Text. Tippen geht auch.",
+            ]),
+            .init(title: "Inhaltsverzeichnis", items: [
+                "Knopf mit den eingerückten Linien oben im Editor (Mac ⇧⌘I): zeigt alle Überschriften der Notiz, nach Ebene eingerückt.",
+                "Ein Tipp auf einen Eintrag springt direkt zu dieser Überschrift. Beim Lesen bleibt die Tastatur auf dem iPhone geschlossen.",
+                "Das Verzeichnis entsteht aus den Zeilen mit `#`, `##`, `###` … und ist immer aktuell.",
             ]),
             .init(title: "Tags und Links", items: [
                 "`#tag` irgendwo im Text. Nach `#` schlägt Hirni bekannte Tags vor (Mac: Tab übernimmt den ersten).",

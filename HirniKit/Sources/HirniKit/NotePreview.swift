@@ -53,7 +53,7 @@ public enum NotePreview {
             if MarkdownTable.isSeparator(s) { return "" }
             return MarkdownTable.cells(of: s).filter { !$0.isEmpty }.joined(separator: " · ")
         }
-        let prefixes = ["- [ ] ", "- [x] ", "- [X] ", "* [ ] ", "* [x] ", "- ", "* ", "+ ", "> "]
+        let prefixes = ["- [ ] ", "- [x] ", "- [X] ", "* [ ] ", "* [x] ", "- ( ) ", "- (x) ", "- (X) ", "- ", "* ", "+ ", "> "]
         while s.hasPrefix("#") { s.removeFirst() }
         for prefix in prefixes where s.hasPrefix(prefix) {
             s.removeFirst(prefix.count)

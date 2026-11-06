@@ -134,6 +134,11 @@ enum MarkdownStyler {
                 .foregroundColor: Colors.accent,
                 .font: PlatformFont.monospacedSystemFont(ofSize: base.pointSize, weight: .semibold),
             ], range: range)
+        case .plainCheckbox:
+            storage.addAttributes([
+                .foregroundColor: Colors.secondary,
+                .font: PlatformFont.monospacedSystemFont(ofSize: base.pointSize, weight: .semibold),
+            ], range: range)
         case .doneItem:
             storage.addAttributes([
                 .foregroundColor: Colors.secondary,

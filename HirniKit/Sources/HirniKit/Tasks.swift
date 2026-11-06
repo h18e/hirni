@@ -62,6 +62,20 @@ public enum TaskLine {
         return ns.substring(with: m.range(at: 2)) != " "
     }
 
+    /// Einfache Checkbox `- ( ) …` (keine Pendenz)? Liefert angehakt ja/nein.
+    static func plainState(of line: String) -> Bool? {
+        let ns = line as NSString
+        guard let m = MarkdownSyntax.Patterns.plainCheckbox.firstMatch(in: line, range: NSRange(location: 0, length: ns.length)) else { return nil }
+        return ns.substring(with: m.range(at: 3)).lowercased() == "(x)"
+    }
+
+    /// Der Inhalt hinter `( )`.
+    static func plainContent(of line: String) -> String {
+        let ns = line as NSString
+        guard let m = MarkdownSyntax.Patterns.plainCheckbox.firstMatch(in: line, range: NSRange(location: 0, length: ns.length)) else { return line }
+        return ns.substring(from: NSMaxRange(m.range))
+    }
+
     /// Der Inhalt hinter `[ ]`, ohne Daten.
     static func content(of line: String) -> String {
         let ns = line as NSString

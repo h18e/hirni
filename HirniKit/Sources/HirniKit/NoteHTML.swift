@@ -152,10 +152,10 @@ public enum NoteHTML {
                 html.append("<blockquote>" + quote.joined(separator: "<br>") + "</blockquote>")
                 continue
             }
-            if let done = TaskLine.state(of: line) {
+            if let done = TaskLine.state(of: line) ?? TaskLine.plainState(of: line) {
                 if !paragraph.isEmpty || list?.tasks == false { flush() }
                 let indent = line.prefix { $0 == " " || $0 == "\t" }.count
-                let content = TaskLine.content(of: line)
+                let content = TaskLine.state(of: line) == nil ? TaskLine.plainContent(of: line) : TaskLine.content(of: line)
                 let doneDate = TaskLine.date(TaskLine.doneMark, in: line).map { " <span class=\"date\">✓ \(TaskLine.format($0))</span>" } ?? ""
                 let item = "<li class=\"\(done ? "done" : "open")\" style=\"margin-left:\(indent * 6)pt\"><span class=\"box\">\(done ? "☑" : "☐")</span><span class=\"text\">\(inline(content))</span>\(doneDate)</li>"
                 list = (true, (list?.items ?? []) + [item])

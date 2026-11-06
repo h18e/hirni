@@ -46,6 +46,8 @@ struct NoteEditorView: View {
     @FocusState private var titleIsFocused: Bool
     /// iPhone: Erhöhen setzt den Cursor in den Titel (siehe TitleField).
     @State private var titleFocusRequest = 0
+    /// Inhaltsverzeichnis ist offen, mit den Überschriften von diesem Moment.
+    @State private var outline: [MarkdownSyntax.Heading]?
     /// Beim nächsten Fokus im Titel diese Stelle markieren (Vorlage mit `{{? …}}`).
     @State private var titleSelection: NSRange?
     /// Vorlagen: Titel neuer Notizen (`notiztitel` im Kopf), mit Platzhaltern.
@@ -99,6 +101,7 @@ struct NoteEditorView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .primaryAction) { outlineButton }
             ToolbarItem(placement: .primaryAction) { shareMenu }
         }
         #else
@@ -196,11 +199,32 @@ struct NoteEditorView: View {
         }
     }
 
+    /// Inhaltsverzeichnis: alle Überschriften der Notiz, ein Tipp springt hin.
+    private var outlineButton: some View {
+        Button("Inhaltsverzeichnis", systemImage: "list.bullet.indent") {
+            outline = controller.headings
+        }
+        .help("Inhaltsverzeichnis (⇧⌘I)")
+        .popover(isPresented: Binding(get: { outline != nil }, set: { if !$0 { outline = nil } })) {
+            OutlineList(headings: outline ?? []) { heading in
+                outline = nil
+                // Erst springen, wenn das Blatt zu ist.
+                Task {
+                    try? await Task.sleep(for: .milliseconds(350))
+                    controller.jump(to: heading)
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
+    }
+
     #if os(macOS)
     /// Formatieren am Mac: Knöpfe in der Fensterleiste, mit Tastenkürzeln.
     @ToolbarContentBuilder
     private var formattingToolbar: some ToolbarContent {
         ToolbarItemGroup {
+            outlineButton
+                .keyboardShortcut("i", modifiers: [.command, .shift])
             Button("Überschrift", systemImage: "textformat.size", action: controller.heading)
                 .keyboardShortcut("h", modifiers: [.command, .shift])
                 .help("Überschrift (⇧⌘H)")
@@ -215,7 +239,7 @@ struct NoteEditorView: View {
                 .help("Liste (⇧⌘8)")
             Button("Checkliste", systemImage: "checklist", action: controller.checklist)
                 .keyboardShortcut("l", modifiers: [.command, .shift])
-                .help("Checkliste (⇧⌘L)")
+                .help("Checkliste (⇧⌘L): Pendenz → einfache Checkbox → Text")
             Button("Anhang", systemImage: "paperclip") { controller.attachmentRequest = .files }
                 .keyboardShortcut("a", modifiers: [.command, .shift])
                 .help("Bild oder PDF einfügen (⇧⌘A) – oder Datei in den Text ziehen")

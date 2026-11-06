@@ -93,7 +93,7 @@ final class EditorController {
     func italic() { perform { MarkdownEditing.toggleWrap("*", in: $0, selection: $1) } }
     func heading() { perform { MarkdownEditing.cycleHeading(in: $0, selection: $1) } }
     func bulletList() { perform { MarkdownEditing.toggleLineStyle(.bullet, in: $0, selection: $1) } }
-    func checklist() { perform { MarkdownEditing.toggleLineStyle(.checkbox, in: $0, selection: $1) } }
+    func checklist() { perform { MarkdownEditing.cycleChecklist(in: $0, selection: $1) } }
 
     /// Fügt einen eingebetteten Anhang auf einer eigenen Zeile ein.
     func insertBlock(_ markdown: String) {
@@ -233,6 +233,40 @@ final class EditorController {
         textView?.resignFirstResponder()
     }
     #endif
+
+    // MARK: - Inhaltsverzeichnis
+
+    var headings: [MarkdownSyntax.Heading] {
+        currentText.map(MarkdownSyntax.headings(in:)) ?? []
+    }
+
+    /// Springt zur Überschrift: Sie steht danach zuoberst.
+    func jump(to heading: MarkdownSyntax.Heading) {
+        guard let textView, let text = currentText, heading.location <= (text as NSString).length else { return }
+        let ns = text as NSString
+        let line = ns.lineRange(for: NSRange(location: heading.location, length: 0))
+        let end = NSMaxRange(line) - (ns.substring(with: line).hasSuffix("\n") ? 1 : 0)
+        let target = NSRange(location: heading.location, length: max(end - heading.location, 0))
+        #if os(iOS)
+        // Beim Lesen bleibt die Tastatur zu: den Cursor nur setzen, wenn sie offen ist.
+        if textView.isFirstResponder { textView.selectedRange = NSRange(location: end, length: 0) }
+        let layout = textView.layoutManager
+        layout.ensureLayout(forCharacterRange: NSRange(location: 0, length: NSMaxRange(target)))
+        let glyphs = layout.glyphRange(forCharacterRange: target, actualCharacterRange: nil)
+        let top = layout.boundingRect(forGlyphRange: glyphs, in: textView.textContainer).minY + textView.textContainerInset.top
+        let inset = textView.adjustedContentInset
+        let lowest = max(-inset.top, textView.contentSize.height - textView.bounds.height + inset.bottom)
+        textView.setContentOffset(CGPoint(x: 0, y: min(lowest, max(-inset.top, top - 8))), animated: true)
+        #else
+        textView.setSelectedRange(NSRange(location: end, length: 0))
+        guard let layout = textView.layoutManager, let container = textView.textContainer else { return }
+        layout.ensureLayout(forCharacterRange: NSRange(location: 0, length: NSMaxRange(target)))
+        let glyphs = layout.glyphRange(forCharacterRange: target, actualCharacterRange: nil)
+        let top = layout.boundingRect(forGlyphRange: glyphs, in: container).minY + textView.textContainerOrigin.y
+        textView.scroll(NSPoint(x: 0, y: max(0, top - 8)))
+        textView.window?.makeFirstResponder(textView)
+        #endif
+    }
 
     // MARK: - Vorlagen: Cursor und Beispieltext
 
