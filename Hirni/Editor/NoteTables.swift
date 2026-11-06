@@ -31,7 +31,7 @@ final class NoteTables {
 
     #if os(macOS)
     /// Am Mac verarbeitet das Textfeld Tab selbst, bevor SwiftUI es sieht.
-    private var tabMonitor: Any?
+    nonisolated(unsafe) private var tabMonitor: Any?
 
     init() {
         tabMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
