@@ -142,4 +142,43 @@ struct TemplatePlaceholderTests {
         try VaultLayout.prepare(root: test.vault.root)
         #expect(test.exists("Vorlagen"))
     }
+
+    @Test func placeholdersInTableCells() throws {
+        #expect(TemplateFiller.hintText(ofCell: " {{? Zutat}} ") == "Zutat")
+        #expect(TemplateFiller.hintText(ofCell: "ca. {{? Menge}}") == nil)
+        #expect(TemplateFiller.hintText(ofCell: "Text") == nil)
+        #expect(TemplateFiller.displayCell("ca. {{? Menge}}") == "ca. Menge")
+
+        // Eine Auswahl in einer Zelle steht mit `\\|` in der Datei.
+        let source = #"| {{wahl: Ja\|Nein}} | {{frage: Wer?}} |"# + "\n|---|---|\n| {{pendenzen}} | {{cursor}} |\n"
+        let questions = TemplateQuestion.all(in: [source])
+        #expect(questions.first?.options == ["Ja", "Nein"])
+
+        let test = try TestVault()
+        try test.write(source, to: "Vorlagen/Tabelle.md")
+        try test.write("- [ ] Eins\n- [ ] Zwei\n", to: "Inbox/Liste.md")
+        let template = test.vault.templatesURL.appending(path: "Tabelle.md")
+        let answers = Dictionary(uniqueKeysWithValues: questions.map { ($0.id, $0.options.first ?? "Lea") })
+        let created = try test.vault.createNote(in: test.vault.inboxURL, fromTemplate: template, answers: answers, now: now)
+        let text = try test.vault.readNote(at: created.url)
+        let table = try #require(MarkdownTable.tables(in: text).first)
+        #expect(table.rows.count == 2)
+        #expect(table.rows[0] == ["Ja", "Lea"])
+        #expect(table.rows[1][0].contains("Eins") && table.rows[1][0].contains("\n"))
+        let cursor = try #require(created.cursor)
+        #expect(table.cell(at: cursor, in: text)?.row == 1)
+        #expect(table.cell(at: cursor, in: text)?.column == 1)
+    }
+
+    @Test func cellLocations() throws {
+        let text = "Vorher\n| A | B |\n|---|---|\n| x | y |\n| p | q |\nNachher"
+        let table = try #require(MarkdownTable.tables(in: text).first)
+        let ns = text as NSString
+        #expect(table.cell(at: ns.range(of: "A").location, in: text)?.row == 0)
+        #expect(table.cell(at: ns.range(of: "B").location, in: text)?.column == 1)
+        #expect(table.cell(at: ns.range(of: "---").location, in: text) == nil)
+        let q = table.cell(at: ns.range(of: "q").location, in: text)
+        #expect(q?.row == 2 && q?.column == 1)
+        #expect(table.cell(at: ns.range(of: "Nachher").location, in: text) == nil)
+    }
 }

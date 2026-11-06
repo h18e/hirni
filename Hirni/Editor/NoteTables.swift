@@ -17,6 +17,9 @@ final class NoteTables {
     /// übernimmt sie die Bewegung.
     var onDragging: (Bool) -> Void = { _ in }
 
+    /// In Vorlagen sind Beispieltexte gewöhnlicher Text, mit Klammern.
+    var hintsAsText = false
+
     private var models: [TableModel] = []
 
     func model(at index: Int) -> TableModel {
@@ -53,6 +56,10 @@ final class TableModel {
     let index: Int
     @ObservationIgnored private weak var owner: NoteTables?
     var table = MarkdownTable.empty()
+    /// Diese Zelle bekommt den Fokus (Tab, Cursor aus einer Vorlage).
+    var focusRequest: TableCell?
+
+    var hintsAsText: Bool { owner?.hintsAsText ?? false }
 
     init(index: Int, owner: NoteTables) {
         self.index = index
@@ -71,6 +78,11 @@ final class TableModel {
         table = changed
         owner?.changed(self, rowCountChanged: rows != table.rows.count)
     }
+}
+
+struct TableCell: Hashable {
+    let row: Int
+    let column: Int
 }
 
 /// Eine Tabelle zum direkten Bearbeiten. Über jeder Spalte und vor jeder
@@ -103,6 +115,7 @@ struct TableGrid: View {
     }
 
     @State private var dragStart: Int?
+    @FocusState private var focusedCell: TableCell?
 
     var body: some View {
         let table = model.table
@@ -130,6 +143,11 @@ struct TableGrid: View {
         .scrollIndicators(.hidden)
         .scrollDisabled(dragStart != nil)
         .defaultScrollAnchor(.topLeading, for: .alignment)
+        .onChange(of: model.focusRequest, initial: true) { _, request in
+            guard let request else { return }
+            focusedCell = request
+            model.focusRequest = nil
+        }
     }
 
     private func rowView(_ row: Int, table: MarkdownTable) -> some View {
@@ -139,7 +157,8 @@ struct TableGrid: View {
             }
             .frame(width: Self.gutterWidth, height: Self.rowHeight)
             ForEach(0..<table.columnCount, id: \.self) { column in
-                TextField(row == 0 ? "Titel" : "", text: cell(row, column))
+                TextField(row == 0 ? "Titel" : "", text: cell(row, column), prompt: prompt(row, column))
+                    .focused($focusedCell, equals: TableCell(row: row, column: column))
                     .textFieldStyle(.plain)
                     .font(row == 0 ? .body.bold() : .body)
                     .padding(.horizontal, 8)
@@ -155,13 +174,34 @@ struct TableGrid: View {
         }
     }
 
+    private func rawCell(_ row: Int, _ column: Int) -> String {
+        let rows = model.table.rows
+        return rows.indices.contains(row) && rows[row].indices.contains(column) ? rows[row][column] : ""
+    }
+
+    /// Besteht die Zelle nur aus einem Beispieltext, erscheint er grau als
+    /// Platzhalter des Felds: Tippen ersetzt ihn.
+    private func prompt(_ row: Int, _ column: Int) -> Text? {
+        guard !model.hintsAsText, let hint = TemplateFiller.hintText(ofCell: rawCell(row, column)) else {
+            return row == 0 ? Text("Titel") : nil
+        }
+        return Text(hint)
+    }
+
     private func cell(_ row: Int, _ column: Int) -> Binding<String> {
         Binding(
             get: {
-                let rows = model.table.rows
-                return rows.indices.contains(row) && rows[row].indices.contains(column) ? rows[row][column] : ""
+                let raw = rawCell(row, column)
+                if model.hintsAsText { return raw }
+                return TemplateFiller.hintText(ofCell: raw) != nil ? "" : TemplateFiller.displayCell(raw)
             },
             set: { value in
+                let raw = rawCell(row, column)
+                // Ohne Eingabe bleibt der Beispieltext in der Datei.
+                if !model.hintsAsText {
+                    if TemplateFiller.hintText(ofCell: raw) != nil, value.isEmpty { return }
+                    if value == TemplateFiller.displayCell(raw) { return }
+                }
                 model.edit { table in
                     guard table.rows.indices.contains(row), table.rows[row].indices.contains(column) else { return }
                     table.rows[row][column] = value

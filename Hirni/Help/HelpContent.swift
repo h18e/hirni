@@ -135,12 +135,15 @@ extension HelpTopic {
                 "`{{wahl: Arbeit|Privat|Verein}}` – Auswahl, die erste ist vorgewählt.",
                 "Kommt dieselbe Frage mehrmals vor (auch im Namen), fragt Hirni nur einmal und setzt die Antwort überall ein.",
                 "Bei Zeilen-Seiten fragt Hirni nicht; dort bleiben diese Platzhalter leer.",
+                "Alle Platzhalter gehen auch in Tabellen. Mehrzeilige wie `{{pendenzen}}` stehen dort in einer Zelle mit Zeilenumbrüchen.",
             ]),
             .init(title: "Cursor und Beispieltext", items: [
                 "`{{cursor}}` – hier steht nach dem Anlegen der Cursor, die Tastatur ist offen.",
                 "`{{? Thema der Besprechung}}` – Beispieltext: erscheint grau und kursiv. Ein Tipp darauf markiert ihn ganz, was du tippst, ersetzt ihn. Gibt es kein `{{cursor}}`, ist der erste Beispieltext gleich markiert.",
                 "**Tab** springt zum nächsten Beispieltext und markiert ihn (nach dem letzten wieder zum ersten). Im **Titel** führen Tab und Return weiter zum ersten Beispieltext im Text. Ein Tabulatorzeichen gibt es mit **Shift+Tab**. Am Mac übernimmt Tab weiterhin zuerst einen Tag-Vorschlag, falls einer angezeigt wird.",
                 "Nicht überschriebene Beispieltexte erscheinen weder in der Vorschau der Liste noch im PDF.",
+                "**In Tabellen:** Eine Zelle nur mit `{{? Zutat}}` zeigt «Zutat» grau, Tippen ersetzt den Text. Steht in der Zelle noch anderes (`ca. {{? Gramm}}`), erscheint der Beispieltext als normaler Text und lässt sich dort von Hand ändern.",
+                "Tab und Return aus dem Titel springen auch in eine Tabellenzelle, wenn dort der nächste Beispieltext steht. In der Tabelle führt Tab zur nächsten Zelle.",
                 "**Im Titel:** `{{iso-datum}} – {{? Thema}}` ergibt «2026-10-30 – Thema» mit markiertem «Thema» – einfach lostippen. `{{cursor}}` im Titel setzt den Cursor dorthin.",
             ]),
             .init(title: "Pendenzen und Nummern", items: [

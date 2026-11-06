@@ -37,7 +37,14 @@ public enum TemplateFiller {
         for match in pattern.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
             result += ns.substring(with: NSRange(last..<match.range.location))
             let key = ns.substring(with: match.range(at: 1))
-            result += resolve(key, context: context, known: known) ?? ns.substring(with: match.range)
+            if let value = resolve(key, context: context, known: known) {
+                // In einer Tabellenzeile darf der Wert sie nicht zerreissen.
+                let line = ns.lineRange(for: NSRange(location: match.range.location, length: 0))
+                let inTable = ns.substring(with: line).trimmingCharacters(in: .whitespaces).hasPrefix("|")
+                result += inTable ? MarkdownTable.escape(value) : value
+            } else {
+                result += ns.substring(with: match.range)
+            }
             last = NSMaxRange(match.range)
         }
         return result + ns.substring(from: last)

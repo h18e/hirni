@@ -64,7 +64,8 @@ public struct TemplateQuestion: Hashable, Identifiable, Sendable {
             let ns = text as NSString
             for match in pattern.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
                 let kind = ns.substring(with: match.range(at: 1)).lowercased()
-                let content = ns.substring(with: match.range(at: 2))
+                // In Tabellenzellen steht das `|` der Auswahl als `\|`.
+                let content = ns.substring(with: match.range(at: 2)).replacingOccurrences(of: "\\|", with: "|")
                 let id = key(kind: kind, content: content)
                 guard seen.insert(id).inserted else { continue }
                 if kind == "wahl" {
@@ -79,7 +80,7 @@ public struct TemplateQuestion: Hashable, Identifiable, Sendable {
     }
 
     static func key(kind: String, content: String) -> String {
-        "\(kind.lowercased()): \(content.trimmingCharacters(in: .whitespaces))"
+        "\(kind.lowercased()): \(content.replacingOccurrences(of: "\\|", with: "|").trimmingCharacters(in: .whitespaces))"
     }
 }
 
@@ -156,6 +157,20 @@ extension TemplateFiller {
     public static func removingHints(_ text: String) -> String {
         guard text.contains("{{?") else { return text }
         return hintPattern.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: (text as NSString).length), withTemplate: "")
+    }
+
+    /// Besteht eine Tabellenzelle nur aus einem Beispieltext? Liefert dessen Text.
+    public static func hintText(ofCell cell: String) -> String? {
+        let ns = cell.trimmingCharacters(in: .whitespaces) as NSString
+        guard let match = hintPattern.firstMatch(in: ns as String, range: NSRange(location: 0, length: ns.length)),
+              match.range.length == ns.length else { return nil }
+        return ns.substring(with: match.range(at: 1))
+    }
+
+    /// Zelle zur Anzeige: Beispieltexte als Text, ohne Klammern.
+    public static func displayCell(_ cell: String) -> String {
+        guard cell.contains("{{?") else { return cell }
+        return hintPattern.stringByReplacingMatches(in: cell, range: NSRange(location: 0, length: (cell as NSString).length), withTemplate: "$1")
     }
 
     /// Bereich des Beispieltexts (samt Klammern), in dem `index` liegt.

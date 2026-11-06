@@ -345,6 +345,7 @@ final class EditorController {
                 if let hint = TemplateFiller.hintRange(containing: range.location, in: text), range.length == 0, range.location > hint.location {
                     range = hint
                 }
+                if focusCell(at: range.location, in: text) { return }
                 #if os(iOS)
                 textView.becomeFirstResponder()
                 textView.selectedRange = range
@@ -367,7 +368,9 @@ final class EditorController {
 
     @ObservationIgnored private var replacingHint = false
     /// In Vorlagen sind Beispieltexte gewöhnlicher Text zum Bearbeiten.
-    @ObservationIgnored var hintsAsText = false
+    @ObservationIgnored var hintsAsText = false {
+        didSet { overlays.tables.hintsAsText = hintsAsText }
+    }
 
     /// Tippen oder Löschen in einem Beispieltext (`{{? Thema}}`) ersetzt ihn
     /// ganz, egal wo genau der Cursor steht. `true` = erledigt, die Textansicht
@@ -403,6 +406,7 @@ final class EditorController {
             .map(\.range)
         guard let target = hints.first(where: { $0.location >= NSMaxRange(selection) && $0 != selection }) ?? hints.first
         else { return }
+        if focusCell(at: target.location, in: text) { return }
         #if os(iOS)
         textView.selectedRange = target
         #else
@@ -418,6 +422,7 @@ final class EditorController {
         let length = (text as NSString).length
         let target = TemplateFiller.hintPattern.firstMatch(in: text, range: NSRange(location: 0, length: length))?.range
             ?? NSRange(location: length, length: 0)
+        if focusCell(at: target.location, in: text) { return }
         #if os(iOS)
         textView.becomeFirstResponder()
         textView.selectedRange = target
@@ -426,6 +431,18 @@ final class EditorController {
         textView.setSelectedRange(target)
         #endif
         textView.scrollRangeToVisible(target)
+    }
+
+    /// Liegt `location` in einer Tabelle, kommt die Zelle in den Fokus: Der Text
+    /// der Tabelle selbst ist ausgeblendet, man bearbeitet sie im Raster.
+    private func focusCell(at location: Int, in text: String) -> Bool {
+        for (index, table) in MarkdownTable.tables(in: text).enumerated() {
+            guard let cell = table.cell(at: location, in: text) else { continue }
+            textView?.scrollRangeToVisible(table.range)
+            overlays.tables.model(at: index).focusRequest = TableCell(row: cell.row, column: cell.column)
+            return true
+        }
+        return false
     }
 
     /// Shift+Tab: ein Tabulatorzeichen einfügen.

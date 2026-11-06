@@ -53,6 +53,24 @@ public struct MarkdownTable: Equatable, Sendable {
         return result
     }
 
+    /// Zeile und Spalte der Zelle an Stelle `location` im Text (Zeile 0 = Kopf).
+    /// `nil` ausserhalb der Tabelle und in der Trennzeile.
+    public func cell(at location: Int, in text: String) -> (row: Int, column: Int)? {
+        guard NSLocationInRange(location, NSRange(location: range.location, length: range.length + 1)) else { return nil }
+        let ns = text as NSString
+        let before = ns.substring(with: NSRange(range.location..<location))
+        let lines = before.components(separatedBy: "\n")
+        let index = lines.count - 1
+        guard index != 1 else { return nil }
+        var pipes = 0
+        var escaped = false
+        for char in lines[index] {
+            if escaped { escaped = false; continue }
+            if char == "\\" { escaped = true } else if char == "|" { pipes += 1 }
+        }
+        return (index == 0 ? 0 : index - 1, min(max(pipes - 1, 0), columnCount - 1))
+    }
+
     /// Der Text der Tabelle, Spalten mit `|`, ohne abschliessende Zeilenschaltung.
     public var markdown: String {
         let rows = Self.padded(rows)
