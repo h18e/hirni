@@ -52,7 +52,7 @@ struct TasksView: View {
         }
         .navigationTitle("Pendenzen")
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItem(placement: .listAction) {
                 Button("Neue Pendenz", systemImage: "plus") { showsNewTask = true }
                     .keyboardShortcut("n")
             }

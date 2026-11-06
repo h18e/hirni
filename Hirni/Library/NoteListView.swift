@@ -58,19 +58,19 @@ struct NoteListView: View {
         }
         .toolbar {
             if case .folder = store.sidebarSelection {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: .listAction) {
                     Button("Neuer Unterordner", systemImage: "folder.badge.plus") {
                         subfolderName = ""
                         asksSubfolderName = true
                     }
                 }
             }
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItem(placement: .listAction) {
                 Button("Neue Datenbank", systemImage: "tablecells.badge.ellipsis") {
                     Task { await store.newDatabase() }
                 }
             }
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItem(placement: .listAction) {
                 if store.offersTemplates {
                     Menu {
                         Button("Leere Notiz", systemImage: "doc") { Task { await store.newNote() } }
@@ -275,5 +275,17 @@ private struct NoteRow: View {
             .font(.subheadline)
         }
         .padding(.vertical, 2)
+    }
+}
+
+extension ToolbarItemPlacement {
+    /// Knöpfe der Listen-Spalte. Mac: links in der Spalte, auch wenn keine
+    /// Notiz gewählt ist (`.primaryAction` wandert dann ganz nach rechts).
+    static var listAction: ToolbarItemPlacement {
+        #if os(macOS)
+        .navigation
+        #else
+        .primaryAction
+        #endif
     }
 }

@@ -44,7 +44,7 @@ struct TrashListView: View {
         }
         .navigationTitle("Zuletzt gelöscht")
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItem(placement: .listAction) {
                 Button("Alle löschen", systemImage: "trash.slash", role: .destructive) { confirmsEmptying = true }
                     .disabled(store.trash.isEmpty)
                     .help("Alles in «Zuletzt gelöscht» endgültig löschen")
