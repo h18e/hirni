@@ -170,6 +170,10 @@ struct TableGrid: View {
 
     @State private var dragStart: Int?
     @FocusState private var focusedCell: TableCell?
+    #if os(iOS)
+    /// Auswahl im Feld mit dem Fokus.
+    @State private var selection: TextSelection?
+    #endif
 
     var body: some View {
         let table = model.table
@@ -202,7 +206,10 @@ struct TableGrid: View {
             focusedCell = request
             model.focusRequest = nil
         }
-        .onChange(of: focusedCell) { _, cell in model.setFocused(cell) }
+        .onChange(of: focusedCell) { _, cell in
+            model.setFocused(cell)
+            if let cell { selectHint(in: cell) }
+        }
         .onDisappear { model.setFocused(nil) }
     }
 
@@ -213,7 +220,7 @@ struct TableGrid: View {
             }
             .frame(width: Self.gutterWidth, height: Self.rowHeight)
             ForEach(0..<table.columnCount, id: \.self) { column in
-                TextField(row == 0 ? "Titel" : "", text: cell(row, column), prompt: prompt(row, column))
+                field(row, column)
                     .focused($focusedCell, equals: TableCell(row: row, column: column))
                     #if os(iOS)
                     .onKeyPress(.tab) {
@@ -233,6 +240,37 @@ struct TableGrid: View {
                         if row < table.rows.count - 1 { Rectangle().fill(Color.secondary.opacity(0.25)).frame(height: 1) }
                     }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func field(_ row: Int, _ column: Int) -> some View {
+        #if os(iOS)
+        TextField(row == 0 ? "Titel" : "", text: cell(row, column), selection: Binding(
+            get: { focusedCell == TableCell(row: row, column: column) ? selection : nil },
+            set: { if focusedCell == TableCell(row: row, column: column) { selection = $0 } }
+        ), prompt: prompt(row, column))
+        #else
+        TextField(row == 0 ? "Titel" : "", text: cell(row, column), prompt: prompt(row, column))
+        #endif
+    }
+
+    /// Steht neben dem Beispieltext fester Text in der Zelle, wird beim
+    /// Betreten nur der Beispieltext markiert: Tippen ersetzt nur ihn.
+    private func selectHint(in cell: TableCell) {
+        let raw = rawCell(cell.row, cell.column)
+        guard !model.hintsAsText, TemplateFiller.hintText(ofCell: raw) == nil,
+              let range = TemplateFiller.hintRangeInDisplay(ofCell: raw) else { return }
+        // Das System markiert beim Betreten selbst; danach korrigieren.
+        Task {
+            try? await Task.sleep(for: .milliseconds(60))
+            guard focusedCell == cell else { return }
+            #if os(iOS)
+            let display = TemplateFiller.displayCell(raw)
+            if let found = Range(range, in: display) { selection = TextSelection(range: found) }
+            #else
+            (NSApp.keyWindow?.firstResponder as? NSTextView)?.setSelectedRange(range)
+            #endif
         }
     }
 

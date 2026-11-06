@@ -142,7 +142,7 @@ extension HelpTopic {
                 "`{{? Thema der Besprechung}}` – Beispieltext: erscheint grau und kursiv. Ein Tipp darauf markiert ihn ganz, was du tippst, ersetzt ihn. Gibt es kein `{{cursor}}`, ist der erste Beispieltext gleich markiert.",
                 "**Tab** springt zum nächsten Beispieltext und markiert ihn (nach dem letzten wieder zum ersten). Im **Titel** führen Tab und Return weiter zum ersten Beispieltext im Text. Ein Tabulatorzeichen gibt es mit **Shift+Tab**. Am Mac übernimmt Tab weiterhin zuerst einen Tag-Vorschlag, falls einer angezeigt wird.",
                 "Nicht überschriebene Beispieltexte erscheinen weder in der Vorschau der Liste noch im PDF.",
-                "**In Tabellen:** Eine Zelle nur mit `{{? Zutat}}` zeigt «Zutat» grau, Tippen ersetzt den Text. Steht in der Zelle noch anderes (`ca. {{? Gramm}}`), erscheint der Beispieltext als normaler Text und lässt sich dort von Hand ändern.",
+                "**In Tabellen:** Eine Zelle nur mit `{{? Zutat}}` zeigt «Zutat» grau, Tippen ersetzt den Text. Steht in der Zelle noch fester Text (`ca. {{? Gramm}} g`), erscheint alles als normaler Text; beim Betreten der Zelle ist nur der Beispieltext markiert, der feste Text bleibt beim Tippen stehen.",
                 "Tab und Return aus dem Titel springen auch in eine Tabellenzelle, wenn dort der nächste Beispieltext steht. In der Tabelle führt Tab zur nächsten Zelle, aus der letzten Zelle zum nächsten Beispieltext dahinter.",
                 "**Im Titel:** `{{iso-datum}} – {{? Thema}}` ergibt «2026-10-30 – Thema» mit markiertem «Thema» – einfach lostippen. `{{cursor}}` im Titel setzt den Cursor dorthin.",
             ]),

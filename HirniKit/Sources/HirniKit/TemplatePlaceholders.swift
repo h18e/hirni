@@ -179,6 +179,15 @@ extension TemplateFiller {
         return hintPattern.stringByReplacingMatches(in: cell, range: NSRange(location: 0, length: (cell as NSString).length), withTemplate: "$1")
     }
 
+    /// Wo der erste Beispieltext in `displayCell(cell)` steht (UTF-16). So lässt
+    /// sich beim Betreten nur er markieren, fester Text daneben bleibt.
+    public static func hintRangeInDisplay(ofCell cell: String) -> NSRange? {
+        let ns = cell as NSString
+        guard let match = hintPattern.firstMatch(in: cell, range: NSRange(location: 0, length: ns.length)) else { return nil }
+        let before = displayCell(ns.substring(to: match.range.location)) as NSString
+        return NSRange(location: before.length, length: match.range(at: 1).length)
+    }
+
     /// Bereich des Beispieltexts (samt Klammern), in dem `index` liegt.
     public static func hintRange(containing index: Int, in text: String) -> NSRange? {
         guard text.contains("{{?") else { return nil }

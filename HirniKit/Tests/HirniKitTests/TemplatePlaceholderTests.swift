@@ -202,4 +202,15 @@ struct TemplatePlaceholderTests {
         #expect(ns.substring(with: back) == "{{? a}}")
         #expect(TemplateFiller.nextHint(from: 0, in: "kein Beispieltext") == nil)
     }
+
+    @Test func hintPositionInMixedCell() {
+        let cell = "ca. {{? Menge}} g"
+        let display = TemplateFiller.displayCell(cell) as NSString
+        #expect(display == "ca. Menge g")
+        let range = TemplateFiller.hintRangeInDisplay(ofCell: cell)
+        #expect(range == NSRange(location: 4, length: 5))
+        #expect(display.substring(with: range!) == "Menge")
+        #expect(TemplateFiller.hintRangeInDisplay(ofCell: "{{? A}} und {{? B}}") == NSRange(location: 0, length: 1))
+        #expect(TemplateFiller.hintRangeInDisplay(ofCell: "fest") == nil)
+    }
 }
