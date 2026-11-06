@@ -540,6 +540,7 @@ struct NoteEditorView: View {
             text: $title,
             focusRequest: titleFocusRequest,
             selection: titleSelection,
+            hidesText: titleHintRange != nil,
             onEndEditing: { Task { await commitTitle() } },
             onSubmit: {
                 // Weiter in den Text (zum ersten Beispieltext), das Verlassen
@@ -548,10 +549,20 @@ struct NoteEditorView: View {
             }
         )
         .frame(height: 44)
+        .overlay(alignment: .leading) { titleHintLabel }
         #else
         TextField(Vault.title(of: fileURL ?? url), text: $title)
             .font(.title.bold())
             .textFieldStyle(.plain)
+            // Am Mac deckt die Anzeige das Feld ab, ausser beim Bearbeiten: Ein
+            // durchsichtiges Feld liesse getippten Text unsichtbar.
+            .overlay(alignment: .leading) {
+                if !titleIsFocused {
+                    titleHintLabel
+                        .background(.background)
+                        .allowsHitTesting(false)
+                }
+            }
             .focused($titleIsFocused)
             .onSubmit { Task { await commitTitle() } }
             // Tab: weiter in den Text, zum ersten Beispieltext.
@@ -560,6 +571,37 @@ struct NoteEditorView: View {
                 return .handled
             }
         #endif
+    }
+
+    /// Stelle des Beispieltexts im Titel, solange er nicht überschrieben ist.
+    private var titleHintRange: NSRange? {
+        let value = Frontmatter.value(TemplateFiller.titleHintKey, in: Frontmatter.join(header: header, body: ""))
+        return TemplateFiller.titleHintRange(value: value, in: title)
+    }
+
+    /// Titel mit grauem, kursivem Beispieltext: Das Feld kann nur eine
+    /// Schrift, darum liegt die Anzeige darüber.
+    @ViewBuilder
+    private var titleHintLabel: some View {
+        if let range = titleHintRange {
+            let ns = title as NSString
+            Text("\(ns.substring(to: range.location))\(Text(ns.substring(with: range)).italic().foregroundStyle(.secondary))\(ns.substring(from: NSMaxRange(range)))")
+                .font(.title.bold())
+                .lineLimit(1)
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// Ist der Beispieltext überschrieben, fällt die Angabe im Kopf weg.
+    private func clearTitleHintIfNeeded() async {
+        guard let fileURL, titleHintRange == nil,
+              Frontmatter.value(TemplateFiller.titleHintKey, in: Frontmatter.join(header: header, body: "")) != nil
+        else { return }
+        header = Frontmatter.split(Frontmatter.setting(TemplateFiller.titleHintKey, to: nil, in: Frontmatter.join(header: header, body: ""))).header
+        if let modified = await store.write(Frontmatter.join(header: header, body: text), to: fileURL) {
+            savedText = text
+            savedModified = modified
+        }
     }
 
     private func commitTitle() async {
@@ -584,6 +626,7 @@ struct NoteEditorView: View {
         isRenaming = false
         // Was während des Umbenennens getippt wurde, jetzt unter dem neuen Namen sichern.
         await save()
+        await clearTitleHintIfNeeded()
     }
 
     /// Meldet sich beim Store, damit er vor Dateioperationen speichern kann,

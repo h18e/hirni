@@ -93,7 +93,7 @@ struct TemplatePlaceholderTests {
         #expect(created.url.lastPathComponent == "2026-10-30 – Thema.md")
         #expect(created.titleSelection == NSRange(location: 13, length: 5))
         let text = try test.vault.readNote(at: created.url)
-        #expect(text == "Text Lea\n")
+        #expect(Frontmatter.split(text).body == "Text Lea\n")
     }
 
     @Test func recognizesRenamedTemplatesFolder() throws {
@@ -256,5 +256,25 @@ struct TemplatePlaceholderTests {
             return
         }
         #expect((text as NSString).substring(with: range) == "{{? b}}")
+    }
+
+    @Test func cellPartsAndTitleHint() throws {
+        let parts = TemplateFiller.cellParts("ca. {{? Menge}} g")
+        #expect(parts.map(\.text) == ["ca. ", "Menge", " g"])
+        #expect(parts.map(\.isHint) == [false, true, false])
+        #expect(TemplateFiller.cellParts("{{? A}}").map(\.isHint) == [true])
+
+        let test = try TestVault()
+        try test.write("---\nnotiztitel: \"{{iso-datum}} – {{? Thema}}\"\n---\nText\n", to: "Vorlagen/T.md")
+        let template = test.vault.templatesURL.appending(path: "T.md")
+        let created = try test.vault.createNote(in: test.vault.inboxURL, fromTemplate: template, answers: [:], now: now)
+        let text = try test.vault.readNote(at: created.url)
+        let value = Frontmatter.value(TemplateFiller.titleHintKey, in: text)
+        #expect(value == "13|Thema")
+        let title = Vault.title(of: created.url)
+        #expect(TemplateFiller.titleHintRange(value: value, in: title) == NSRange(location: 13, length: 5))
+        #expect(TemplateFiller.titleHintRange(value: value, in: "2026-10-30 – Besprechung") == nil)
+        #expect(TemplateFiller.titleHintRange(value: value, in: "kurz") == nil)
+        #expect(TemplateFiller.titleHintRange(value: nil, in: title) == nil)
     }
 }

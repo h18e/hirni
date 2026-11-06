@@ -179,6 +179,39 @@ extension TemplateFiller {
         return hintPattern.stringByReplacingMatches(in: cell, range: NSRange(location: 0, length: (cell as NSString).length), withTemplate: "$1")
     }
 
+    /// Zelle in Stücke zerlegt: fester Text und Beispieltexte (`true`).
+    public static func cellParts(_ cell: String) -> [(text: String, isHint: Bool)] {
+        let ns = cell as NSString
+        var parts: [(text: String, isHint: Bool)] = []
+        var last = 0
+        for match in hintPattern.matches(in: cell, range: NSRange(location: 0, length: ns.length)) {
+            if match.range.location > last { parts.append((ns.substring(with: NSRange(last..<match.range.location)), false)) }
+            parts.append((ns.substring(with: match.range(at: 1)), true))
+            last = NSMaxRange(match.range)
+        }
+        if last < ns.length { parts.append((ns.substring(from: last), false)) }
+        return parts
+    }
+
+    /// Kopfzeile einer neuen Notiz, deren Titel noch einen Beispieltext
+    /// enthält: `titel-beispiel: "13|Thema"` (Stelle und Text). Der Titel ist
+    /// der Dateiname und kann die Klammern nicht tragen.
+    public static let titleHintKey = "titel-beispiel"
+
+    static func titleHintValue(_ range: NSRange, in title: String) -> String {
+        "\"\(range.location)|\((title as NSString).substring(with: range).replacingOccurrences(of: "\"", with: "'"))\""
+    }
+
+    /// Wo der Beispieltext im Titel steht; `nil`, sobald er überschrieben ist.
+    public static func titleHintRange(value: String?, in title: String) -> NSRange? {
+        guard let value, let bar = value.firstIndex(of: "|"), let location = Int(value[..<bar]) else { return nil }
+        let hint = value[value.index(after: bar)...]
+        let ns = title as NSString
+        let range = NSRange(location: location, length: (hint as NSString).length)
+        guard !hint.isEmpty, NSMaxRange(range) <= ns.length, ns.substring(with: range) == hint else { return nil }
+        return range
+    }
+
     /// Wo der erste Beispieltext in `displayCell(cell)` steht (UTF-16). So lässt
     /// sich beim Betreten nur er markieren, fester Text daneben bleibt.
     public static func hintRangeInDisplay(ofCell cell: String) -> NSRange? {
@@ -370,6 +403,9 @@ extension Vault {
         text = Frontmatter.setting(Self.rowKey, to: nil, in: text)
         text = Frontmatter.setting(Self.templateTitleKey, to: nil, in: text)
         text = Frontmatter.setting(NoteLink.idKey, to: nil, in: text)
+        if let titleSelection, titleSelection.length > 0 {
+            text = Frontmatter.setting(TemplateFiller.titleHintKey, to: TemplateFiller.titleHintValue(titleSelection, in: finalTitle), in: text)
+        }
 
         // {{stichtag: …}} aus Pendenzen-Zeilen herausnehmen und merken.
         var dueDates: [Int: Date] = [:]

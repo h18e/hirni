@@ -14,6 +14,8 @@ struct TitleField: UIViewRepresentable {
     let focusRequest: Int
     /// Beim Fokus diese Stelle markieren (z. B. Beispieltext aus einer Vorlage).
     var selection: NSRange?
+    /// Text unsichtbar: Der Beispieltext im Titel liegt als Anzeige darüber.
+    var hidesText = false
     /// Fokus verloren: Titel übernehmen.
     let onEndEditing: () -> Void
     /// Return: Titel übernehmen und weiter in den Text.
@@ -40,6 +42,7 @@ struct TitleField: UIViewRepresentable {
         context.coordinator.parent = self
         if field.text != text, !field.isFirstResponder { field.text = text }
         if field.placeholder != placeholder { field.placeholder = placeholder }
+        field.textColor = hidesText ? .clear : .label
         if context.coordinator.focusRequest != focusRequest {
             context.coordinator.focusRequest = focusRequest
             let selection = selection

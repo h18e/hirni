@@ -217,6 +217,11 @@ struct TableGrid: View {
             .frame(width: Self.gutterWidth, height: Self.rowHeight)
             ForEach(0..<table.columnCount, id: \.self) { column in
                 field(row, column)
+                    // Beispieltexte grau und kursiv: Das Feld kann nur eine
+                    // Schrift, darum liegt die Anzeige darüber. Das Feld selbst
+                    // durchsichtig zu machen geht nicht: Getippter Text bliebe
+                    // unsichtbar.
+                    .overlay(alignment: .leading) { hintOverlay(row, column) }
                     .focused($focusedCell, equals: TableCell(row: row, column: column))
                     #if os(iOS)
                     .onKeyPress(.tab) {
@@ -275,13 +280,38 @@ struct TableGrid: View {
         return rows.indices.contains(row) && rows[row].indices.contains(column) ? rows[row][column] : ""
     }
 
-    /// Besteht die Zelle nur aus einem Beispieltext, erscheint er grau als
-    /// Platzhalter des Felds: Tippen ersetzt ihn.
-    private func prompt(_ row: Int, _ column: Int) -> Text? {
-        guard !model.hintsAsText, let hint = TemplateFiller.hintText(ofCell: rawCell(row, column)) else {
-            return row == 0 ? Text("Titel") : nil
+    private func hasHint(_ row: Int, _ column: Int) -> Bool {
+        !model.hintsAsText && rawCell(row, column).contains("{{?")
+    }
+
+    /// Nur Beispieltext: Das Feld ist leer, die Anzeige liegt durchsichtig
+    /// darüber. Mit festem Text deckt sie das Feld ab, ausser beim Bearbeiten
+    /// (dort ist der Beispieltext markiert).
+    @ViewBuilder
+    private func hintOverlay(_ row: Int, _ column: Int) -> some View {
+        if hasHint(row, column) {
+            let raw = rawCell(row, column)
+            if TemplateFiller.hintText(ofCell: raw) != nil {
+                hintLabel(raw)
+            } else if focusedCell != TableCell(row: row, column: column) {
+                hintLabel(raw)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                    .background(.background)
+                    .allowsHitTesting(false)
+            }
         }
-        return Text(hint)
+    }
+
+    private func hintLabel(_ raw: String) -> some View {
+        TemplateFiller.cellParts(raw).reduce(Text("")) { label, part in
+            part.isHint ? Text("\(label)\(Text(part.text).italic().foregroundStyle(.secondary))") : Text("\(label)\(part.text)")
+        }
+        .lineLimit(1)
+        .allowsHitTesting(false)
+    }
+
+    private func prompt(_ row: Int, _ column: Int) -> Text? {
+        row == 0 && !hasHint(row, column) ? Text("Titel") : nil
     }
 
     private func cell(_ row: Int, _ column: Int) -> Binding<String> {

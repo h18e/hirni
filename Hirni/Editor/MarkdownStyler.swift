@@ -172,10 +172,7 @@ enum MarkdownStyler {
         case .textColor(let color):
             storage.addAttribute(.foregroundColor, value: Colors.text(color), range: range)
         case .hint:
-            storage.addAttributes([
-                .foregroundColor: Colors.syntax,
-                .backgroundColor: Colors.tagBackground,
-            ], range: range)
+            storage.addAttribute(.foregroundColor, value: Colors.secondary, range: range)
             addTraits(italic: true, in: range, of: storage)
         case .embed:
             // Der Verweis selbst ist nur grau (über `.syntax`), das Bild kommt darunter.
