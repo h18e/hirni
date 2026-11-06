@@ -95,4 +95,51 @@ struct TemplatePlaceholderTests {
         let text = try test.vault.readNote(at: created.url)
         #expect(text == "Text Lea\n")
     }
+
+    @Test func recognizesRenamedTemplatesFolder() throws {
+        for name in ["Vorlagen", "00 Vorlagen", "00_Vorlagen", "01-vorlagen", "7.Vorlagen"] {
+            #expect(VaultLayout.isTemplatesFolder(named: name))
+        }
+        for name in ["Alte Vorlagen", "Vorlagen alt", "10_Ferienplanung", "_Vorlagen"] {
+            #expect(!VaultLayout.isTemplatesFolder(named: name))
+        }
+
+        let test = try TestVault()
+        let manager = FileManager.default
+        try manager.moveItem(at: test.vault.root.appending(path: "Vorlagen"), to: test.vault.root.appending(path: "00 Vorlagen"))
+        try test.write("- [ ] In Vorlage #vorlage\n{{nr}}\n", to: "00 Vorlagen/Protokoll.md")
+        try test.write("- [ ] Echte Pendenz\n", to: "Inbox/A.md")
+        // Altes Hirni hat einen leeren «Vorlagen» daneben angelegt.
+        try manager.createDirectory(at: test.vault.root.appending(path: "Vorlagen"), withIntermediateDirectories: true)
+
+        #expect(test.vault.templatesURL.lastPathComponent == "00 Vorlagen")
+        #expect(test.vault.templates().map(\.name) == ["Protokoll"])
+        #expect(test.vault.allTasks().map(\.text) == ["Echte Pendenz"])
+        #expect(test.vault.allTags().isEmpty)
+
+        try VaultLayout.prepare(root: test.vault.root)
+        #expect(!test.exists("Vorlagen"))
+
+        // Nummern früherer Stände (mit Pfad als Schlüssel) gehen weiter.
+        var state = TemplateState()
+        state.vorlagen["Vorlagen/Protokoll.md"] = .init(nr: 4)
+        try test.vault.saveTemplateState(state)
+        let note = try test.vault.createNote(in: test.vault.inboxURL, fromTemplate: test.vault.templates()[0].url)
+        #expect(try test.vault.readNote(at: note).contains("5"))
+        #expect(test.vault.templateState().vorlagen.keys.sorted() == ["Protokoll.md"])
+    }
+
+    @Test func templatesFolderWithContentIsKeptAndCreatedWhenMissing() throws {
+        let test = try TestVault()
+        let manager = FileManager.default
+        try test.write("Alt\n", to: "Vorlagen/Alt.md")
+        try manager.createDirectory(at: test.vault.root.appending(path: "00 Vorlagen"), withIntermediateDirectories: true)
+        try VaultLayout.prepare(root: test.vault.root)
+        #expect(test.exists("Vorlagen/Alt.md"))
+
+        try manager.removeItem(at: test.vault.root.appending(path: "00 Vorlagen"))
+        try manager.removeItem(at: test.vault.root.appending(path: "Vorlagen"))
+        try VaultLayout.prepare(root: test.vault.root)
+        #expect(test.exists("Vorlagen"))
+    }
 }

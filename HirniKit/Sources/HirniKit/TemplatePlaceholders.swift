@@ -251,6 +251,19 @@ struct TemplateState: Codable {
         var letzte: String?
     }
     var vorlagen: [String: Entry] = [:]
+
+    /// Schlüssel ist der Dateiname, damit Nummer und letzte Notiz ein
+    /// Umbenennen des Ordners überstehen. Frühere Stände nannten den Pfad.
+    func entry(for template: URL) -> Entry? {
+        let name = template.lastPathComponent
+        return vorlagen[name] ?? vorlagen.first { $0.key.hasSuffix("/" + name) }?.value
+    }
+
+    mutating func set(_ entry: Entry, for template: URL) {
+        let name = template.lastPathComponent
+        vorlagen = vorlagen.filter { !$0.key.hasSuffix("/" + name) }
+        vorlagen[name] = entry
+    }
 }
 
 extension Vault {
@@ -300,8 +313,7 @@ extension Vault {
         let name = templateTitlePattern(template, source: source)
         let everything = name + "\n" + source
         var context = TemplateContext(date: now, values: values, answers: answers)
-        let key = relativePath(of: template) ?? template.lastPathComponent
-        let state = templateState().vorlagen[key]
+        let state = templateState().entry(for: template)
         if everything.range(of: "{{nr}}", options: .caseInsensitive) != nil { context.number = (state?.nr ?? 0) + 1 }
         if let path = state?.letzte, FileManager.default.fileExists(atPath: root.appending(path: path).path(percentEncoded: false)) {
             context.previous = (Self.title(of: root.appending(path: path)), path)
@@ -387,13 +399,12 @@ extension Vault {
             }
             try saveDueDates(dates)
         }
-        let key = relativePath(of: template) ?? template.lastPathComponent
         var state = templateState()
-        var entry = state.vorlagen[key] ?? .init()
+        var entry = state.entry(for: template) ?? .init()
         let source = (try? readNote(at: template)) ?? ""
         if (Self.title(of: template) + source).range(of: "{{nr}}", options: .caseInsensitive) != nil { entry.nr = (entry.nr ?? 0) + 1 }
         entry.letzte = relativePath(of: url)
-        state.vorlagen[key] = entry
+        state.set(entry, for: template)
         try saveTemplateState(state)
     }
 }

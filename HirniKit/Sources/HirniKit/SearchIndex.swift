@@ -59,6 +59,7 @@ public actor SearchIndex {
 
         var seen = Set<String>()
         var changed = 0
+        let templates = vault.templatesURL
         try Self.exec(db, "BEGIN")
         do {
             for url in vault.allNoteURLs() + vault.allDatabaseURLs() {
@@ -72,7 +73,7 @@ public actor SearchIndex {
                 } else {
                     let body = Frontmatter.split(text).body
                     // Tags in Vorlagen zählen nicht (sonst stünden sie in der Tag-Liste).
-                    let tags = url.isInside(vault.templatesURL) ? [] : MarkdownSyntax.tags(in: body)
+                    let tags = url.isInside(templates) ? [] : MarkdownSyntax.tags(in: body)
                     try store(path: path, title: Vault.title(of: url), body: body, tags: tags, modified: modified)
                 }
                 changed += 1
@@ -82,8 +83,8 @@ public actor SearchIndex {
                 changed += 1
             }
             // Ältere Index-Stände enthalten noch Tags aus Vorlagen.
-            if let templates = vault.relativePath(of: vault.templatesURL) {
-                try run("DELETE FROM tags WHERE path LIKE ? ESCAPE '\\'", Self.likePrefix(templates))
+            if let path = vault.relativePath(of: templates) {
+                try run("DELETE FROM tags WHERE path LIKE ? ESCAPE '\\'", Self.likePrefix(path))
             }
             try Self.exec(db, "COMMIT")
         } catch {

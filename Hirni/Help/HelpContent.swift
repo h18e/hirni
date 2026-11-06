@@ -80,6 +80,7 @@ extension HelpTopic {
         sections: [
             .init(title: "So funktioniert's", items: [
                 "Jede Notiz im Ordner **Vorlagen** ist eine Vorlage. Du bearbeitest sie wie jede Notiz.",
+                "Der Ordner darf zum Sortieren eine Nummer davor haben, z. B. `00 Vorlagen` oder `00_Vorlagen`. Ein ganz anderer Name geht nicht, sonst erkennt Hirni ihn nicht als Vorlagen-Ordner.",
                 "**Neue Notiz aus Vorlage:** Stift → Vorlage wählen.",
                 "**Name und Titel:** Die Vorlage selbst hat einen kurzen Namen (z. B. «Besprechung»). Darunter steht das Feld **Titel neuer Notizen** – dort kommt der Titel mit Platzhaltern hin, z. B. `{{iso-datum}} – {{? Thema}}`. Leer = neue Notizen heissen wie die Vorlage.",
                 "Vorlagen, deren Name noch Platzhalter enthält, stellt Hirni beim Start automatisch so um.",

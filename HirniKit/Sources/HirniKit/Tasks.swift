@@ -172,8 +172,9 @@ public enum TaskError: LocalizedError {
 extension Vault {
     /// Alle Pendenzen im Hirni-Ordner, ohne Vorlagen.
     public func allTasks() -> [TaskItem] {
-        allNoteURLs()
-            .filter { !$0.isInside(templatesURL) }
+        let templates = templatesURL
+        return allNoteURLs()
+            .filter { !$0.isInside(templates) }
             .flatMap { url -> [TaskItem] in
                 guard let text = try? String(contentsOf: url, encoding: .utf8), text.contains("[") else { return [] }
                 return TaskLine.tasks(in: text, note: url)

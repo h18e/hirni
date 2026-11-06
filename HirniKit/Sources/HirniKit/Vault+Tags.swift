@@ -7,7 +7,8 @@ extension Vault {
     public func allTags() -> [(name: String, count: Int)] {
         var counts: [String: (name: String, count: Int)] = [:]
         // Tags in Vorlagen zählen nicht: Sie stehen erst in den neuen Notizen.
-        for url in allNoteURLs() where !url.isInside(templatesURL) {
+        let templates = templatesURL
+        for url in allNoteURLs() where !url.isInside(templates) {
             guard let text = try? String(contentsOf: url, encoding: .utf8) else { continue }
             for tag in MarkdownSyntax.tags(in: Frontmatter.split(text).body) {
                 counts[tag.lowercased(), default: (tag, 0)].count += 1

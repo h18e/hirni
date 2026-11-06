@@ -83,7 +83,8 @@ public enum TemplateFiller {
 
 extension Vault {
     public var templatesURL: URL {
-        root.appending(path: VaultLayout.templatesFolderName, directoryHint: .isDirectory)
+        VaultLayout.templatesFolder(in: root)
+            ?? root.appending(path: VaultLayout.templatesFolderName, directoryHint: .isDirectory)
     }
 
     /// Alle Vorlagen, alphabetisch. Datenbanken im Ordner zählen nicht.
