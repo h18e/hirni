@@ -59,6 +59,49 @@ public struct MarkdownTable: Equatable, Sendable {
         return row + 1 < rows.count ? (row + 1, 0) : nil
     }
 
+    /// Wohin Tab aus einer Zelle führt.
+    public enum TabTarget: Equatable, Sendable {
+        /// Der nächste Beispieltext, in dieser Tabelle oder dahinter.
+        case hint(NSRange)
+        case cell(row: Int, column: Int)
+        /// Hinter die Tabelle: Es gibt nichts mehr zu tun.
+        case afterTable
+    }
+
+    /// Von Beispieltext zu Beispieltext: Zellen ohne Beispieltext zählen nicht.
+    /// Nach dem letzten geht es wieder zum ersten. Gibt es im Text gar keinen
+    /// (mehr), führt Tab wie gewohnt von Zelle zu Zelle.
+    public func tabTarget(fromRow row: Int, column: Int, in text: String) -> TabTarget {
+        let end = endLocation(ofRow: row, column: column, in: text) ?? NSMaxRange(range)
+        if let hint = TemplateFiller.nextHint(from: end, in: text) { return .hint(hint) }
+        if let next = nextCell(afterRow: row, column: column) { return .cell(row: next.row, column: next.column) }
+        return .afterTable
+    }
+
+    /// Das Ende einer Zelle im Text (das `|` dahinter).
+    func endLocation(ofRow row: Int, column: Int, in text: String) -> Int? {
+        let ns = text as NSString
+        let lines = ns.substring(with: range).components(separatedBy: "\n")
+        // Die Trennzeile zählt im Text mit, in `rows` nicht.
+        let lineIndex = row == 0 ? 0 : row + 1
+        guard lines.indices.contains(lineIndex) else { return nil }
+        var location = range.location + lines[..<lineIndex].reduce(0) { $0 + ($1 as NSString).length + 1 }
+        var pipes = 0
+        var escaped = false
+        for unit in lines[lineIndex].utf16 {
+            if escaped {
+                escaped = false
+            } else if unit == 0x5C {
+                escaped = true
+            } else if unit == 0x7C {
+                pipes += 1
+                if pipes == column + 2 { return location }
+            }
+            location += 1
+        }
+        return location
+    }
+
     /// Zeile und Spalte der Zelle an Stelle `location` im Text (Zeile 0 = Kopf).
     /// `nil` ausserhalb der Tabelle und in der Trennzeile.
     public func cell(at location: Int, in text: String) -> (row: Int, column: Int)? {

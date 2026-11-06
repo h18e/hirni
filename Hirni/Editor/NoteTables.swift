@@ -22,11 +22,11 @@ final class NoteTables {
 
     /// In Vorlagen sind Beispieltexte gewöhnlicher Text, mit Klammern.
     var hintsAsText = false
-    /// Tab in der letzten Zelle der Tabelle an Position `index`.
-    var onTabOut: (_ index: Int) -> Void = { _ in }
+    /// Tab in einer Zelle der Tabelle an Position `index`.
+    var onTab: (_ index: Int, _ cell: TableCell) -> Void = { _, _ in }
     /// Die Zelle mit dem Fokus. Tab behandelt Hirni selbst: Das System würde
     /// aus der letzten Zelle zum nächsten Eingabefeld springen, also in die
-    /// nächste Tabelle, und Beispieltexte im Text dazwischen auslassen.
+    /// nächste Tabelle, und Beispieltexte dazwischen auslassen.
     var focused: (model: TableModel, cell: TableCell)?
 
     #if os(macOS)
@@ -71,8 +71,8 @@ final class NoteTables {
         TableGrid.height(rows: table.rows.count)
     }
 
-    fileprivate func tabOut(of model: TableModel) {
-        onTabOut(model.index)
+    fileprivate func tab(in model: TableModel, from cell: TableCell) {
+        onTab(model.index, cell)
     }
 
     fileprivate func changed(_ model: TableModel, rowCountChanged: Bool) {
@@ -101,13 +101,9 @@ final class TableModel {
         self.owner = owner
     }
 
-    /// Tab: zur nächsten Zelle, aus der letzten weiter im Text.
+    /// Tab: zum nächsten Beispieltext (siehe `MarkdownTable.tabTarget`).
     func tab(from cell: TableCell) {
-        if let next = table.nextCell(afterRow: cell.row, column: cell.column) {
-            focusRequest = TableCell(row: next.row, column: next.column)
-        } else {
-            owner?.tabOut(of: self)
-        }
+        owner?.tab(in: self, from: cell)
     }
 
     /// Meldet die Zelle mit dem Fokus (`nil` = keine mehr in dieser Tabelle).

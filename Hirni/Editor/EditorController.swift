@@ -47,7 +47,7 @@ final class EditorController {
         overlays.onTap = { [weak self] url in self?.previewURL = url }
         // Änderungen im Tabellen-Raster zurück in den Markdown-Text.
         overlays.tables.onChange = { [weak self] index, table in self?.replaceTable(at: index, with: table) }
-        overlays.tables.onTabOut = { [weak self] index in self?.tabOut(ofTable: index) }
+        overlays.tables.onTab = { [weak self] index, cell in self?.tab(inTable: index, from: cell) }
         #if os(iOS)
         overlays.tables.onDragging = { [weak self] dragging in
             self?.textView?.panGestureRecognizer.isEnabled = !dragging
@@ -434,18 +434,21 @@ final class EditorController {
         textView.scrollRangeToVisible(target)
     }
 
-    /// Tab aus der letzten Zelle einer Tabelle: zum nächsten Beispieltext
-    /// dahinter. Ohne Beispieltext auf die Zeile nach der Tabelle.
-    private func tabOut(ofTable index: Int) {
+    /// Tab in einer Tabellenzelle: zum nächsten Beispieltext, nicht einfach
+    /// zur nächsten Zelle.
+    private func tab(inTable index: Int, from cell: TableCell) {
         guard let text = currentText else { return }
         let tables = MarkdownTable.tables(in: text)
         guard tables.indices.contains(index) else { return }
-        let end = NSMaxRange(tables[index].range)
-        guard let hint = TemplateFiller.nextHint(from: end, in: text) else {
-            selectInText(NSRange(location: min(end + 1, (text as NSString).length), length: 0))
-            return
+        let table = tables[index]
+        switch table.tabTarget(fromRow: cell.row, column: cell.column, in: text) {
+        case .hint(let hint):
+            if !focusCell(at: hint.location, in: text) { selectInText(hint) }
+        case .cell(let row, let column):
+            overlays.tables.model(at: index).focusRequest = TableCell(row: row, column: column)
+        case .afterTable:
+            selectInText(NSRange(location: min(NSMaxRange(table.range) + 1, (text as NSString).length), length: 0))
         }
-        if !focusCell(at: hint.location, in: text) { selectInText(hint) }
     }
 
     /// Fokus in den Text, Auswahl setzen.

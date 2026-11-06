@@ -213,4 +213,48 @@ struct TemplatePlaceholderTests {
         #expect(TemplateFiller.hintRangeInDisplay(ofCell: "{{? A}} und {{? B}}") == NSRange(location: 0, length: 1))
         #expect(TemplateFiller.hintRangeInDisplay(ofCell: "fest") == nil)
     }
+
+    @Test func tabSkipsCellsWithoutHint() throws {
+        // Wie «REZEPT»: letzte Spalte mit Beispieltext, erste Spalte fest.
+        let text = "| Z | M |\n|---|---|\n| Mehl | {{? a}} |\n| Salz | {{? b}} |\n| Ei | fest |\n\n{{? Text}}\n"
+        let ns = text as NSString
+        let table = try #require(MarkdownTable.tables(in: text).first)
+        func target(_ row: Int, _ column: Int) -> String? {
+            guard case .hint(let range) = table.tabTarget(fromRow: row, column: column, in: text) else { return nil }
+            return ns.substring(with: range)
+        }
+        #expect(target(1, 1) == "{{? b}}") // nicht in «Salz»
+        #expect(target(2, 1) == "{{? Text}}") // nicht in «Ei»
+        #expect(target(3, 0) == "{{? Text}}")
+
+        // Vor dem Ende der Zelle zählt nichts: Spalte 0 führt zur Spalte 1 derselben Zeile.
+        #expect(target(1, 0) == "{{? a}}")
+
+        // Nach dem letzten wieder zum ersten.
+        let filled = "| Z |\n|---|\n| {{? a}} |\n| fertig |\n"
+        let second = try #require(MarkdownTable.tables(in: filled).first)
+        guard case .hint(let wrapped) = second.tabTarget(fromRow: 2, column: 0, in: filled) else {
+            Issue.record("sollte zum ersten springen")
+            return
+        }
+        #expect((filled as NSString).substring(with: wrapped) == "{{? a}}")
+    }
+
+    @Test func tabWithoutHintsMovesCellByCell() throws {
+        let text = "| A | B |\n|---|---|\n| x | y |\n"
+        let table = try #require(MarkdownTable.tables(in: text).first)
+        #expect(table.tabTarget(fromRow: 1, column: 0, in: text) == .cell(row: 1, column: 1))
+        #expect(table.tabTarget(fromRow: 0, column: 1, in: text) == .cell(row: 1, column: 0))
+        #expect(table.tabTarget(fromRow: 1, column: 1, in: text) == .afterTable)
+    }
+
+    @Test func tabCountsEscapedPipesAndUmlauts() throws {
+        let text = "Über\n| A \\| ä | B |\n|---|---|\n| x \\| ü | {{? b}} |\n"
+        let table = try #require(MarkdownTable.tables(in: text).first)
+        guard case .hint(let range) = table.tabTarget(fromRow: 1, column: 0, in: text) else {
+            Issue.record("Beispieltext erwartet")
+            return
+        }
+        #expect((text as NSString).substring(with: range) == "{{? b}}")
+    }
 }
