@@ -67,13 +67,24 @@ final class VaultStore {
     }
     var selectedNote: URL? {
         didSet {
-            if let selectedNote { tabs.show(selectedNote) }
+            if let selectedNote {
+                if addingTab {
+                    addingTab = false
+                    tabs.openNew(selectedNote)
+                } else {
+                    tabs.show(selectedNote)
+                }
+            }
             // Wegnavigieren speichert den offenen Editor. Darauf, dass SwiftUI
             // beim Zurückgehen «verschwunden» meldet, ist auf dem iPhone kein Verlass.
             guard oldValue != selectedNote, let oldValue, let editor = openEditor, editor.url == oldValue else { return }
             Task { await editor.flush() }
         }
     }
+
+    /// Nach dem + der Tab-Leiste: Die nächste geöffnete Notiz wird zum neuen Tab.
+    private(set) var addingTab = false
+    @ObservationIgnored private var selectionBeforeAddingTab: SidebarItem? = .inbox
 
     /// Die offenen Notizen als Tabs. Im Hauptfenster bleiben sie über einen
     /// Neustart erhalten, abgelöste Fenster merkt sich das System selbst.
@@ -139,6 +150,29 @@ final class VaultStore {
                 active: active.map { vault.root.appending(path: $0) }
             )
         }
+    }
+
+    /// Eigenes Fenster ohne Seitenleiste und Liste.
+    var isNoteWindow: Bool { !keepsTabs }
+
+    /// Das + der Tab-Leiste: Die nächste geöffnete Notiz wird zum neuen Tab.
+    func beginAddingTab() {
+        addingTab = true
+        #if os(iOS)
+        selectedNote = nil
+        // Ohne Auswahl zeigt das iPhone die Seitenleiste.
+        selectionBeforeAddingTab = sidebarSelection
+        sidebarSelection = nil
+        #endif
+    }
+
+    /// Zurück zum Tab, von dem aus das + gedrückt wurde.
+    func cancelAddingTab() {
+        addingTab = false
+        #if os(iOS)
+        sidebarSelection = selectionBeforeAddingTab
+        #endif
+        selectedNote = tabs.active
     }
 
     /// «In neuem Tab öffnen».

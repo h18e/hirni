@@ -7,6 +7,8 @@ import SwiftUI
 struct LibraryView: View {
     @State private var store: VaultStore
     @Environment(\.scenePhase) private var scenePhase
+    /// iPhone: die sichtbare Ebene. Hirni startet in der Inbox.
+    @State private var compactColumn = NavigationSplitViewColumn.content
     /// Eigenes Fenster: zeigt nur diese Notizen, ohne Seitenleiste und Liste.
     private let windowNotes: [URL]?
 
@@ -50,23 +52,38 @@ struct LibraryView: View {
         if windowNotes != nil {
             NavigationStack { detail }
         } else {
-            NavigationSplitView {
+            NavigationSplitView(preferredCompactColumn: $compactColumn) {
                 SidebarView()
+                    .modifier(hint)
             } content: {
-                if store.sidebarSelection == .trash {
-                    TrashListView()
-                } else if store.sidebarSelection == .tasks {
-                    TasksView()
-                } else if store.sidebarSelection == .help {
-                    HelpListView()
-                } else {
-                    NoteListView()
+                Group {
+                    if store.sidebarSelection == .trash {
+                        TrashListView()
+                    } else if store.sidebarSelection == .tasks {
+                        TasksView()
+                    } else if store.sidebarSelection == .help {
+                        HelpListView()
+                    } else {
+                        NoteListView()
+                    }
                 }
+                .modifier(hint)
             } detail: {
                 detail
             }
+            #if os(iOS)
+            .onChange(of: store.addingTab) { _, adding in
+                if adding {
+                    compactColumn = .sidebar
+                } else if store.selectedNote != nil {
+                    compactColumn = .detail
+                }
+            }
+            #endif
         }
     }
+
+    private var hint: AddingTabHint { AddingTabHint(isShown: store.addingTab) { store.cancelAddingTab() } }
 
     @ViewBuilder
     private var detail: some View {
@@ -111,5 +128,32 @@ struct LibraryView: View {
             get: { store.errorMessage != nil },
             set: { if !$0 { store.errorMessage = nil } }
         )
+    }
+}
+
+/// iPhone: Hinweis, solange die nächste Notiz als neuer Tab aufgeht.
+private struct AddingTabHint: ViewModifier {
+    let isShown: Bool
+    let cancel: () -> Void
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content.safeAreaInset(edge: .top, spacing: 0) {
+            if isShown {
+                HStack {
+                    Label("Notiz für neuen Tab wählen", systemImage: "plus.rectangle.on.rectangle")
+                        .font(.subheadline.weight(.medium))
+                    Spacer()
+                    Button("Abbrechen", action: cancel)
+                        .font(.subheadline)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(.bar)
+            }
+        }
+        #else
+        content
+        #endif
     }
 }

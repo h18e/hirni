@@ -19,18 +19,30 @@ struct NoteTabBar: View {
     var body: some View {
         HStack(spacing: 0) {
             tabs
-            Button("Notiz in neuem Tab öffnen", systemImage: "plus") {
-                #if os(iOS)
-                hideKeyboard()
-                #endif
-                picksNewTab = true
+            if store.addingTab {
+                Text("Notiz für neuen Tab wählen")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Button("Abbrechen", systemImage: "xmark") { store.cancelAddingTab() }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .frame(width: 32, height: 40)
+            } else {
+                Button("Notiz in neuem Tab öffnen", systemImage: "plus") {
+                    #if os(iOS)
+                    hideKeyboard()
+                    #endif
+                    // Ein eigenes Fenster hat keine Seitenleiste zum Auswählen.
+                    if store.isNoteWindow { picksNewTab = true } else { store.beginAddingTab() }
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.plain)
+                .foregroundStyle(.tint)
+                .frame(width: 44, height: 40)
+                .contentShape(Rectangle())
+                .help("Notiz in neuem Tab öffnen")
             }
-            .labelStyle(.iconOnly)
-            .buttonStyle(.plain)
-            .foregroundStyle(.tint)
-            .frame(width: 44, height: 40)
-            .contentShape(Rectangle())
-            .help("Notiz in neuem Tab öffnen")
         }
         .sheet(isPresented: $picksNewTab) {
             NoteLinkPicker(excluding: store.selectedNote, title: "Notiz in neuem Tab") { target in
