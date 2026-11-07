@@ -11,8 +11,15 @@ final class NotePDF: NSObject, WKNavigationDelegate {
     static let a4 = CGSize(width: 595.2, height: 841.8)
     static let margin: CGFloat = 46
 
-    private let webView = WKWebView(frame: CGRect(origin: .zero, size: a4))
+    private let webView: WKWebView = {
+        let configuration = WKWebViewConfiguration()
+        // Sonst fehlen Markierungen und Farbflächen im Ausdruck.
+        configuration.preferences.shouldPrintBackgrounds = true
+        return WKWebView(frame: CGRect(origin: .zero, size: a4), configuration: configuration)
+    }()
     private var loaded: CheckedContinuation<Void, Error>?
+    /// So lange darf die Web-Ansicht zum Laden brauchen.
+    private static let loadTimeout = Duration.seconds(20)
 
     /// PDF einer Notiz als Datei im temporären Ordner («Titel.pdf»).
     static func file(for note: URL, store: VaultStore) async throws -> URL {
@@ -30,6 +37,11 @@ final class NotePDF: NSObject, WKNavigationDelegate {
 
     func render(_ html: String) async throws -> Data {
         webView.navigationDelegate = self
+        let timeout = Task { [weak self] in
+            try await Task.sleep(for: Self.loadTimeout)
+            self?.finishLoading(.failure(NotePDFError.notRendered))
+        }
+        defer { timeout.cancel() }
         try await withCheckedThrowingContinuation { continuation in
             loaded = continuation
             webView.loadHTMLString(html, baseURL: nil)
@@ -37,18 +49,28 @@ final class NotePDF: NSObject, WKNavigationDelegate {
         return try await paginate()
     }
 
+    /// Beendet das Warten auf die Web-Ansicht. Ohne diese Rückmeldung bliebe
+    /// der Export für immer hängen.
+    private func finishLoading(_ result: Result<Void, Error>) {
+        loaded?.resume(with: result)
+        loaded = nil
+    }
+
     nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        MainActor.assumeIsolated {
-            loaded?.resume()
-            loaded = nil
-        }
+        MainActor.assumeIsolated { finishLoading(.success(())) }
     }
 
     nonisolated func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        MainActor.assumeIsolated {
-            loaded?.resume(throwing: error)
-            loaded = nil
-        }
+        MainActor.assumeIsolated { finishLoading(.failure(error)) }
+    }
+
+    nonisolated func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        MainActor.assumeIsolated { finishLoading(.failure(error)) }
+    }
+
+    /// Der Prozess der Web-Ansicht ist abgestürzt oder liess sich nicht starten.
+    nonisolated func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        MainActor.assumeIsolated { finishLoading(.failure(NotePDFError.notRendered)) }
     }
 
     #if os(iOS)
@@ -109,11 +131,20 @@ final class NotePDF: NSObject, WKNavigationDelegate {
         return try Data(contentsOf: url)
     }
 
-    @objc private func printOperationDidRun(_ operation: NSPrintOperation, success: Bool, contextInfo: UnsafeMutableRawPointer?) {
-        printed?.resume(returning: success)
-        printed = nil
+    /// AppKit ruft das auf seinem eigenen Druck-Thread auf.
+    @objc private nonisolated func printOperationDidRun(_ operation: NSPrintOperation, success: Bool, contextInfo: UnsafeMutableRawPointer?) {
+        Task { @MainActor in
+            printed?.resume(returning: success)
+            printed = nil
+        }
     }
     #endif
+}
+
+enum NotePDFError: LocalizedError {
+    case notRendered
+
+    var errorDescription: String? { "Die Notiz liess sich nicht als Seite darstellen." }
 }
 
 /// Zum Teilen: Das PDF entsteht erst, wenn es gebraucht wird.
@@ -123,7 +154,15 @@ struct NotePDFExport: Transferable {
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .pdf) { export in
-            SentTransferredFile(try await NotePDF.file(for: export.note, store: export.store))
+            do {
+                return SentTransferredFile(try await NotePDF.file(for: export.note, store: export.store))
+            } catch {
+                // Das Teilen-Menü meldet Fehler selbst nicht.
+                await MainActor.run {
+                    export.store.errorMessage = "Das PDF liess sich nicht erstellen: \(error.localizedDescription)"
+                }
+                throw error
+            }
         }
         .suggestedFileName { Vault.title(of: $0.note) + ".pdf" }
     }
