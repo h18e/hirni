@@ -16,8 +16,9 @@ extension HelpTopic {
                 "Die Notizliste ist nach «zuletzt geändert» sortiert, angepinnte Notizen stehen oben.",
             ]),
             .init(title: "Mehrere Notizen offen haben", items: [
-                "**Neuer Tab:** Notiz in der Liste lange drücken (iPhone) bzw. Rechtsklick (Mac) → «In neuem Tab öffnen».",
-                "Ab zwei Tabs steht die Leiste über dem Text: Antippen wechselt, ✕ schliesst den Tab, die Notiz bleibt erhalten.",
+                "**Neuer Tab aus einer offenen Notiz:** in der Tab-Leiste über dem Text auf + tippen und die Notiz auswählen. Die aktuelle Notiz bleibt als Tab offen.",
+                "**Neuer Tab aus der Liste:** Notiz lange drücken (iPhone) bzw. Rechtsklick (Mac) → «In neuem Tab öffnen».",
+                "In der Tab-Leiste wechselt Antippen die Notiz, ✕ schliesst den Tab, die Notiz bleibt erhalten. Auf dem iPhone steht die Leiste immer über der Notiz, am Mac ab zwei Tabs.",
                 "Eine normal geöffnete Notiz ersetzt den aktuellen Tab, wie im Browser. So sammeln sich beim Durchblättern keine Tabs an. Hat die Notiz schon einen Tab, springt Hirni dorthin.",
                 "Die Tabs bleiben nach einem Neustart erhalten.",
                 "**Mac – Tab ablösen:** Tab aus der Leiste nach unten ziehen oder Rechtsklick → «In eigenes Fenster». Mehrere Tabs markierst du mit ⌘-Klick; sie wandern gemeinsam in ein Fenster.",

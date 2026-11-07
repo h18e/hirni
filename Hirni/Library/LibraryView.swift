@@ -78,7 +78,7 @@ struct LibraryView: View {
             }
         } else if let url = store.selectedNote {
             VStack(spacing: 0) {
-                if store.tabs.urls.count > 1 {
+                if showsTabBar {
                     NoteTabBar()
                     Divider()
                 }
@@ -95,6 +95,15 @@ struct LibraryView: View {
         } else {
             ContentUnavailableView("Keine Notiz ausgewählt", systemImage: "note.text")
         }
+    }
+
+    /// iPhone: immer, wegen des Knopfs für einen neuen Tab. Mac: ab zwei Tabs.
+    private var showsTabBar: Bool {
+        #if os(iOS)
+        true
+        #else
+        store.tabs.urls.count > 1
+        #endif
     }
 
     private var errorIsPresented: Binding<Bool> {

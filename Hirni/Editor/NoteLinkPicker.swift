@@ -7,6 +7,7 @@ struct NoteLinkPicker: View {
     @Environment(\.dismiss) private var dismiss
     /// Die offene Notiz: ein Link auf sich selbst ergibt keinen Sinn.
     let excluding: URL?
+    var title = "Link auf Notiz"
     let select: (NoteLink.Target) -> Void
     @State private var targets: [NoteLink.Target] = []
     @State private var query = ""
@@ -41,7 +42,7 @@ struct NoteLinkPicker: View {
                 if filtered.isEmpty, !targets.isEmpty { ContentUnavailableView.search(text: query) }
             }
             .searchable(text: $query, prompt: "Notiz suchen")
-            .navigationTitle("Link auf Notiz")
+            .navigationTitle(title)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

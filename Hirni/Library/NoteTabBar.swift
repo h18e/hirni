@@ -14,8 +14,32 @@ struct NoteTabBar: View {
     /// Mit ⌘-Klick markierte Tabs, zum gemeinsamen Ablösen.
     @State private var marked: Set<URL> = []
     #endif
+    @State private var picksNewTab = false
 
     var body: some View {
+        HStack(spacing: 0) {
+            tabs
+            Button("Notiz in neuem Tab öffnen", systemImage: "plus") {
+                #if os(iOS)
+                hideKeyboard()
+                #endif
+                picksNewTab = true
+            }
+            .labelStyle(.iconOnly)
+            .buttonStyle(.plain)
+            .foregroundStyle(.tint)
+            .frame(width: 44, height: 40)
+            .contentShape(Rectangle())
+            .help("Notiz in neuem Tab öffnen")
+        }
+        .sheet(isPresented: $picksNewTab) {
+            NoteLinkPicker(excluding: store.selectedNote, title: "Notiz in neuem Tab") { target in
+                store.openInNewTab(target.url)
+            }
+        }
+    }
+
+    private var tabs: some View {
         ScrollViewReader { scroller in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
@@ -72,14 +96,19 @@ struct NoteTabBar: View {
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
             }
-            Button("Tab schliessen", systemImage: "xmark") {
-                store.closeTab(url)
+            // Der letzte Tab bleibt: Zurück führt zur Liste.
+            if store.tabs.urls.count > 1 {
+                Button("Tab schliessen", systemImage: "xmark") {
+                    store.closeTab(url)
+                }
+                .labelStyle(.iconOnly)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 28, height: 28)
+                .padding(.trailing, 2)
+            } else {
+                Spacer().frame(width: 12, height: 28)
             }
-            .labelStyle(.iconOnly)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .frame(width: 28, height: 28)
-            .padding(.trailing, 2)
         }
         .buttonStyle(.plain)
         .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
@@ -97,11 +126,17 @@ struct NoteTabBar: View {
         }
         marked = []
         #else
-        // Der Cursor der alten Notiz hätte in der neuen keinen Sinn.
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        hideKeyboard()
         #endif
         store.selectedNote = url
     }
+
+    #if os(iOS)
+    /// Der Cursor der alten Notiz hätte in der neuen keinen Sinn.
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+    #endif
 
     #if os(macOS)
     /// Ein markierter Tab nimmt die übrigen markierten mit.

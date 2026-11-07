@@ -147,7 +147,16 @@ struct NoteEditorView: View {
                 ConflictResolverView(url: fileURL, currentText: Frontmatter.join(header: header, body: text))
             }
         }
-        .task(id: url) { await open(url) }
+        // Bewusst nicht `.task(id:)`: Meldet SwiftUI den Editor auf dem iPhone
+        // fälschlich als verschwunden (siehe unten), startet die Aufgabe beim
+        // Wechsel des Tabs nicht mehr neu, und die alte Notiz bleibt stehen.
+        .onChange(of: url, initial: true) { _, newURL in
+            let previous = controller.loading
+            controller.loading = Task {
+                await previous?.value
+                await open(newURL)
+            }
+        }
         .task { await store.refreshTags() }
         .onChange(of: store.tags, initial: true) { _, tags in
             controller.knownTags = tags

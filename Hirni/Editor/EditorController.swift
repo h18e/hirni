@@ -38,6 +38,8 @@ final class EditorController {
     @ObservationIgnored let overlays = EmbedOverlays()
     /// Automatisches Speichern kurz nach der letzten Eingabe (siehe NoteEditorView).
     @ObservationIgnored var autosave: Task<Void, Never>?
+    /// Das Laden der Notiz. Mehrere Wechsel kurz hintereinander laufen nacheinander.
+    @ObservationIgnored var loading: Task<Void, Never>?
     /// Ein Link auf eine Notiz wurde angetippt.
     @ObservationIgnored var onInternalLink: ((URL) -> Void)?
     /// Mac: Dateien wurden in den Text gezogen.
