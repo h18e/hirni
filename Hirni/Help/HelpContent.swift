@@ -15,6 +15,13 @@ extension HelpTopic {
                 "**Inbox:** Sammelort für alles Neue, auch für Geteiltes, Kurzbefehle und die Menüleiste.",
                 "Die Notizliste ist nach «zuletzt geändert» sortiert, angepinnte Notizen stehen oben.",
             ]),
+            .init(title: "Mehrere Notizen offen haben", items: [
+                "**Mac – eigenes Fenster:** Rechtsklick auf eine Notiz → «In neuem Fenster öffnen», oder die gewählte Notiz mit ⇧⌘O bzw. «Ablage → Notiz in neuem Fenster öffnen». Das Fenster lässt sich frei auf dem Bildschirm platzieren.",
+                "Das neue Fenster zeigt nur die Notiz, ohne Seitenleiste und Liste. Für eine weitere Notiz öffnest du einfach noch ein Fenster.",
+                "Dieselbe Notiz öffnet nur ein Fenster: Ein zweiter Versuch holt das bestehende nach vorne.",
+                "**iPhone – Tabs:** Jede geöffnete Notiz bekommt einen Tab. Ab zwei Notizen stehen die Tabs über dem Text; tippen wechselt, ✕ schliesst den Tab (die Notiz bleibt erhalten).",
+                "Eine weitere Notiz öffnest du wie immer: mit dem Zurück-Pfeil zur Liste und dort antippen. Es gibt höchstens 6 Tabs, danach fällt der älteste weg. Die Tabs bleiben nach einem Neustart erhalten.",
+            ]),
             .init(title: "Ordner und Unterordner", items: [
                 "**Neuer Ordner:** Ordner-Symbol mit + oben in der Seitenleiste.",
                 "**Neuer Unterordner:** im geöffneten Ordner oben das Ordner-Symbol mit +; am Mac auch Rechtsklick auf den Ordner. In der Inbox gibt es keine Unterordner.",

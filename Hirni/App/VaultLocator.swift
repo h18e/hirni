@@ -20,6 +20,7 @@ final class VaultLocator {
     }
 
     private(set) var state: State = .searching
+    private var isLocating = false
 
     /// Der hirni-Ordner, ohne ihn vorzubereiten. Nicht auf dem Hauptthread
     /// aufrufen: Beim ersten Mal kann das einige Sekunden dauern.
@@ -36,7 +37,13 @@ final class VaultLocator {
         #endif
     }
 
+    /// Jedes Fenster ruft das auf. Ist der Ordner gefunden, bleibt alles, wie
+    /// es ist, sonst würden die offenen Fenster neu aufgebaut.
     func locate() async {
+        if case .ready = state { return }
+        guard !isLocating else { return }
+        isLocating = true
+        defer { isLocating = false }
         state = .searching
         // Apple verlangt, dass dieser Aufruf nicht auf dem Hauptthread passiert:
         // Beim ersten Mal kann er einige Sekunden dauern.

@@ -171,6 +171,11 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 - **Verschieben:** am Mac per Drag'n'Drop (Notizen und Ordner auf einen Ordner oder die Inbox in der Seitenleiste). Überall auch per Kontextmenü «Verschieben nach …» mit Ordnerauswahl, auf dem iPhone zusätzlich per Wischen nach rechts. Ein Ordner kann nicht in sich selbst verschoben werden. Ist der Name am Ziel belegt, gibt es eine Nummer.
 - Drag'n'Drop verwendet einen eigenen Datentyp (`ch.hebera.hirni.item`), keine Datei-URL. So kann man eine Notiz nicht aus Versehen auf den Schreibtisch und damit aus iCloud herausziehen.
 
+### Mehrere Notizen offen
+
+- Mac: «In neuem Fenster öffnen» (Kontextmenü, ⇧⌘O, Menü Ablage) öffnet die Notiz in einem eigenständigen Fenster mit eigener Auswahl und eigenem Editor. Es zeigt nur die Notiz, ohne Seitenleiste und Liste. Links aus Widget, Mitteilungen und Kurzbefehlen gehen ans Hauptfenster.
+- iPhone: Jede geöffnete Notiz wird zum Tab (`NoteTabs`, höchstens 6, der älteste fällt weg). Ab zwei Tabs steht die Leiste über dem Editor. Die Tabs bleiben über einen Neustart erhalten (`offeneTabs` in den Einstellungen des Geräts, nicht in iCloud). Tabs gelöschter Notizen verschwinden.
+
 ### Notizen und Editor
 
 - **Grundfunktionen:** anlegen, umbenennen, löschen, anpinnen, duplizieren («Titel Kopie», nicht angepinnt)

@@ -21,6 +21,21 @@ struct HirniApp: App {
                 .task { await vault.locate() }
         }
         #if os(macOS)
+        .commands { NoteWindowCommands() }
+        #endif
+
+        #if os(macOS)
+        // Eigenständige Fenster für einzelne Notizen. Links aus Widget und
+        // Mitteilungen gehen weiter ans Hauptfenster.
+        WindowGroup("Notiz", id: NoteWindow.id, for: URL.self) { $note in
+            RootView(note: note)
+                .environment(vault)
+                .task { await vault.locate() }
+        }
+        .defaultSize(width: 760, height: 820)
+        .commandsRemoved()
+        .handlesExternalEvents(matching: [])
+
         MenuBarExtra("Hirni", systemImage: "brain.head.profile", isInserted: $showsMenuBarExtra) {
             MenuBarQuickNote()
                 .environment(vault)

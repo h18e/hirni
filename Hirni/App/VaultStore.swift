@@ -62,12 +62,22 @@ final class VaultStore {
     }
     var selectedNote: URL? {
         didSet {
+            if let selectedNote { tabs.open(selectedNote) }
             // Wegnavigieren speichert den offenen Editor. Darauf, dass SwiftUI
             // beim Zurückgehen «verschwunden» meldet, ist auf dem iPhone kein Verlass.
             guard oldValue != selectedNote, let oldValue, let editor = openEditor, editor.url == oldValue else { return }
             Task { await editor.flush() }
         }
     }
+
+    /// iPhone: die offenen Notizen als Tabs. Bleiben über einen Neustart erhalten.
+    private(set) var tabs = NoteTabs() {
+        didSet {
+            guard oldValue != tabs else { return }
+            UserDefaults.standard.set(tabs.urls.compactMap(vault.relativePath(of:)), forKey: Self.tabsKey)
+        }
+    }
+    private static let tabsKey = "offeneTabs"
 
     /// Gewähltes Hilfe-Thema (`HelpTopic.id`).
     var helpTopic: String?
@@ -108,6 +118,23 @@ final class VaultStore {
 
     init(vault: Vault) {
         self.vault = vault
+        let paths = UserDefaults.standard.stringArray(forKey: Self.tabsKey) ?? []
+        tabs = NoteTabs(urls: paths.map { vault.root.appending(path: $0) })
+    }
+
+    /// Schliesst einen Tab. War es der gezeigte, rückt der Nachbar nach.
+    func closeTab(_ url: URL) {
+        let neighbour = tabs.close(url)
+        if selectedNote == url { selectedNote = neighbour }
+    }
+
+    /// Der Such-Index ist eine Datei: Alle Fenster teilen sich denselben Zugang.
+    private static var sharedIndex: SearchIndex?
+    private static func openIndex() throws -> SearchIndex {
+        if let sharedIndex { return sharedIndex }
+        let index = try SearchIndex(fileURL: URL.cachesDirectory.appending(path: "hirni-suche.sqlite"))
+        sharedIndex = index
+        return index
     }
 
     var currentFolderURL: URL? {
@@ -138,7 +165,7 @@ final class VaultStore {
         monitor.start()
         self.monitor = monitor
         do {
-            index = try SearchIndex(fileURL: URL.cachesDirectory.appending(path: "hirni-suche.sqlite"))
+            index = try Self.openIndex()
         } catch {
             vaultLog.error("Such-Index nicht verfügbar: \(error.localizedDescription, privacy: .public)")
         }
@@ -223,6 +250,7 @@ final class VaultStore {
         if templates != result.templates { templates = result.templates }
         if tasks != result.tasks { tasks = result.tasks }
         if dueDates != result.dueDates { dueDates = result.dueDates }
+        tabs.retain { FileManager.default.fileExists(atPath: $0.path(percentEncoded: false)) }
         await scheduleReminders()
         Task { [vault] in await CalendarExporter.shared.sync(vault) }
         switch result.notes {
@@ -395,6 +423,7 @@ final class VaultStore {
     /// gerade offen hat.
     func renameNote(_ url: URL, to title: String) async -> URL? {
         guard let newURL = await perform({ try $0.renameNote(at: url, to: title) }) else { return nil }
+        tabs.replace(url, with: newURL)
         await reload()
         return newURL
     }
@@ -486,12 +515,7 @@ final class VaultStore {
         case .tasks:
             sidebarSelection = .tasks
         case .note(let path):
-            let url = vault.root.appending(path: path)
-            guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else {
-                errorMessage = "Diese Notiz gibt es nicht mehr."
-                return
-            }
-            show(url)
+            open(file: vault.root.appending(path: path))
         case .link(let link):
             let vault = vault
             Task {
@@ -502,6 +526,15 @@ final class VaultStore {
                 show(url)
             }
         }
+    }
+
+    /// Öffnet eine Datei, zum Beispiel beim Start eines eigenen Notiz-Fensters.
+    func open(file url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else {
+            errorMessage = "Diese Notiz gibt es nicht mehr."
+            return
+        }
+        show(url)
     }
 
     private func show(_ url: URL) {

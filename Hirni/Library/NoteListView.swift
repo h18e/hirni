@@ -3,6 +3,9 @@ import SwiftUI
 
 struct NoteListView: View {
     @Environment(VaultStore.self) private var store
+    #if os(macOS)
+    @Environment(\.openWindow) private var openWindow
+    #endif
     /// Notiz, für die gerade «Verschieben nach …» offen ist.
     @State private var moving: MovingItem?
     @State private var asksSubfolderName = false
@@ -195,6 +198,12 @@ struct NoteListView: View {
 
     @ViewBuilder
     private func menu(for note: NoteSummary) -> some View {
+        #if os(macOS)
+        Button("In neuem Fenster öffnen", systemImage: "macwindow.badge.plus") {
+            openWindow(id: NoteWindow.id, value: note.url)
+        }
+        Divider()
+        #endif
         pinButton(for: note)
         Button("Duplizieren", systemImage: "plus.square.on.square") {
             Task { await store.duplicateNote(note.url) }
