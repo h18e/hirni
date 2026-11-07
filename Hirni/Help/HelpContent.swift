@@ -91,6 +91,13 @@ extension HelpTopic {
                 "Zellen direkt bearbeiten. Menü «…» über jeder Spalte und vor jeder Zeile: einfügen, verschieben, löschen.",
                 "Griff rechts bzw. unten ziehen fügt Spalten bzw. Zeilen an; zurückziehen entfernt leere wieder.",
             ]),
+            .init(title: "Spalten", items: [
+                "**Einfügen:** iPhone Büroklammer → «Spalten», Mac Spalten-Knopf (⌥⌘S). Es entsteht ein Bereich mit zwei Spalten, der Rest der Notiz bleibt wie er ist. Markierter Text kommt in die erste Spalte.",
+                "In einer Spalte geht fast alles wie im normalen Text: Listen, Checklisten, Tabellen, Bilder, Formatierung. Datenbank-Ansichten gehen dort nicht, und Spalten in Spalten gibt es nicht.",
+                "Menü «…» über jeder Spalte: Spalte links oder rechts einfügen, verschieben, löschen, oder «Spalten auflösen». Beim Auflösen bleibt der ganze Text erhalten und steht untereinander.",
+                "Die Höhe richtet sich nach der längsten Spalte. Passen die Spalten nicht nebeneinander, etwa auf dem iPhone, lässt sich der Bereich seitwärts schieben.",
+                "Im PDF stehen die Spalten nebeneinander. In der Datei stehen sie als `:::spalten`, `:::spalte` und `:::`; in anderen Markdown-Programmen erscheint der Text deshalb untereinander.",
+            ]),
             .init(title: "Bilder und PDFs", items: [
                 "iPhone: Büroklammer → Fotos (bis 10), Kamera oder Datei. Mac: Büroklammer (⇧⌘A) oder Datei in den Text ziehen.",
                 "Fotos werden verkleinert (max. 3000 Pixel) und ohne Standortdaten gespeichert.",

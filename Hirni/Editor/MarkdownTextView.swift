@@ -14,6 +14,9 @@ import SwiftUI
 struct MarkdownTextView: UIViewRepresentable {
     @Binding var text: String
     let controller: EditorController
+    /// Als Spalte in einer Notiz: kein eigenes Scrollen, die Notiz scrollt.
+    var embedded = false
+    static let embeddedInset: CGFloat = 8
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -21,10 +24,16 @@ struct MarkdownTextView: UIViewRepresentable {
         let textView = EditorTextView(usingTextLayoutManager: false)
         textView.font = MarkdownStyler.bodyFont
         textView.backgroundColor = .clear
-        textView.textContainerInset = UIEdgeInsets(top: 4, left: 20, bottom: 60, right: 20)
+        if embedded {
+            let inset = Self.embeddedInset
+            textView.textContainerInset = UIEdgeInsets(top: 6, left: inset, bottom: 6, right: inset)
+            textView.isScrollEnabled = false
+        } else {
+            textView.textContainerInset = UIEdgeInsets(top: 4, left: 20, bottom: 60, right: 20)
+            textView.alwaysBounceVertical = true
+            textView.keyboardDismissMode = .interactive
+        }
         textView.textContainer.lineFragmentPadding = 0
-        textView.alwaysBounceVertical = true
-        textView.keyboardDismissMode = .interactive
         // Markdown braucht gerade Anführungszeichen und echte Bindestriche.
         textView.smartQuotesType = .no
         textView.smartDashesType = .no
@@ -33,7 +42,7 @@ struct MarkdownTextView: UIViewRepresentable {
         textView.layoutManager.delegate = context.coordinator
         textView.onWidthChange = { [weak coordinator = context.coordinator] in coordinator?.restyle() }
 
-        let bar = UIHostingController(rootView: FormattingBar(controller: controller))
+        let bar = UIHostingController(rootView: FormattingBar(controller: controller.commandController))
         bar.view.frame = CGRect(x: 0, y: 0, width: 0, height: 48)
         bar.view.autoresizingMask = [.flexibleWidth]
         bar.view.backgroundColor = .clear
@@ -47,6 +56,13 @@ struct MarkdownTextView: UIViewRepresentable {
 
         context.coordinator.connect(textView)
         return textView
+    }
+
+    /// Ohne eigenes Scrollen will die Textansicht so breit wie ihre längste Zeile
+    /// sein. Eine Spalte hat aber die Breite, die ihr der Bereich gibt.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: EditorTextView, context: Context) -> CGSize? {
+        guard embedded else { return nil }
+        return proposal.replacingUnspecifiedDimensions(by: CGSize(width: ColumnsGrid.minimumWidth, height: 44))
     }
 
     func updateUIView(_ textView: EditorTextView, context: Context) {
@@ -69,8 +85,10 @@ struct MarkdownTextView: UIViewRepresentable {
             let controller = parent.controller
             controller.overlays.onPreviewLoaded = { [weak self] in self?.restyle() }
             controller.overlays.tables.onLayoutChange = { [weak self] in self?.restyle() }
+            controller.overlays.columns.onLayoutChange = { [weak self] in self?.restyle() }
             controller.textView = textView
             controller.onTextChange = { [weak self] in self?.parent.text = $0 }
+            textView.onFocusChange = { [weak controller] in controller?.focusChanged($0) }
             textView.onTab = { [weak controller] in controller?.jumpToNextHint() }
             textView.onShiftTab = { [weak controller] in controller?.insertTabCharacter() }
         }
@@ -101,6 +119,7 @@ struct MarkdownTextView: UIViewRepresentable {
                 reservedHeight: { overlays.reservedHeight(for: $0, width: width) },
                 databaseHeight: overlays.databaseHeight,
                 tableHeight: { overlays.tables.height(of: $0) },
+                columnHeight: { overlays.columns.height(at: $0) },
                 hintsAsText: parent.controller.hintsAsText
             )
             scheduleLayout()
@@ -113,6 +132,7 @@ struct MarkdownTextView: UIViewRepresentable {
                 guard let self, let textView = self.textView else { return }
                 self.layoutScheduled = false
                 self.parent.controller.overlays.layout(in: textView)
+                self.parent.controller.reportContentHeight()
             }
         }
 
@@ -124,6 +144,7 @@ struct MarkdownTextView: UIViewRepresentable {
         func textViewDidChangeSelection(_ textView: UITextView) {
             parent.controller.updateSuggestions()
             parent.controller.selectHintIfNeeded()
+            parent.controller.revealCaretInNote()
         }
 
         func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
@@ -185,7 +206,11 @@ struct MarkdownTextView: UIViewRepresentable {
 
         /// Tipps in einer eingebetteten Datenbank-Ansicht sind keine Tipps in den Text.
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-            !sequence(first: touch.view, next: { $0?.superview }).contains { $0?.accessibilityIdentifier == EmbedOverlays.databaseViewID }
+            // Nur bis zur eigenen Textansicht suchen: Auch eine Spalte liegt in einer
+            // eingebetteten Ansicht, für sie sind Tipps in ihren Text aber gemeint.
+            !sequence(first: touch.view, next: { $0?.superview })
+                .prefix { $0 !== gestureRecognizer.view }
+                .contains { $0?.accessibilityIdentifier == EmbedOverlays.databaseViewID }
         }
     }
 }
@@ -197,7 +222,20 @@ final class EditorTextView: UITextView {
     /// Tab (Hardware-Tastatur): zum nächsten Beispieltext. Shift+Tab: Tabulator.
     var onTab: (() -> Void)?
     var onShiftTab: (() -> Void)?
+    var onFocusChange: ((Bool) -> Void)?
     private var lastWidth: CGFloat = 0
+
+    override func becomeFirstResponder() -> Bool {
+        let became = super.becomeFirstResponder()
+        if became { onFocusChange?(true) }
+        return became
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned { onFocusChange?(false) }
+        return resigned
+    }
 
     override var keyCommands: [UIKeyCommand]? {
         let tab = UIKeyCommand(input: "\t", modifierFlags: [], action: #selector(tabPressed))
@@ -224,6 +262,9 @@ final class EditorTextView: UITextView {
 struct MarkdownTextView: NSViewRepresentable {
     @Binding var text: String
     let controller: EditorController
+    /// Als Spalte in einer Notiz: kein eigenes Scrollen, die Notiz scrollt.
+    var embedded = false
+    static let embeddedInset: CGFloat = 8
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -235,7 +276,7 @@ struct MarkdownTextView: NSViewRepresentable {
         textView.allowsUndo = true
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
-        textView.textContainerInset = NSSize(width: 16, height: 8)
+        textView.textContainerInset = embedded ? NSSize(width: Self.embeddedInset, height: 6) : NSSize(width: 16, height: 8)
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false
         textView.autoresizingMask = [.width]
@@ -250,8 +291,8 @@ struct MarkdownTextView: NSViewRepresentable {
         textView.onFileDrop = { [weak controller] urls in controller?.onFileDrop?(urls) }
         textView.onWidthChange = { [weak coordinator = context.coordinator] in coordinator?.restyle() }
 
-        let scrollView = NSScrollView()
-        scrollView.hasVerticalScroller = true
+        let scrollView = embedded ? PassThroughScrollView() : NSScrollView()
+        scrollView.hasVerticalScroller = !embedded
         scrollView.drawsBackground = false
         scrollView.documentView = textView
 
@@ -277,8 +318,10 @@ struct MarkdownTextView: NSViewRepresentable {
             let controller = parent.controller
             controller.overlays.onPreviewLoaded = { [weak self] in self?.restyle() }
             controller.overlays.tables.onLayoutChange = { [weak self] in self?.restyle() }
+            controller.overlays.columns.onLayoutChange = { [weak self] in self?.restyle() }
             controller.textView = textView
             controller.onTextChange = { [weak self] in self?.parent.text = $0 }
+            textView.onFocusChange = { [weak controller] in controller?.focusChanged($0) }
         }
 
         func restyle() {
@@ -295,6 +338,7 @@ struct MarkdownTextView: NSViewRepresentable {
                 reservedHeight: { overlays.reservedHeight(for: $0, width: width) },
                 databaseHeight: overlays.databaseHeight,
                 tableHeight: { overlays.tables.height(of: $0) },
+                columnHeight: { overlays.columns.height(at: $0) },
                 hintsAsText: parent.controller.hintsAsText
             )
             scheduleLayout()
@@ -307,6 +351,7 @@ struct MarkdownTextView: NSViewRepresentable {
                 guard let self, let textView = self.textView else { return }
                 self.layoutScheduled = false
                 self.parent.controller.overlays.layout(in: textView)
+                self.parent.controller.reportContentHeight()
             }
         }
 
@@ -333,6 +378,7 @@ struct MarkdownTextView: NSViewRepresentable {
         func textViewDidChangeSelection(_ notification: Notification) {
             parent.controller.updateSuggestions()
             parent.controller.selectHintIfNeeded()
+            parent.controller.revealCaretInNote()
         }
 
         func textView(_ textView: NSTextView, doCommandBy selector: Selector) -> Bool {
@@ -372,9 +418,30 @@ struct MarkdownTextView: NSViewRepresentable {
     }
 }
 
+/// Spalten scrollen nicht selbst: Das Mausrad bewegt die Notiz.
+final class PassThroughScrollView: NSScrollView {
+    override func scrollWheel(with event: NSEvent) {
+        nextResponder?.scrollWheel(with: event)
+    }
+}
+
 /// NSTextView mit drei Zusätzen: Klick auf eine Checkbox, Bilder und PDFs
 /// per Drag'n'Drop als Anhang, Meldung bei Breitenänderung.
 final class EditorTextView: NSTextView {
+    var onFocusChange: ((Bool) -> Void)?
+
+    override func becomeFirstResponder() -> Bool {
+        let became = super.becomeFirstResponder()
+        if became { onFocusChange?(true) }
+        return became
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned { onFocusChange?(false) }
+        return resigned
+    }
+
     var onClick: ((Int) -> Bool)?
     var onFileDrop: (([URL]) -> Void)?
     var onWidthChange: (() -> Void)?

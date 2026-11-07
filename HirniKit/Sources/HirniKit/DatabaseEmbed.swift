@@ -61,7 +61,7 @@ public struct DatabaseEmbed: Equatable, Sendable {
             let value = trimmed[trimmed.index(after: colon)...].trimmingCharacters(in: .whitespaces)
             open?.values[key] = value
         }
-        return result
+        return ColumnBlock.outside(result, in: text, range: \.range)
     }
 
     /// Der Block-Text für eine Datenbank, z. B. zum Einfügen.

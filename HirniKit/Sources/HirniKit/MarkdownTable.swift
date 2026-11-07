@@ -50,7 +50,7 @@ public struct MarkdownTable: Equatable, Sendable {
             result.append(MarkdownTable(rows: rows, range: range))
             index = end + 1
         }
-        return result
+        return ColumnBlock.outside(result, in: text, range: \.range)
     }
 
     /// Die Zelle nach dieser (zeilenweise); `nil` nach der letzten.

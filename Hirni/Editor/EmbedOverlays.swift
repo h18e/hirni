@@ -36,12 +36,19 @@ final class EmbedOverlays {
 
     /// Gewöhnliche Markdown-Tabellen als bearbeitbare Raster.
     let tables = NoteTables()
+    /// Bereiche mit Spalten.
+    let columns = NoteColumns()
+    /// Unterkante der tiefsten eingeblendeten Ansicht: So hoch muss ein
+    /// Spalten-Editor mindestens sein.
+    private(set) var contentBottom: CGFloat = 0
 
     private var views: [EmbedImageView] = []
     #if os(iOS)
     private var tableViews: [UIHostingController<AnyView>] = []
+    private var columnViews: [UIHostingController<AnyView>] = []
     #else
     private var tableViews: [NSHostingView<AnyView>] = []
+    private var columnViews: [NSHostingView<AnyView>] = []
     #endif
     #if os(iOS)
     private var databaseViews: [(key: String, host: UIHostingController<AnyView>)] = []
@@ -90,10 +97,14 @@ final class EmbedOverlays {
         // Zeilen sonst nur, und die Ansichten landeten neben ihrer Lücke.
         layoutManager.ensureLayout(forCharacterRange: NSRange(location: 0, length: ns.length))
 
+        contentBottom = 0
+        let blocks = ColumnBlock.blocks(in: text)
         var index = 0
         for span in MarkdownSyntax.spans(in: text) {
             guard case .embed(let path) = span.kind,
-                  let url = resolve(path), let kind = AttachmentLinks.kind(of: path)
+                  let url = resolve(path), let kind = AttachmentLinks.kind(of: path),
+                  // Bilder in Spalten zeigt der Editor der Spalte.
+                  !blocks.contains(where: { NSIntersectionRange($0.range, span.range).length > 0 })
             else { continue }
 
             // Letztes Zeichen des Absatzes: Darunter liegt die Lücke.
@@ -118,6 +129,7 @@ final class EmbedOverlays {
                 view.showPlaceholder()
                 view.frame = CGRect(x: origin.x, y: top, width: min(width, 240), height: Self.placeholderHeight)
             }
+            contentBottom = max(contentBottom, view.frame.maxY)
             index += 1
         }
         while views.count > index {
@@ -126,6 +138,37 @@ final class EmbedOverlays {
 
         layoutDatabases(in: textView, layoutManager: layoutManager, origin: origin, width: width, text: text)
         layoutTables(in: textView, layoutManager: layoutManager, origin: origin, width: width, text: text)
+        layoutColumns(blocks, in: textView, layoutManager: layoutManager, origin: origin, width: width)
+    }
+
+    /// Die Spalten liegen über dem (unsichtbaren) Text ihres Bereichs.
+    private func layoutColumns(
+        _ blocks: [ColumnBlock], in textView: PlatformTextView, layoutManager: NSLayoutManager, origin: CGPoint, width: CGFloat
+    ) {
+        columns.update(from: blocks)
+        for (index, block) in blocks.enumerated() {
+            let glyph = layoutManager.glyphIndexForCharacter(at: block.range.location)
+            let line = layoutManager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
+            let frame = CGRect(x: origin.x, y: origin.y + line.minY, width: width, height: columns.height(at: index))
+            if index >= columnViews.count {
+                columnViews.append(makeHost(AnyView(ColumnsGrid(model: columns.model(at: index))), in: textView))
+            }
+            #if os(iOS)
+            columnViews[index].view.frame = frame
+            #else
+            columnViews[index].frame = frame
+            #endif
+        }
+        while columnViews.count > blocks.count {
+            let removed = columnViews.removeLast()
+            #if os(iOS)
+            removed.willMove(toParent: nil)
+            removed.view.removeFromSuperview()
+            removed.removeFromParent()
+            #else
+            removed.removeFromSuperview()
+            #endif
+        }
     }
 
     /// Das Raster liegt über dem (unsichtbaren) Tabellentext, ab seiner ersten Zeile.
@@ -138,6 +181,7 @@ final class EmbedOverlays {
             let glyph = layoutManager.glyphIndexForCharacter(at: table.range.location)
             let line = layoutManager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
             let frame = CGRect(x: origin.x, y: origin.y + line.minY, width: width, height: tables.height(of: table))
+            contentBottom = max(contentBottom, frame.maxY)
             if index >= tableViews.count {
                 let view = AnyView(TableGrid(model: tables.model(at: index)))
                 tableViews.append(makeHost(view, in: textView))

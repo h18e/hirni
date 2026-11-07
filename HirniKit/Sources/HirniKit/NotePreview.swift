@@ -18,6 +18,7 @@ public enum NotePreview {
         }
 
         let cleaned = lines
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix(":::") }
             .map(stripMarkup)
             .filter { !$0.isEmpty }
             .joined(separator: " ")

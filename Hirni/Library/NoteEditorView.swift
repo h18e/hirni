@@ -276,6 +276,9 @@ struct NoteEditorView: View {
             Button("Tabelle", systemImage: "squareshape.split.3x3", action: controller.insertTable)
                 .keyboardShortcut("t", modifiers: [.command, .option])
                 .help("Tabelle einfügen (⌥⌘T)")
+            Button("Spalten", systemImage: "rectangle.split.2x1", action: controller.insertColumns)
+                .keyboardShortcut("s", modifiers: [.command, .option])
+                .help("Bereich mit Spalten einfügen (⌥⌘S)")
             Button("Datenbank", systemImage: "tablecells") { controller.showsDatabasePicker = true }
         }
         ToolbarItem {

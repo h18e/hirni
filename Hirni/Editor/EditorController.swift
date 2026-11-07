@@ -14,7 +14,9 @@ typealias PlatformTextView = NSTextView
 @Observable
 final class EditorController {
     /// Passende Tags, während `#…` getippt wird.
-    private(set) var suggestions: [String] = []
+    private(set) var suggestions: [String] = [] {
+        didSet { parent?.suggestions = suggestions }
+    }
 
     /// Auswahl «Link auf Notiz» ist offen.
     var showsNotePicker = false
@@ -34,6 +36,63 @@ final class EditorController {
         var id: Self { self }
     }
 
+    /// Fokus in dieser Spalte gesetzt oder verloren.
+    ///
+    /// Beim Verlieren bleibt die Spalte aktiv: Das Fotos-Blatt oder der Dateidialog
+    /// nimmt ihr den Fokus, das Gewählte soll aber trotzdem dort landen.
+    func focusChanged(_ focused: Bool) {
+        guard focused else { return }
+        if let parent {
+            parent.activeColumn = self
+        } else {
+            activeColumn = nil
+        }
+    }
+
+    /// Die Spalte gibt es nicht mehr.
+    func columnRemoved(_ column: EditorController) {
+        if activeColumn === column { activeColumn = nil }
+    }
+
+    /// Spalte: Der Notiz melden, wie viel Platz der Inhalt braucht.
+    func reportContentHeight() {
+        guard let onContentHeight, let textView else { return }
+        #if os(iOS)
+        let padding = textView.textContainerInset.top + textView.textContainerInset.bottom
+        // Ohne eigenes Scrollen endet der Textbereich an der Ansicht: Das Layout
+        // allein kennt die wirkliche Länge also nicht.
+        let width = textView.bounds.width
+        guard width > 0 else { return }
+        let used = textView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude)).height - padding
+        #else
+        guard let layout = textView.layoutManager, let container = textView.textContainer else { return }
+        layout.ensureLayout(for: container)
+        let used = layout.usedRect(for: container).maxY
+        let padding = 2 * textView.textContainerInset.height
+        #endif
+        onContentHeight(ceil(max(used + padding, overlays.contentBottom + padding / 2)))
+    }
+
+    /// Spalte: Die Spalte scrollt nicht selbst, also muss die Notiz den Cursor zeigen.
+    func revealCaretInNote() {
+        guard let note = parent?.textView else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let textView = self?.textView else { return }
+            #if os(iOS)
+            guard textView.isFirstResponder, let end = textView.selectedTextRange?.end else { return }
+            let caret = textView.convert(textView.caretRect(for: end), to: note)
+            note.scrollRectToVisible(caret.insetBy(dx: 0, dy: -24), animated: false)
+            #else
+            guard textView.window?.firstResponder === textView, let layout = textView.layoutManager,
+                  let container = textView.textContainer else { return }
+            let glyph = layout.glyphRange(forCharacterRange: NSRange(location: textView.selectedRange().location, length: 0), actualCharacterRange: nil)
+            let caret = layout.boundingRect(forGlyphRange: glyph, in: container)
+                .offsetBy(dx: textView.textContainerOrigin.x, dy: textView.textContainerOrigin.y)
+            note.scrollToVisible(textView.convert(caret, to: note).insetBy(dx: 0, dy: -24))
+            #endif
+        }
+    }
+
     /// Bilder und Datenbank-Ansichten unter ihren Zeilen anzeigen.
     @ObservationIgnored let overlays = EmbedOverlays()
     /// Automatisches Speichern kurz nach der letzten Eingabe (siehe NoteEditorView).
@@ -45,8 +104,32 @@ final class EditorController {
     /// Mac: Dateien wurden in den Text gezogen.
     @ObservationIgnored var onFileDrop: (([URL]) -> Void)?
 
-    init() {
-        overlays.onTap = { [weak self] url in self?.previewURL = url }
+    /// Die Notiz, wenn dieser Editor eine Spalte ist (siehe `NoteColumns`).
+    @ObservationIgnored private weak var parent: EditorController?
+    /// Die Spalte mit dem Cursor: Formatknöpfe wirken dort.
+    @ObservationIgnored private var activeColumn: EditorController?
+    /// Spalte: Die nötige Höhe hat sich geändert.
+    @ObservationIgnored var onContentHeight: ((CGFloat) -> Void)?
+
+    /// Empfänger der Knöpfe. Bei Spalten ist das die Notiz: Dort hängen die
+    /// Blätter, und sie leitet die Befehle an die Spalte mit dem Cursor weiter.
+    var commandController: EditorController { parent ?? self }
+
+    init(parent: EditorController? = nil) {
+        self.parent = parent
+        if let parent {
+            overlays.resolve = { [weak parent] in parent?.overlays.resolve($0) }
+            overlays.onTap = { [weak parent] in parent?.previewURL = $0 }
+            onInternalLink = { [weak parent] in parent?.onInternalLink?($0) }
+            onFileDrop = { [weak parent] in parent?.onFileDrop?($0) }
+            hintsAsText = parent.hintsAsText
+            overlays.tables.hintsAsText = parent.hintsAsText
+        } else {
+            overlays.onTap = { [weak self] url in self?.previewURL = url }
+        }
+        overlays.columns.owner = self
+        overlays.columns.onChange = { [weak self] index, block in self?.replaceColumns(at: index, with: block.markdown) }
+        overlays.columns.onDissolve = { [weak self] index in self?.dissolveColumns(at: index) }
         // Änderungen im Tabellen-Raster zurück in den Markdown-Text.
         overlays.tables.onChange = { [weak self] index, table in self?.replaceTable(at: index, with: table) }
         overlays.tables.onTab = { [weak self] index, cell in self?.tab(inTable: index, from: cell) }
@@ -76,6 +159,7 @@ final class EditorController {
     /// bei jeder Aktualisierung zurückschreiben, käme manchmal ein veralteter
     /// Stand an, und der Cursor spränge zurück.
     func setText(_ text: String) {
+        activeColumn = nil
         guard let textView else {
             pendingText = text
             return
@@ -110,6 +194,51 @@ final class EditorController {
     /// Fügt einen eingebetteten Anhang auf einer eigenen Zeile ein.
     func insertBlock(_ markdown: String) {
         perform { MarkdownEditing.insertBlock(markdown, in: $0, selection: $1) }
+    }
+
+    /// Fügt einen Bereich mit zwei Spalten ein. Markierter Text kommt in die
+    /// erste Spalte. Spalten in Spalten gibt es nicht.
+    func insertColumns() {
+        guard parent == nil, activeColumn == nil else { return }
+        perform { text, selection in
+            var block = ColumnBlock.empty()
+            block.columns[0] = (text as NSString).substring(with: selection)
+            return MarkdownEditing.insertBlock(block.markdown + "\n", in: text, selection: selection)
+        }
+        guard let text = currentText, let caret = currentSelection?.location,
+              let index = ColumnBlock.blocks(in: text).lastIndex(where: { $0.range.location < caret })
+        else { return }
+        // Die Spalten entstehen beim nächsten Layout.
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard let self else { return }
+            let column = self.overlays.columns.model(at: index).columns.first?.controller
+            let length = (column?.currentText as NSString?)?.length ?? 0
+            column?.selectInText(NSRange(location: length, length: 0))
+        }
+    }
+
+    private func replaceColumns(at index: Int, with markdown: String) {
+        perform(keepingScroll: true) { text, selection in
+            let blocks = ColumnBlock.blocks(in: text)
+            guard blocks.indices.contains(index) else {
+                return TextEdit(range: NSRange(location: selection.location, length: 0), replacement: "", selection: selection)
+            }
+            let range = blocks[index].range
+            let delta = (markdown as NSString).length - range.length
+            let caret = selection.location >= NSMaxRange(range) ? selection.location + delta : min(selection.location, range.location)
+            return TextEdit(range: range, replacement: markdown, selection: NSRange(location: max(0, caret), length: 0))
+        }
+    }
+
+    /// Macht aus dem Bereich wieder gewöhnlichen Text.
+    private func dissolveColumns(at index: Int) {
+        guard let text = currentText else { return }
+        let blocks = ColumnBlock.blocks(in: text)
+        guard blocks.indices.contains(index) else { return }
+        let block = blocks[index]
+        activeColumn = nil
+        replaceColumns(at: index, with: block.dissolved)
     }
 
     /// Ersetzt im Text den `hirni-db`-Block, der `embed` entspricht (gleiche
@@ -200,6 +329,7 @@ final class EditorController {
     }
 
     func accept(_ tag: String) {
+        if let activeColumn { return activeColumn.accept(tag) }
         guard let text = currentText, let selection = currentSelection,
               let query = MarkdownEditing.tagQuery(in: text, caret: selection.location)
         else { return }
@@ -225,8 +355,9 @@ final class EditorController {
     /// (auch eben erst getippte). Der Tag, der gerade entsteht, zählt nicht mit.
     private func candidates(in text: String, excluding typing: NSRange) -> [String] {
         let rest = (text as NSString).replacingCharacters(in: typing, with: "")
-        var seen = Set(knownTags.map { $0.lowercased() })
-        var result = knownTags
+        let known = parent?.knownTags ?? knownTags
+        var seen = Set(known.map { $0.lowercased() })
+        var result = known
         for tag in MarkdownSyntax.tags(in: rest) where seen.insert(tag.lowercased()).inserted {
             result.append(tag)
         }
@@ -242,6 +373,7 @@ final class EditorController {
     }
 
     func dismissKeyboard() {
+        activeColumn?.dismissKeyboard()
         textView?.resignFirstResponder()
     }
     #endif
@@ -250,6 +382,7 @@ final class EditorController {
 
     /// Die Auswahl wird zur eigenen Beschriftung des Links.
     var selectedText: String? {
+        if let activeColumn { return activeColumn.selectedText }
         guard let text = currentText, let selection = currentSelection, selection.length > 0 else { return nil }
         let selected = (text as NSString).substring(with: selection)
         return selected.contains("\n") ? nil : selected
@@ -372,7 +505,10 @@ final class EditorController {
     @ObservationIgnored private var replacingHint = false
     /// In Vorlagen sind Beispieltexte gewöhnlicher Text zum Bearbeiten.
     @ObservationIgnored var hintsAsText = false {
-        didSet { overlays.tables.hintsAsText = hintsAsText }
+        didSet {
+            overlays.tables.hintsAsText = hintsAsText
+            for column in overlays.columns.controllers { column.hintsAsText = hintsAsText }
+        }
     }
 
     /// Tippen oder Löschen in einem Beispieltext (`{{? Thema}}`) ersetzt ihn
@@ -403,12 +539,17 @@ final class EditorController {
     /// markieren, nach dem letzten wieder zum ersten. Ohne Beispieltext
     /// passiert nichts (ein Tabulatorzeichen gibt es mit Shift+Tab).
     func jumpToNextHint() {
-        guard let textView, let text = currentText, let selection = currentSelection, text.contains("{{?") else { return }
+        guard let textView, let text = currentText, let selection = currentSelection else { return }
         let hints = TemplateFiller.hintPattern
             .matches(in: text, range: NSRange(location: 0, length: (text as NSString).length))
             .map(\.range)
-        guard let target = hints.first(where: { $0.location >= NSMaxRange(selection) && $0 != selection }) ?? hints.first
-        else { return }
+        // Aus einer Spalte geht es nach ihrem letzten Beispieltext in der Notiz weiter.
+        guard let target = hints.first(where: { $0.location >= NSMaxRange(selection) && $0 != selection })
+            ?? (parent == nil ? hints.first : nil)
+        else {
+            parent?.jumpToNextHint(after: self)
+            return
+        }
         if focusCell(at: target.location, in: text) { return }
         #if os(iOS)
         textView.selectedRange = target
@@ -416,6 +557,19 @@ final class EditorController {
         textView.setSelectedRange(target)
         #endif
         textView.scrollRangeToVisible(target)
+    }
+
+    private func jumpToNextHint(after column: EditorController) {
+        guard let text = currentText, let position = overlays.columns.position(of: column) else { return }
+        let blocks = ColumnBlock.blocks(in: text)
+        guard blocks.indices.contains(position.block), blocks[position.block].columnRanges.indices.contains(position.column)
+        else { return }
+        let end = NSMaxRange(blocks[position.block].columnRanges[position.column])
+        let hints = TemplateFiller.hintPattern
+            .matches(in: text, range: NSRange(location: 0, length: (text as NSString).length))
+            .map(\.range)
+        guard let target = hints.first(where: { $0.location > end }) ?? hints.first else { return }
+        if !focusCell(at: target.location, in: text) { selectInText(target) }
     }
 
     /// Aus dem Titel weiter in den Text (Tab bzw. Return): zum ersten
@@ -475,6 +629,19 @@ final class EditorController {
             overlays.tables.model(at: index).focusRequest = TableCell(row: cell.row, column: cell.column)
             return true
         }
+        for (index, block) in ColumnBlock.blocks(in: text).enumerated() {
+            guard let position = block.column(at: location) else { continue }
+            let columns = overlays.columns.model(at: index).columns
+            guard columns.indices.contains(position.index) else { return false }
+            textView?.scrollRangeToVisible(block.range)
+            let column = columns[position.index].controller
+            let columnText = block.columns[position.index]
+            if !column.focusCell(at: position.offset, in: columnText) {
+                let hint = TemplateFiller.hintRange(containing: position.offset, in: columnText)
+                column.selectInText(hint ?? NSRange(location: position.offset, length: 0))
+            }
+            return true
+        }
         return false
     }
 
@@ -505,6 +672,9 @@ final class EditorController {
     // MARK: - Anwenden
 
     private func perform(keepingScroll: Bool = false, _ makeEdit: (String, NSRange) -> TextEdit) {
+        // Befehle gehen an die Spalte mit dem Cursor. Änderungen aus
+        // eingebetteten Ansichten betreffen immer diesen Text selbst.
+        if !keepingScroll, let activeColumn { return activeColumn.perform(makeEdit) }
         guard let text = currentText, let selection = currentSelection else { return }
         apply(makeEdit(text, selection), keepingScroll: keepingScroll)
     }

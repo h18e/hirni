@@ -32,6 +32,7 @@ enum MarkdownStyler {
         reservedHeight: (String) -> CGFloat = { _ in 0 },
         databaseHeight: (DatabaseEmbed) -> CGFloat = { _ in 0 },
         tableHeight: (MarkdownTable) -> CGFloat = { _ in 0 },
+        columnHeight: (Int) -> CGFloat = { _ in 0 },
         hintsAsText: Bool = false
     ) {
         let text = storage.string
@@ -52,8 +53,11 @@ enum MarkdownStyler {
         for span in spans where !span.kind.isLineLevel && span.kind != .syntax { style(span, in: storage, base: base) }
         for span in spans where span.kind == .syntax { style(span, in: storage, base: base) }
 
+        let columnBlocks = ColumnBlock.blocks(in: text)
         for span in spans {
-            guard case .embed(let path) = span.kind else { continue }
+            guard case .embed(let path) = span.kind,
+                  !columnBlocks.contains(where: { NSIntersectionRange($0.range, span.range).length > 0 })
+            else { continue }
             let height = reservedHeight(path)
             guard height > 0 else { continue }
             let paragraph = (text as NSString).paragraphRange(for: span.range)
@@ -89,6 +93,23 @@ enum MarkdownStyler {
             let style = NSMutableParagraphStyle()
             style.paragraphSpacing = height + 8
             let last = (text as NSString).paragraphRange(for: NSRange(location: NSMaxRange(table.range) - 1, length: 0))
+            storage.addAttribute(.paragraphStyle, value: style, range: last)
+        }
+        // Spalten: wie Tabellen, der Text bleibt unsichtbar in der Notiz.
+        for (index, block) in columnBlocks.enumerated() where NSMaxRange(block.range) <= storage.length {
+            let height = columnHeight(index)
+            guard height > 0 else { continue }
+            storage.removeAttribute(.link, range: block.range)
+            storage.addAttributes([
+                .font: PlatformFont.systemFont(ofSize: 0.1),
+                .foregroundColor: PlatformColor.clear,
+                .backgroundColor: PlatformColor.clear,
+                .strikethroughColor: PlatformColor.clear,
+                .underlineColor: PlatformColor.clear,
+            ], range: block.range)
+            let style = NSMutableParagraphStyle()
+            style.paragraphSpacing = height + 8
+            let last = (text as NSString).paragraphRange(for: NSRange(location: NSMaxRange(block.range) - 1, length: 0))
             storage.addAttribute(.paragraphStyle, value: style, range: last)
         }
         storage.endEditing()

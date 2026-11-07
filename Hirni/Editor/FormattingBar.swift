@@ -43,6 +43,7 @@ struct FormattingBar: View {
                 Divider()
                 Button("Link auf Notiz", systemImage: "link") { controller.showsNotePicker = true }
                 Button("Tabelle", systemImage: "squareshape.split.3x3") { controller.insertTable() }
+                Button("Spalten", systemImage: "rectangle.split.2x1") { controller.insertColumns() }
                 Button("Datenbank-Ansicht", systemImage: "tablecells") { controller.showsDatabasePicker = true }
             } label: {
                 Label("Anhang", systemImage: "paperclip")

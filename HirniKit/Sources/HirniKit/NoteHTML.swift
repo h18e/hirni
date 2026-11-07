@@ -66,12 +66,30 @@ public enum NoteHTML {
     .tag { color: #007aff; }
     .date, .hint { color: #8e8e93; font-size: 8.5pt; }
     .db-title { font-weight: 600; margin: 10pt 0 4pt; }
+    .columns { display: flex; gap: 14pt; margin: 0 0 8pt; }
+    .column { flex: 1; min-width: 0; }
     a { color: #007aff; text-decoration: none; }
     """
 
     // MARK: - Blöcke
 
     static func blocks(_ text: String, image: (String) -> Image?, database: (DatabaseEmbed) -> String?) -> String {
+        let columnBlocks = ColumnBlock.blocks(in: text)
+        if !columnBlocks.isEmpty {
+            let ns = text as NSString
+            var html = ""
+            var position = 0
+            for block in columnBlocks {
+                html += blocks(ns.substring(with: NSRange(position..<block.range.location)), image: image, database: database)
+                html += "<div class=\"columns\">"
+                for column in block.columns {
+                    html += "<div class=\"column\">\(blocks(column, image: image, database: database))</div>"
+                }
+                html += "</div>"
+                position = NSMaxRange(block.range)
+            }
+            return html + blocks(ns.substring(from: position), image: image, database: database)
+        }
         let lines = text.components(separatedBy: "\n")
         let embeds = DatabaseEmbed.blocks(in: text)
         let tables = MarkdownTable.tables(in: text)
