@@ -14,6 +14,8 @@ import AppKit
 final class NoteTables {
     /// Die Tabelle an Position `index` wurde im Raster geändert.
     var onChange: (_ index: Int, _ table: MarkdownTable) -> Void = { _, _ in }
+    /// Die Tabelle an Position `index` soll aus der Notiz verschwinden.
+    var onRemove: (_ index: Int) -> Void = { _ in }
     /// Die Höhe hat sich geändert (Zeile dazu oder weg).
     var onLayoutChange: () -> Void = {}
     /// Ein Griff wird gezogen: Solange darf die Notiz nicht scrollen, sonst
@@ -75,6 +77,12 @@ final class NoteTables {
         onTab(model.index, cell)
     }
 
+    fileprivate func remove(_ model: TableModel) {
+        focused = nil
+        onRemove(model.index)
+        onLayoutChange()
+    }
+
     fileprivate func changed(_ model: TableModel, rowCountChanged: Bool) {
         onChange(model.index, model.table)
         if rowCountChanged { onLayoutChange() }
@@ -118,6 +126,10 @@ final class TableModel {
 
     func setDragging(_ dragging: Bool) {
         owner?.onDragging(dragging)
+    }
+
+    func remove() {
+        owner?.remove(self)
     }
 
     func edit(_ change: (inout MarkdownTable) -> Void) {
@@ -165,6 +177,7 @@ struct TableGrid: View {
     }
 
     @State private var dragStart: Int?
+    @State private var confirmsRemoval = false
     @FocusState private var focusedCell: TableCell?
     #if os(iOS)
     /// Auswahl im Feld mit dem Fokus.
@@ -207,6 +220,12 @@ struct TableGrid: View {
             if let cell { selectHint(in: cell) }
         }
         .onDisappear { model.setFocused(nil) }
+        .alert("Tabelle löschen?", isPresented: $confirmsRemoval) {
+            Button("Löschen", role: .destructive) { model.remove() }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Der Inhalt der Tabelle geht verloren.")
+        }
     }
 
     private func rowView(_ row: Int, table: MarkdownTable) -> some View {
@@ -338,6 +357,15 @@ struct TableGrid: View {
 
     // MARK: - Menüs
 
+    /// Mit Inhalt wird zuerst nachgefragt: Auf dem iPhone lässt sich das nicht
+    /// rückgängig machen.
+    @ViewBuilder private var removeButton: some View {
+        Divider()
+        Button("Tabelle löschen", systemImage: "trash", role: .destructive) {
+            if model.table.hasContent { confirmsRemoval = true } else { model.remove() }
+        }
+    }
+
     private func columnMenu(_ column: Int, count: Int) -> some View {
         Menu {
             Button("Spalte links einfügen", systemImage: "arrow.left.to.line") { model.edit { $0.insertColumn(at: column) } }
@@ -353,6 +381,7 @@ struct TableGrid: View {
                 Divider()
                 Button("Spalte löschen", systemImage: "trash", role: .destructive) { model.edit { $0.removeColumn(at: column) } }
             }
+            removeButton
         } label: {
             Image(systemName: "ellipsis")
                 .font(.caption2.bold())
@@ -383,6 +412,7 @@ struct TableGrid: View {
                 Divider()
                 Button("Zeile löschen", systemImage: "trash", role: .destructive) { model.edit { $0.removeRow(at: row) } }
             }
+            removeButton
         } label: {
             Image(systemName: "ellipsis")
                 .rotationEffect(.degrees(90))

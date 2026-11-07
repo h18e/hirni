@@ -89,6 +89,7 @@ extension HelpTopic {
             .init(title: "Tabellen", items: [
                 "**Einfügen:** iPhone Büroklammer → «Tabelle», Mac Tabellen-Knopf (⌥⌘T).",
                 "Zellen direkt bearbeiten. Menü «…» über jeder Spalte und vor jeder Zeile: einfügen, verschieben, löschen.",
+                "**Ganze Tabelle löschen:** in einem dieser Menüs «Tabelle löschen». Steht etwas in der Tabelle, fragt Hirni zuerst nach.",
                 "Griff rechts bzw. unten ziehen fügt Spalten bzw. Zeilen an; zurückziehen entfernt leere wieder.",
             ]),
             .init(title: "Spalten", items: [

@@ -133,6 +133,37 @@ public struct MarkdownTable: Equatable, Sendable {
     }
 
     /// Eine neue, leere Tabelle zum Einfügen.
+    /// Steht in einer Zelle etwas? Die vorgegebenen Titel einer neuen Tabelle
+    /// («Spalte 1») zählen nicht.
+    public var hasContent: Bool {
+        rows.enumerated().contains { row, cells in
+            cells.enumerated().contains { column, cell in
+                let value = cell.trimmingCharacters(in: .whitespaces)
+                return !value.isEmpty && !(row == 0 && value == "Spalte \(column + 1)")
+            }
+        }
+    }
+
+    /// Entfernt diese Tabelle samt ihrem Zeilenumbruch und einer Leerzeile, damit
+    /// keine doppelte Lücke bleibt. Steht die Tabelle am Ende des Textes, fällt
+    /// die Leerzeile davor weg.
+    public func removal(in text: String, selection: NSRange) -> TextEdit {
+        let ns = text as NSString
+        func isBreak(_ location: Int) -> Bool {
+            location >= 0 && location < ns.length && ns.character(at: location) == 0x0A
+        }
+        var start = range.location
+        var end = NSMaxRange(range)
+        if isBreak(end) { end += 1 }
+        if isBreak(end) {
+            end += 1
+        } else if end == ns.length, isBreak(start - 1), isBreak(start - 2) {
+            start -= 1
+        }
+        let caret = selection.location >= end ? selection.location - (end - start) : min(selection.location, start)
+        return TextEdit(range: NSRange(start..<end), replacement: "", selection: NSRange(location: caret, length: 0))
+    }
+
     public static func empty(columns: Int = 3, rows: Int = 2) -> MarkdownTable {
         let header = (1...columns).map { "Spalte \($0)" }
         return MarkdownTable(rows: [header] + Array(repeating: Array(repeating: "", count: columns), count: rows))

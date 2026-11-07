@@ -145,6 +145,7 @@ final class EditorController {
         overlays.columns.onDissolve = { [weak self] index in self?.dissolveColumns(at: index) }
         // Änderungen im Tabellen-Raster zurück in den Markdown-Text.
         overlays.tables.onChange = { [weak self] index, table in self?.replaceTable(at: index, with: table) }
+        overlays.tables.onRemove = { [weak self] index in self?.removeTable(at: index) }
         overlays.tables.onTab = { [weak self] index, cell in self?.tab(inTable: index, from: cell) }
         #if os(iOS)
         overlays.tables.onDragging = { [weak self] dragging in
@@ -286,6 +287,16 @@ final class EditorController {
             let insertion = prefix + MarkdownTable.empty().markdown + "\n\n"
             return TextEdit(range: selection, replacement: insertion,
                             selection: NSRange(location: selection.location + (insertion as NSString).length, length: 0))
+        }
+    }
+
+    private func removeTable(at index: Int) {
+        perform(keepingScroll: true) { text, selection in
+            let tables = MarkdownTable.tables(in: text)
+            guard tables.indices.contains(index) else {
+                return TextEdit(range: NSRange(location: selection.location, length: 0), replacement: "", selection: selection)
+            }
+            return tables[index].removal(in: text, selection: selection)
         }
     }
 

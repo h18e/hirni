@@ -3,6 +3,36 @@ import Testing
 @testable import HirniKit
 
 struct MarkdownTableTests {
+    private func removing(from text: String) -> String {
+        let table = MarkdownTable.tables(in: text)[0]
+        return table.removal(in: text, selection: NSRange(location: 0, length: 0)).applied(to: text)
+    }
+
+    @Test func removalLeavesNoDoubleGap() {
+        let table = "| A |\n|---|\n| 1 |"
+        #expect(removing(from: "Davor\n\n\(table)\n\nDanach") == "Davor\n\nDanach")
+        #expect(removing(from: "Davor\n\n\(table)") == "Davor\n")
+        #expect(removing(from: "Davor\n\n\(table)\n") == "Davor\n")
+        #expect(removing(from: "\(table)\n\nDanach") == "Danach")
+        #expect(removing(from: "Davor\n\n\(table)\nDanach") == "Davor\n\nDanach")
+        #expect(removing(from: table) == "")
+    }
+
+    @Test func removalMovesTheCursor() {
+        let text = "Davor\n\n| A |\n|---|\n| 1 |\n\nDanach"
+        let table = MarkdownTable.tables(in: text)[0]
+        let length = (text as NSString).length
+        #expect(table.removal(in: text, selection: NSRange(location: length, length: 0)).selection.location == 13)
+        #expect(table.removal(in: text, selection: NSRange(location: 9, length: 0)).selection.location == 7)
+        #expect(table.removal(in: text, selection: NSRange(location: 2, length: 0)).selection.location == 2)
+    }
+
+    @Test func knowsWhetherItHasContent() {
+        #expect(!MarkdownTable.empty().hasContent)
+        #expect(MarkdownTable(rows: [["", ""], ["", "x"]]).hasContent)
+        #expect(MarkdownTable(rows: [["Name", "Spalte 2"], ["", ""]]).hasContent)
+    }
+
     @Test func findsTablesAndIgnoresCode() {
         let text = "Vorher\n| Was | Wann |\n|---|:--:|\n| Zoo | Sa |\n| A \\| B | x<br>y |\nNachher\n```\n| a | b |\n|---|---|\n```"
         let tables = MarkdownTable.tables(in: text)
