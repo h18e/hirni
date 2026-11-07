@@ -49,6 +49,19 @@ final class EditorController {
         }
     }
 
+    /// Anderer Text von aussen: Die gemerkte Spalte gilt nur weiter, wenn dort
+    /// wirklich der Cursor steht. Sonst landeten Befehle in einer falschen Spalte.
+    /// Lädt die App bloss denselben Text neu (etwa nach dem iCloud-Abgleich),
+    /// bleibt alles, wie es ist.
+    private func releaseUnfocusedColumn() {
+        #if os(iOS)
+        if activeColumn?.textView?.isFirstResponder != true { activeColumn = nil }
+        #else
+        if let view = activeColumn?.textView, view.window?.firstResponder === view { return }
+        activeColumn = nil
+        #endif
+    }
+
     /// Die Spalte gibt es nicht mehr.
     func columnRemoved(_ column: EditorController) {
         if activeColumn === column { activeColumn = nil }
@@ -159,7 +172,6 @@ final class EditorController {
     /// bei jeder Aktualisierung zurückschreiben, käme manchmal ein veralteter
     /// Stand an, und der Cursor spränge zurück.
     func setText(_ text: String) {
-        activeColumn = nil
         guard let textView else {
             pendingText = text
             return
@@ -167,11 +179,13 @@ final class EditorController {
         pendingText = nil
         #if os(iOS)
         guard textView.text != text else { return }
+        releaseUnfocusedColumn()
         let selection = textView.selectedRange
         textView.text = text
         textView.selectedRange = NSRange(location: min(selection.location, (text as NSString).length), length: 0)
         #else
         guard textView.string != text else { return }
+        releaseUnfocusedColumn()
         let selection = textView.selectedRange()
         textView.string = text
         textView.setSelectedRange(NSRange(location: min(selection.location, (text as NSString).length), length: 0))
