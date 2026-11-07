@@ -16,11 +16,12 @@ extension HelpTopic {
                 "Die Notizliste ist nach «zuletzt geändert» sortiert, angepinnte Notizen stehen oben.",
             ]),
             .init(title: "Mehrere Notizen offen haben", items: [
-                "**Mac – eigenes Fenster:** Rechtsklick auf eine Notiz → «In neuem Fenster öffnen», oder die gewählte Notiz mit ⇧⌘O bzw. «Ablage → Notiz in neuem Fenster öffnen». Das Fenster lässt sich frei auf dem Bildschirm platzieren.",
-                "Das neue Fenster zeigt nur die Notiz, ohne Seitenleiste und Liste. Für eine weitere Notiz öffnest du einfach noch ein Fenster.",
-                "Dieselbe Notiz öffnet nur ein Fenster: Ein zweiter Versuch holt das bestehende nach vorne.",
-                "**iPhone – Tabs:** Jede geöffnete Notiz bekommt einen Tab. Ab zwei Notizen stehen die Tabs über dem Text; tippen wechselt, ✕ schliesst den Tab (die Notiz bleibt erhalten).",
-                "Eine weitere Notiz öffnest du wie immer: mit dem Zurück-Pfeil zur Liste und dort antippen. Es gibt höchstens 6 Tabs, danach fällt der älteste weg. Die Tabs bleiben nach einem Neustart erhalten.",
+                "**Neuer Tab:** Notiz in der Liste lange drücken (iPhone) bzw. Rechtsklick (Mac) → «In neuem Tab öffnen».",
+                "Ab zwei Tabs steht die Leiste über dem Text: Antippen wechselt, ✕ schliesst den Tab, die Notiz bleibt erhalten.",
+                "Eine normal geöffnete Notiz ersetzt den aktuellen Tab, wie im Browser. So sammeln sich beim Durchblättern keine Tabs an. Hat die Notiz schon einen Tab, springt Hirni dorthin.",
+                "Die Tabs bleiben nach einem Neustart erhalten.",
+                "**Mac – Tab ablösen:** Tab aus der Leiste nach unten ziehen oder Rechtsklick → «In eigenes Fenster». Mehrere Tabs markierst du mit ⌘-Klick; sie wandern gemeinsam in ein Fenster.",
+                "**Mac – neues Fenster:** Rechtsklick auf eine Notiz → «In neuem Fenster öffnen», oder die gewählte Notiz mit ⇧⌘O bzw. «Ablage → Notiz in neuem Fenster öffnen». Das Fenster zeigt nur die Notiz, ohne Seitenleiste und Liste, und lässt sich frei platzieren.",
             ]),
             .init(title: "Ordner und Unterordner", items: [
                 "**Neuer Ordner:** Ordner-Symbol mit + oben in der Seitenleiste.",

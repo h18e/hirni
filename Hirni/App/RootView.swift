@@ -5,12 +5,12 @@ import SwiftUI
 /// eigentliche App, vorher ein Hinweis.
 struct RootView: View {
     @Environment(VaultLocator.self) private var vault
-    /// Eigenes Fenster: zeigt von Anfang an diese Notiz.
-    var note: URL?
+    /// Eigenes Fenster: zeigt von Anfang an diese Notizen als Tabs.
+    var notes: [URL]?
 
     var body: some View {
         if case .ready(let url) = vault.state {
-            LibraryView(vault: Vault(root: url), windowNote: note)
+            LibraryView(vault: Vault(root: url), windowNotes: notes)
                 .id(url)
         } else {
             VStack(spacing: 16) {

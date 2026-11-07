@@ -173,8 +173,10 @@ Jede Ansicht hat einen Namen und eigene **Filter**, **Sortierung** und **Gruppie
 
 ### Mehrere Notizen offen
 
-- Mac: «In neuem Fenster öffnen» (Kontextmenü, ⇧⌘O, Menü Ablage) öffnet die Notiz in einem eigenständigen Fenster mit eigener Auswahl und eigenem Editor. Es zeigt nur die Notiz, ohne Seitenleiste und Liste. Links aus Widget, Mitteilungen und Kurzbefehlen gehen ans Hauptfenster.
-- iPhone: Jede geöffnete Notiz wird zum Tab (`NoteTabs`, höchstens 6, der älteste fällt weg). Ab zwei Tabs steht die Leiste über dem Editor. Die Tabs bleiben über einen Neustart erhalten (`offeneTabs` in den Einstellungen des Geräts, nicht in iCloud). Tabs gelöschter Notizen verschwinden.
+- Tabs wie im Browser (`NoteTabs`, Mac und iPhone): Eine normal geöffnete Notiz ersetzt den aktiven Tab oder springt zu ihrem Tab. Neue Tabs nur über «In neuem Tab öffnen» (Kontextmenü in Liste und Suche). Ab zwei Tabs steht die Leiste über dem Editor.
+- Die Tabs bleiben über einen Neustart erhalten (`notizTabs`, `notizTabAktiv` in den Einstellungen des Geräts, nicht in iCloud). Tabs gelöschter Notizen verschwinden.
+- Mac: Tabs lassen sich ablösen (aus der Leiste ziehen oder Kontextmenü); mit ⌘-Klick markierte Tabs wandern gemeinsam in ein Fenster. Beim Ordnerwechsel bleiben offene Tabs sichtbar.
+- Mac: «In neuem Fenster öffnen» (Kontextmenü, ⇧⌘O, Menü Ablage) öffnet die Notiz in einem eigenständigen Fenster mit eigener Auswahl und eigenem Editor. Es zeigt nur die Notiz bzw. seine Tabs, ohne Seitenleiste und Liste. Links aus Widget, Mitteilungen und Kurzbefehlen gehen ans Hauptfenster.
 
 ### Notizen und Editor
 

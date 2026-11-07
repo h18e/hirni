@@ -55,14 +55,19 @@ final class VaultStore {
     var sidebarSelection: SidebarItem? = .inbox {
         didSet {
             guard oldValue != sidebarSelection else { return }
+            #if os(macOS)
+            // Offene Tabs bleiben beim Wechsel des Ordners sichtbar.
+            if tabs.urls.count < 2 { selectedNote = nil }
+            #else
             selectedNote = nil
+            #endif
             notes = []
             Task { await reload() }
         }
     }
     var selectedNote: URL? {
         didSet {
-            if let selectedNote { tabs.open(selectedNote) }
+            if let selectedNote { tabs.show(selectedNote) }
             // Wegnavigieren speichert den offenen Editor. Darauf, dass SwiftUI
             // beim Zurückgehen «verschwunden» meldet, ist auf dem iPhone kein Verlass.
             guard oldValue != selectedNote, let oldValue, let editor = openEditor, editor.url == oldValue else { return }
@@ -70,14 +75,18 @@ final class VaultStore {
         }
     }
 
-    /// iPhone: die offenen Notizen als Tabs. Bleiben über einen Neustart erhalten.
+    /// Die offenen Notizen als Tabs. Im Hauptfenster bleiben sie über einen
+    /// Neustart erhalten, abgelöste Fenster merkt sich das System selbst.
     private(set) var tabs = NoteTabs() {
         didSet {
-            guard oldValue != tabs else { return }
+            guard oldValue != tabs, keepsTabs else { return }
             UserDefaults.standard.set(tabs.urls.compactMap(vault.relativePath(of:)), forKey: Self.tabsKey)
+            UserDefaults.standard.set(tabs.active.flatMap(vault.relativePath(of:)), forKey: Self.activeTabKey)
         }
     }
-    private static let tabsKey = "offeneTabs"
+    private let keepsTabs: Bool
+    private static let tabsKey = "notizTabs"
+    private static let activeTabKey = "notizTabAktiv"
 
     /// Gewähltes Hilfe-Thema (`HelpTopic.id`).
     var helpTopic: String?
@@ -116,10 +125,26 @@ final class VaultStore {
     /// Sonst würde ein später Speichervorgang die Datei am alten Ort neu anlegen.
     @ObservationIgnored var openEditor: EditorHandle?
 
-    init(vault: Vault) {
+    /// - Parameter windowTabs: Eigenes Fenster mit diesen Tabs; sonst Hauptfenster.
+    init(vault: Vault, windowTabs: [URL]? = nil) {
         self.vault = vault
-        let paths = UserDefaults.standard.stringArray(forKey: Self.tabsKey) ?? []
-        tabs = NoteTabs(urls: paths.map { vault.root.appending(path: $0) })
+        keepsTabs = windowTabs == nil
+        if let windowTabs {
+            tabs = NoteTabs(urls: windowTabs, active: windowTabs.first)
+        } else {
+            let paths = UserDefaults.standard.stringArray(forKey: Self.tabsKey) ?? []
+            let active = UserDefaults.standard.string(forKey: Self.activeTabKey)
+            tabs = NoteTabs(
+                urls: paths.map { vault.root.appending(path: $0) },
+                active: active.map { vault.root.appending(path: $0) }
+            )
+        }
+    }
+
+    /// «In neuem Tab öffnen».
+    func openInNewTab(_ url: URL) {
+        tabs.openNew(url)
+        selectedNote = url
     }
 
     /// Schliesst einen Tab. War es der gezeigte, rückt der Nachbar nach.
@@ -251,6 +276,10 @@ final class VaultStore {
         if tasks != result.tasks { tasks = result.tasks }
         if dueDates != result.dueDates { dueDates = result.dueDates }
         tabs.retain { FileManager.default.fileExists(atPath: $0.path(percentEncoded: false)) }
+        #if os(macOS)
+        // Aktiver Tab gelöscht: Der Nachbar rückt nach.
+        if selectedNote == nil, tabs.urls.count > 1 { selectedNote = tabs.active }
+        #endif
         await scheduleReminders()
         Task { [vault] in await CalendarExporter.shared.sync(vault) }
         switch result.notes {

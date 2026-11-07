@@ -7,12 +7,12 @@ import SwiftUI
 struct LibraryView: View {
     @State private var store: VaultStore
     @Environment(\.scenePhase) private var scenePhase
-    /// Eigenes Notiz-Fenster: zeigt nur diese Notiz, ohne Seitenleiste und Liste.
-    private let windowNote: URL?
+    /// Eigenes Fenster: zeigt nur diese Notizen, ohne Seitenleiste und Liste.
+    private let windowNotes: [URL]?
 
-    init(vault: Vault, windowNote: URL? = nil) {
-        _store = State(initialValue: VaultStore(vault: vault))
-        self.windowNote = windowNote
+    init(vault: Vault, windowNotes: [URL]? = nil) {
+        _store = State(initialValue: VaultStore(vault: vault, windowTabs: windowNotes))
+        self.windowNotes = windowNotes
     }
 
     var body: some View {
@@ -26,9 +26,9 @@ struct LibraryView: View {
         .focusedSceneValue(\.openNote, store.selectedNote)
         #endif
         .task {
-            if windowNote == nil { AppRouter.shared.handler = { [store] in store.open($0) } }
+            if windowNotes == nil { AppRouter.shared.handler = { [store] in store.open($0) } }
             await store.start()
-            if let windowNote { store.open(file: windowNote) }
+            if let note = windowNotes?.first { store.open(file: note) }
         }
         .onOpenURL { url in
             if let destination = AppDestination(url: url) { store.open(destination) }
@@ -47,7 +47,7 @@ struct LibraryView: View {
 
     @ViewBuilder
     private var layout: some View {
-        if windowNote != nil {
+        if windowNotes != nil {
             NavigationStack { detail }
         } else {
             NavigationSplitView {
@@ -78,12 +78,10 @@ struct LibraryView: View {
             }
         } else if let url = store.selectedNote {
             VStack(spacing: 0) {
-                #if os(iOS)
                 if store.tabs.urls.count > 1 {
                     NoteTabBar()
                     Divider()
                 }
-                #endif
                 if Vault.isDatabase(url) {
                     DatabaseView(url: url)
                         .id(url)

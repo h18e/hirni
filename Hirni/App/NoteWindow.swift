@@ -20,7 +20,7 @@ struct NoteWindowCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .newItem) {
             Button("Notiz in neuem Fenster öffnen") {
-                if let note { openWindow(id: NoteWindow.id, value: note) }
+                if let note { openWindow(id: NoteWindow.id, value: [note]) }
             }
             .keyboardShortcut("o", modifiers: [.command, .shift])
             .disabled(note == nil)

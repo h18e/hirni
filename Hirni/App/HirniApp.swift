@@ -25,10 +25,10 @@ struct HirniApp: App {
         #endif
 
         #if os(macOS)
-        // Eigenständige Fenster für einzelne Notizen. Links aus Widget und
+        // Eigenständige Fenster mit einer oder mehreren Notizen. Links aus Widget und
         // Mitteilungen gehen weiter ans Hauptfenster.
-        WindowGroup("Notiz", id: NoteWindow.id, for: URL.self) { $note in
-            RootView(note: note)
+        WindowGroup("Notiz", id: NoteWindow.id, for: [URL].self) { $notes in
+            RootView(notes: notes)
                 .environment(vault)
                 .task { await vault.locate() }
         }

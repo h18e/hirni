@@ -1,12 +1,19 @@
 import HirniKit
 import SwiftUI
-
 #if os(iOS)
 import UIKit
+#else
+import AppKit
+#endif
 
-/// iPhone: die offenen Notizen als Tabs über dem Editor.
+/// Die offenen Notizen als Tabs über dem Editor.
 struct NoteTabBar: View {
     @Environment(VaultStore.self) private var store
+    #if os(macOS)
+    @Environment(\.openWindow) private var openWindow
+    /// Mit ⌘-Klick markierte Tabs, zum gemeinsamen Ablösen.
+    @State private var marked: Set<URL> = []
+    #endif
 
     var body: some View {
         ScrollViewReader { scroller in
@@ -25,13 +32,37 @@ struct NoteTabBar: View {
         }
     }
 
+    @ViewBuilder
     private func tab(_ url: URL) -> some View {
+        let label = tabLabel(url)
+        #if os(macOS)
+        label
+            .overlay {
+                if marked.contains(url) {
+                    Capsule().strokeBorder(.tint, lineWidth: 1.5)
+                }
+            }
+            .contextMenu {
+                let detached = tabsToDetach(with: url)
+                Button(detached.count > 1 ? "\(detached.count) Tabs in eigenes Fenster" : "In eigenes Fenster") {
+                    detach(detached)
+                }
+                Button("Tab schliessen") { store.closeTab(url) }
+            }
+            // Einen Tab aus der Leiste ziehen löst ihn ab.
+            .simultaneousGesture(DragGesture(minimumDistance: 30).onEnded { drag in
+                if abs(drag.translation.height) > 60 { detach(tabsToDetach(with: url)) }
+            })
+        #else
+        label
+        #endif
+    }
+
+    private func tabLabel(_ url: URL) -> some View {
         let isSelected = url == store.selectedNote
         return HStack(spacing: 4) {
             Button {
-                // Der Cursor der alten Notiz hätte in der neuen keinen Sinn.
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                store.selectedNote = url
+                select(url)
             } label: {
                 Text(Vault.title(of: url))
                     .font(.subheadline.weight(isSelected ? .semibold : .regular))
@@ -39,6 +70,7 @@ struct NoteTabBar: View {
                     .frame(maxWidth: 130)
                     .padding(.leading, 12)
                     .padding(.vertical, 6)
+                    .contentShape(Rectangle())
             }
             Button("Tab schliessen", systemImage: "xmark") {
                 store.closeTab(url)
@@ -56,5 +88,35 @@ struct NoteTabBar: View {
             in: Capsule()
         )
     }
+
+    private func select(_ url: URL) {
+        #if os(macOS)
+        if NSEvent.modifierFlags.contains(.command) {
+            if marked.remove(url) == nil { marked.insert(url) }
+            return
+        }
+        marked = []
+        #else
+        // Der Cursor der alten Notiz hätte in der neuen keinen Sinn.
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
+        store.selectedNote = url
+    }
+
+    #if os(macOS)
+    /// Ein markierter Tab nimmt die übrigen markierten mit.
+    private func tabsToDetach(with url: URL) -> [URL] {
+        marked.contains(url) ? store.tabs.urls.filter(marked.contains) : [url]
+    }
+
+    /// Die Tabs wandern gemeinsam in ein neues Fenster.
+    private func detach(_ urls: [URL]) {
+        marked = []
+        Task {
+            for url in urls { await store.openEditor?.flushIfShowing(url) }
+            openWindow(id: NoteWindow.id, value: urls)
+            for url in urls { store.closeTab(url) }
+        }
+    }
+    #endif
 }
-#endif

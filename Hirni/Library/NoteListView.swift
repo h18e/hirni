@@ -32,6 +32,7 @@ struct NoteListView: View {
                 ForEach(hits) { hit in
                     SearchResultRow(hit: hit)
                         .tag(hit.url)
+                        .contextMenu { openButtons(for: hit.url) }
                 }
             } else {
                 noteRows
@@ -198,12 +199,8 @@ struct NoteListView: View {
 
     @ViewBuilder
     private func menu(for note: NoteSummary) -> some View {
-        #if os(macOS)
-        Button("In neuem Fenster öffnen", systemImage: "macwindow.badge.plus") {
-            openWindow(id: NoteWindow.id, value: note.url)
-        }
+        openButtons(for: note.url)
         Divider()
-        #endif
         pinButton(for: note)
         Button("Duplizieren", systemImage: "plus.square.on.square") {
             Task { await store.duplicateNote(note.url) }
@@ -215,6 +212,19 @@ struct NoteListView: View {
         Button("Löschen", systemImage: "trash", role: .destructive) {
             Task { await store.deleteNote(note.url) }
         }
+    }
+
+    /// Neuer Tab; am Mac auch ein eigenes Fenster.
+    @ViewBuilder
+    private func openButtons(for url: URL) -> some View {
+        Button("In neuem Tab öffnen", systemImage: "plus.rectangle.on.rectangle") {
+            store.openInNewTab(url)
+        }
+        #if os(macOS)
+        Button("In neuem Fenster öffnen", systemImage: "macwindow.badge.plus") {
+            openWindow(id: NoteWindow.id, value: [url])
+        }
+        #endif
     }
 
     private func pinButton(for note: NoteSummary) -> some View {
