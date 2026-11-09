@@ -112,7 +112,31 @@ enum MarkdownStyler {
             let last = (text as NSString).paragraphRange(for: NSRange(location: NSMaxRange(block.range) - 1, length: 0))
             storage.addAttribute(.paragraphStyle, value: style, range: last)
         }
+        indentListItems(in: storage, skipping: spans.filter { $0.kind == .codeBlock }.map(\.range)
+            + MarkdownTable.tables(in: text).map(\.range) + columnBlocks.map(\.range))
         storage.endEditing()
+    }
+
+    /// Hängender Einzug: Umbrochene Zeilen eines Listenpunkts beginnen dort,
+    /// wo der Text nach `- `, `1. ` oder der Checkbox beginnt. Gemessen wird
+    /// mit der Schrift, wie sie dasteht (das `- ` vor einer Checkbox ist fast
+    /// unsichtbar und darum schmal).
+    private static func indentListItems(in storage: NSTextStorage, skipping hidden: [NSRange]) {
+        let ns = storage.string as NSString
+        var location = 0
+        while location < ns.length {
+            let paragraph = ns.paragraphRange(for: NSRange(location: location, length: 0))
+            location = NSMaxRange(paragraph)
+            guard !hidden.contains(where: { NSIntersectionRange($0, paragraph).length > 0 }),
+                  let length = MarkdownSyntax.listPrefixLength(of: ns.substring(with: paragraph))
+            else { continue }
+            let prefix = storage.attributedSubstring(from: NSRange(location: paragraph.location, length: min(length, paragraph.length)))
+            let width = ceil(prefix.size().width)
+            let current = storage.attribute(.paragraphStyle, at: paragraph.location, effectiveRange: nil) as? NSParagraphStyle
+            let style = (current?.mutableCopy() as? NSMutableParagraphStyle) ?? NSMutableParagraphStyle()
+            style.headIndent = width
+            storage.addAttribute(.paragraphStyle, value: style, range: paragraph)
+        }
     }
 
     private static func style(_ span: MarkdownSpan, in storage: NSTextStorage, base: PlatformFont) {

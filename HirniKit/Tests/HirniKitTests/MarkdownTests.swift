@@ -220,4 +220,13 @@ struct TagCollectionTests {
         #expect(tags.map(\.name) == ["Ferien", "idee"])
         #expect(tags.first?.count == 2)
     }
+
+    @Test func listPrefixLengthCoversMarkerAndCheckbox() {
+        #expect(MarkdownSyntax.listPrefixLength(of: "- Punkt") == 2)
+        #expect(MarkdownSyntax.listPrefixLength(of: "  12. Punkt") == 6)
+        #expect(MarkdownSyntax.listPrefixLength(of: "- [ ] Aufgabe") == 6)
+        #expect(MarkdownSyntax.listPrefixLength(of: "\t- (x) Erledigt") == 7)
+        #expect(MarkdownSyntax.listPrefixLength(of: "Kein Punkt") == nil)
+        #expect(MarkdownSyntax.listPrefixLength(of: "-kein Punkt") == nil)
+    }
 }

@@ -312,6 +312,18 @@ public enum MarkdownSyntax {
 
     // MARK: - Muster
 
+    /// Länge (UTF-16) von Einrückung und Listenzeichen einer Zeile, also
+    /// `- `, `1. `, `- [ ] ` oder `- ( ) ` samt führenden Leerzeichen; `nil`,
+    /// wenn die Zeile kein Listenpunkt ist. Der Editor rückt Folgezeilen
+    /// eines umbrochenen Punkts so weit ein.
+    public static func listPrefixLength(of line: String) -> Int? {
+        let full = NSRange(location: 0, length: (line as NSString).length)
+        for pattern in [Patterns.checkbox, Patterns.plainCheckbox, Patterns.list] {
+            if let match = pattern.firstMatch(in: line, range: full) { return match.range.length }
+        }
+        return nil
+    }
+
     enum Patterns {
         static let fence = regex(#"^\s*```"#)
         static let heading = regex(#"^(#{1,6})[ \t]+"#)
