@@ -34,6 +34,18 @@ struct VaultTests {
         #expect(allDownloaded)
     }
 
+    @Test func notesKnowWhenTheyWereCreated() throws {
+        let test = try TestVault()
+        try test.write("Inhalt", to: "Inbox/Alt.md")
+        let url = test.vault.inboxURL.appending(path: "Alt.md")
+        let created = Date(timeIntervalSinceNow: -86_400)
+        try FileManager.default.setAttributes([.creationDate: created], ofItemAtPath: url.path(percentEncoded: false))
+
+        let note = try #require(try test.vault.notes(in: test.vault.inboxURL).first)
+        #expect(abs(note.created.timeIntervalSince(created)) < 1)
+        #expect(note.modified > note.created)
+    }
+
     @Test func placeholdersAppearAsNotDownloadedNotes() throws {
         let test = try TestVault()
         try test.write("", to: "Inbox/.Unterwegs.md.icloud")

@@ -48,6 +48,7 @@ extension HelpTopic {
             .init(title: "Notizen", items: [
                 "**Neue Notiz:** Stift oben rechts (Mac ⌘N). Gibt es Vorlagen, wählst du «Leere Notiz» oder eine Vorlage.",
                 "Anpinnen, Duplizieren, Verschieben und Löschen über das Kontextmenü in der Liste.",
+                "**Sortieren:** Pfeile ↑↓ über der Liste: nach «Zuletzt geändert», «Erstellt» oder «Titel», jeweils auf- oder absteigend. Angepinnte Notizen bleiben oben, die Wahl gilt für alle Ordner.",
                 "Gelöschte Notizen landen in «Zuletzt gelöscht» und lassen sich dort wiederherstellen.",
             ]),
             .init(title: "Formatieren", items: [

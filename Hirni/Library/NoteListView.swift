@@ -69,6 +69,7 @@ struct NoteListView: View {
                     }
                 }
             }
+            ToolbarItem(placement: .listAction) { sortMenu }
             ToolbarItem(placement: .listAction) {
                 Button("Neue Datenbank", systemImage: "tablecells.badge.ellipsis") {
                     Task { await store.newDatabase() }
@@ -171,11 +172,35 @@ struct NoteListView: View {
         }
     }
 
+    /// Sortieren nach Titel, Erstellung oder Änderung, auf- oder absteigend.
+    private var sortMenu: some View {
+        @Bindable var store = store
+        let field = Binding(get: { store.noteSort.field }, set: { store.noteSort = .natural($0) })
+        let isTitle = store.noteSort.field == .title
+        return Menu {
+            Picker("Sortieren nach", selection: field) {
+                Text("Zuletzt geändert").tag(NoteSort.Field.modified)
+                Text("Erstellt").tag(NoteSort.Field.created)
+                Text("Titel").tag(NoteSort.Field.title)
+            }
+            .pickerStyle(.inline)
+            Picker("Reihenfolge", selection: $store.noteSort.ascending) {
+                Text(isTitle ? "A–Z" : "Neueste zuerst").tag(isTitle)
+                Text(isTitle ? "Z–A" : "Älteste zuerst").tag(!isTitle)
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label("Sortieren", systemImage: "arrow.up.arrow.down")
+        }
+        .help("Notizen sortieren")
+    }
+
     @ViewBuilder
     private var noteRows: some View {
         subfolderRows
         ForEach(store.notes) { note in
-            NoteRow(note: note, hasConflict: store.hasConflict(note.url))
+            NoteRow(note: note, date: store.noteSort.field == .created ? note.created : note.modified,
+                    hasConflict: store.hasConflict(note.url))
                 .tag(note.url)
                 .draggable(VaultItemTransfer(url: note.url)) {
                     Label(note.title, systemImage: "note.text")
@@ -252,6 +277,8 @@ struct MovingItem: Identifiable {
 
 private struct NoteRow: View {
     let note: NoteSummary
+    /// Geändert, beim Sortieren nach Erstellung das Erstellungsdatum.
+    let date: Date
     let hasConflict: Bool
 
     var body: some View {
@@ -280,7 +307,7 @@ private struct NoteRow: View {
                 }
             }
             HStack(spacing: 6) {
-                Text(note.modified, format: .relative(presentation: .named))
+                Text(date, format: .relative(presentation: .named))
                     .foregroundStyle(.secondary)
                 if !note.isDownloaded {
                     Image(systemName: "icloud.and.arrow.down")

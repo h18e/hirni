@@ -38,6 +38,15 @@ final class VaultStore {
 
     private(set) var folders: [FolderNode] = []
     private(set) var notes: [NoteSummary] = []
+    /// Reihenfolge der Notizliste, für alle Ordner gleich; bleibt gespeichert.
+    var noteSort = VaultStore.savedNoteSort() {
+        didSet {
+            guard oldValue != noteSort else { return }
+            notes = noteSort.apply(notes)
+            UserDefaults.standard.set(noteSort.field.rawValue, forKey: Self.sortFieldKey)
+            UserDefaults.standard.set(noteSort.ascending, forKey: Self.sortAscendingKey)
+        }
+    }
     private(set) var trash: [TrashEntry] = []
     /// Alle Pendenzen (Checkboxen) aus allen Notizen.
     private(set) var tasks: [TaskItem] = []
@@ -97,6 +106,14 @@ final class VaultStore {
     }
     private let keepsTabs: Bool
     private static let tabsKey = "notizTabs"
+    private static let sortFieldKey = "notizSortierung"
+    private static let sortAscendingKey = "notizSortierungAufsteigend"
+
+    private static func savedNoteSort() -> NoteSort {
+        guard let raw = UserDefaults.standard.string(forKey: sortFieldKey),
+              let field = NoteSort.Field(rawValue: raw) else { return NoteSort() }
+        return NoteSort(field: field, ascending: UserDefaults.standard.bool(forKey: sortAscendingKey))
+    }
     private static let activeTabKey = "notizTabAktiv"
 
     /// Gewähltes Hilfe-Thema (`HelpTopic.id`).
@@ -318,7 +335,7 @@ final class VaultStore {
         Task { [vault] in await CalendarExporter.shared.sync(vault) }
         switch result.notes {
         case .success(let notes):
-            self.notes = sidebarSelection?.isTag == true ? await taggedNotes() : notes
+            self.notes = noteSort.apply(sidebarSelection?.isTag == true ? await taggedNotes() : notes)
         case .failure:
             // Der gewählte Ordner existiert nicht mehr (z. B. auf dem anderen
             // Gerät gelöscht oder umbenannt): zurück zur Inbox.

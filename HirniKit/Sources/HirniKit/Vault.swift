@@ -36,7 +36,7 @@ public struct Vault: Sendable {
     }
 
     /// Die Notizen direkt in `folder` (nicht in Unterordnern): angepinnte
-    /// zuerst, sonst neueste zuerst.
+    /// zuerst, sonst neueste zuerst (andere Reihenfolgen: `NoteSort`).
     public func notes(in folder: URL) throws -> [NoteSummary] {
         try entries(in: folder)
             .filter { !$0.isDirectory && (Self.isNote(name: $0.name) || Self.isDatabase($0.url)) }
@@ -49,6 +49,7 @@ public struct Vault: Sendable {
                     url: entry.url,
                     title: Self.title(of: entry.url),
                     modified: entry.modified,
+                    created: entry.created,
                     preview: preview,
                     isDownloaded: entry.isDownloaded,
                     isPinned: Frontmatter.value(Frontmatter.pinnedKey, in: head) == "true"
@@ -69,6 +70,7 @@ public struct Vault: Sendable {
                 url: url,
                 title: Self.title(of: url),
                 modified: modified,
+                created: try? url.resourceValues(forKeys: [.creationDateKey]).creationDate,
                 preview: NotePreview.make(from: head),
                 isDownloaded: true,
                 isPinned: Frontmatter.value(Frontmatter.pinnedKey, in: head) == "true"
@@ -103,27 +105,29 @@ public struct Vault: Sendable {
         let isDirectory: Bool
         let isDownloaded: Bool
         let modified: Date
+        let created: Date
     }
 
     /// Inhalt eines Ordners. iCloud-Platzhalter (`.Notiz.md.icloud`) erscheinen
     /// unter ihrem echten Namen, andere versteckte Dateien fehlen.
     func entries(in folder: URL) throws -> [Entry] {
-        let keys: [URLResourceKey] = [.isDirectoryKey, .contentModificationDateKey]
+        let keys: [URLResourceKey] = [.isDirectoryKey, .contentModificationDateKey, .creationDateKey]
         let urls = try fileManager.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys)
         var result: [Entry] = []
         for url in urls {
             let values = try? url.resourceValues(forKeys: Set(keys))
             let modified = values?.contentModificationDate ?? .distantPast
+            let created = values?.creationDate ?? modified
             let name = url.lastPathComponent
             if let realName = ICloudPlaceholder.realName(forPlaceholder: name) {
                 result.append(Entry(
                     url: folder.appending(path: realName), name: realName,
-                    isDirectory: false, isDownloaded: false, modified: modified
+                    isDirectory: false, isDownloaded: false, modified: modified, created: created
                 ))
             } else if !name.hasPrefix(".") {
                 result.append(Entry(
                     url: url, name: name,
-                    isDirectory: values?.isDirectory ?? false, isDownloaded: true, modified: modified
+                    isDirectory: values?.isDirectory ?? false, isDownloaded: true, modified: modified, created: created
                 ))
             }
         }
