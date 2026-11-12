@@ -48,6 +48,7 @@ extension HelpTopic {
             .init(title: "Notizen", items: [
                 "**Neue Notiz:** Stift oben rechts (Mac ⌘N). Gibt es Vorlagen, wählst du «Leere Notiz» oder eine Vorlage.",
                 "Anpinnen, Duplizieren, Verschieben und Löschen über das Kontextmenü in der Liste.",
+                "**Lese-Modus:** Buch-Symbol oben (Mac ⇧⌘R). Die Notiz erscheint wie im PDF, ohne Markdown-Zeichen, auf dem gewohnten Hintergrund (auch dunkel). Links öffnen sich im Browser. Der Stift führt zurück zum Bearbeiten; eine andere Notiz öffnet sich immer zum Bearbeiten.",
                 "**Text erkennen:** Im Menü «Neue Notiz» (Stift) gibt es «Text scannen» (Kamera, iPhone), «Text aus Foto» (iPhone) bzw. «Text aus Bild …» (Mac). Hirni erkennt den Text auf dem Gerät, ohne Internet, und legt daraus eine neue Notiz an; die erste Zeile wird zum Titel. Mehrere Seiten oder Fotos ergeben eine Notiz.",
                 "**Sortieren:** Pfeile ↑↓ über der Liste: nach «Zuletzt geändert», «Erstellt» oder «Titel», jeweils auf- oder absteigend. Angepinnte Notizen bleiben oben, die Wahl gilt für alle Ordner.",
                 "Gelöschte Notizen landen in «Zuletzt gelöscht» und lassen sich dort wiederherstellen.",

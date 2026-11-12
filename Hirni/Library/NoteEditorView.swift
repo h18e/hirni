@@ -37,6 +37,9 @@ struct NoteEditorView: View {
     @State private var showsConflictVersions = false
     @State private var loadError: String?
     @State private var controller = EditorController()
+    /// Lese-Modus: die Notiz wie im PDF statt im Editor.
+    @State private var isReading = false
+    @State private var readingHTML: String?
     #if os(macOS)
     /// PDF für «Als PDF exportieren …».
     @State private var exportedPDF: PDFFile?
@@ -70,6 +73,9 @@ struct NoteEditorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+          if let readingHTML, isReading {
+            NoteReadingView(html: readingHTML)
+          } else {
             if let externalChange {
                 ExternalChangeBanner(
                     keepMine: { Task { await keepMine(over: externalChange) } },
@@ -87,9 +93,15 @@ struct NoteEditorView: View {
 
             if isTemplate { templateTitleField }
 
+          }
+            // Der Editor bleibt im Lese-Modus bestehen (unsichtbar), damit
+            // Cursor, Verlauf und offene Spalten erhalten bleiben.
             MarkdownTextView(text: $text, controller: controller)
+                .opacity(isReading ? 0 : 1)
+                .frame(maxHeight: isReading ? 0 : .infinity)
+                .allowsHitTesting(!isReading)
             #if os(macOS)
-            if !controller.suggestions.isEmpty {
+            if !controller.suggestions.isEmpty, !isReading {
                 TagSuggestions(controller: controller)
                     .padding(.vertical, 6)
                     .background(.bar)
@@ -101,6 +113,7 @@ struct NoteEditorView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .primaryAction) { readingButton }
             ToolbarItem(placement: .primaryAction) { outlineButton }
             ToolbarItem(placement: .primaryAction) { shareMenu }
         }
@@ -183,8 +196,11 @@ struct NoteEditorView: View {
             Task {
                 await reloadIfChangedElsewhere()
                 await databases?.refresh()
+                if isReading { await renderReading() }
             }
         }
+        // Eine andere Notiz öffnet sich wieder zum Schreiben.
+        .onChange(of: url) { isReading = false }
         .onDisappear {
             if let databases { Task { await databases.closeAll() } }
             if store.openEditor?.url == fileURL { store.openEditor = nil }
@@ -218,6 +234,37 @@ struct NoteEditorView: View {
         }
     }
 
+    /// Lese-Modus ein/aus: die Notiz wie im PDF, ohne Markdown-Zeichen.
+    private var readingButton: some View {
+        Button(isReading ? "Bearbeiten" : "Lesen", systemImage: isReading ? "pencil" : "book") {
+            Task { await toggleReading() }
+        }
+        .disabled(!isLoaded)
+        .help(isReading ? "Zurück zum Bearbeiten (⇧⌘R)" : "Lese-Modus (⇧⌘R)")
+        .keyboardShortcut("r", modifiers: [.command, .shift])
+    }
+
+    private func toggleReading() async {
+        if isReading {
+            isReading = false
+            return
+        }
+        controller.endEditing()
+        await renderReading()
+        isReading = readingHTML != nil
+    }
+
+    /// Erstellt die Seite aus dem gespeicherten Text (ungespeicherte
+    /// Eingaben werden zuerst gesichert).
+    private func renderReading() async {
+        guard let fileURL else { return }
+        await save()
+        let vault = store.vault
+        let size = Double(MarkdownStyler.bodyFont.pointSize)
+        readingHTML = try? await Task.detached { try vault.html(ofNote: fileURL, screenFontSize: size) }.value
+        if readingHTML == nil { store.errorMessage = "Die Notiz liess sich nicht zum Lesen darstellen." }
+    }
+
     /// Inhaltsverzeichnis: alle Überschriften der Notiz, ein Tipp springt hin.
     private var outlineButton: some View {
         Button("Inhaltsverzeichnis", systemImage: "list.bullet.indent") {
@@ -241,7 +288,9 @@ struct NoteEditorView: View {
     /// Formatieren am Mac: Knöpfe in der Fensterleiste, mit Tastenkürzeln.
     @ToolbarContentBuilder
     private var formattingToolbar: some ToolbarContent {
+        ToolbarItem { readingButton }
         ToolbarItemGroup {
+          Group {
             outlineButton
                 .keyboardShortcut("i", modifiers: [.command, .shift])
             Button("Überschrift", systemImage: "textformat.size", action: controller.heading)
@@ -280,12 +329,12 @@ struct NoteEditorView: View {
                 .keyboardShortcut("s", modifiers: [.command, .option])
                 .help("Bereich mit Spalten einfügen (⌥⌘S)")
             Button("Datenbank", systemImage: "tablecells") { controller.showsDatabasePicker = true }
-        }
-        ToolbarItem {
-            shareMenu
                 .keyboardShortcut("d", modifiers: [.command, .shift])
                 .help("Datenbank-Ansicht einfügen (⇧⌘D)")
+          }
+          .disabled(isReading)
         }
+        ToolbarItem { shareMenu }
     }
     #endif
 

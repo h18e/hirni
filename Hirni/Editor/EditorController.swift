@@ -403,6 +403,15 @@ final class EditorController {
     }
     #endif
 
+    /// Lese-Modus: Der Editor ist verborgen und darf keine Eingaben mehr annehmen.
+    func endEditing() {
+        #if os(iOS)
+        dismissKeyboard()
+        #else
+        if let window = textView?.window { window.makeFirstResponder(nil) }
+        #endif
+    }
+
     // MARK: - Links auf Notizen
 
     /// Die Auswahl wird zur eigenen Beschriftung des Links.

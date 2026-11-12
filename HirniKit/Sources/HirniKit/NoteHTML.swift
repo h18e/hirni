@@ -20,11 +20,14 @@ public enum NoteHTML {
     /// - Parameters:
     ///   - image: Pfad aus `![](…)` → Bild, `nil` wenn nicht vorhanden.
     ///   - database: `hirni-db`-Block → fertiges HTML (Tabelle), `nil` = Hinweis.
+    ///   - screenFontSize: Für den Lese-Modus statt für Papier: Grundschrift
+    ///     in Punkten, durchsichtiger Hintergrund, Farben für hell und dunkel.
     public static func page(
         title: String,
         markdown: String,
         image: (String) -> Image? = { _ in nil },
-        database: (DatabaseEmbed) -> String? = { _ in nil }
+        database: (DatabaseEmbed) -> String? = { _ in nil },
+        screenFontSize: Double? = nil
     ) -> String {
         let body = TemplateFiller.removingHints(Frontmatter.split(markdown).body)
         // Beginnt die Notiz schon mit dem Titel als Überschrift, nicht doppelt zeigen.
@@ -35,7 +38,8 @@ public enum NoteHTML {
         return """
         <!doctype html>
         <html lang="de"><head><meta charset="utf-8"><title>\(escape(title))</title>
-        <style>\(css)</style></head>
+        \(screenFontSize == nil ? "" : "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
+        <style>\(css)\(screenFontSize.map(screenCSS) ?? "")</style></head>
         <body>\(heading)
         \(blocks(body, image: image, database: database))
         </body></html>
@@ -70,6 +74,43 @@ public enum NoteHTML {
     .column { flex: 1; min-width: 0; }
     a { color: #007aff; text-decoration: none; }
     """
+
+    /// Lese-Modus: wie der Ausdruck, aber in Bildschirmgrössen (relativ zur
+    /// Grundschrift), ohne eigenen Hintergrund und mit dunklen Farben im
+    /// Dunkelmodus.
+    static func screenCSS(fontSize: Double) -> String {
+        """
+
+        :root { color-scheme: light dark; --text: #1d1d1f; --secondary: #8e8e93; --quote: #636366; --line: #d1d1d6;
+          --fill: #f2f2f7; --fill2: #f9f9fb; --accent: #007aff; }
+        @media (prefers-color-scheme: dark) {
+          :root { --text: #f5f5f7; --secondary: #98989d; --quote: #aeaeb2; --line: #48484a;
+            --fill: #2c2c2e; --fill2: #1c1c1e; --accent: #0a84ff; }
+        }
+        html, body { background: transparent; }
+        body { font-size: \(fontSize)px; color: var(--text); margin: 0; padding: 16px 20px 48px;
+          -webkit-text-size-adjust: none; overflow-wrap: break-word; }
+        h1.title { font-size: 1.8em; margin: 0 0 0.6em; }
+        h1 { font-size: 1.6em; } h2 { font-size: 1.35em; } h3 { font-size: 1.15em; } h4, h5, h6 { font-size: 1.05em; }
+        h1, h2, h3, h4, h5, h6 { margin: 1.1em 0 0.45em; }
+        p, ul, blockquote { margin-bottom: 0.7em; }
+        ul { padding-left: 1.5em; } ul.tasks { padding-left: 0.3em; }
+        .box { width: 1.3em; }
+        li.done .text, .date, .hint { color: var(--secondary); }
+        .date, .hint { font-size: 0.78em; }
+        blockquote { border-left-color: var(--line); color: var(--quote); }
+        pre, code { font-size: 0.9em; background: var(--fill); }
+        pre { padding: 0.7em; border-radius: 6px; overflow-x: auto; }
+        table { font-size: 0.92em; display: block; overflow-x: auto; max-width: 100%; }
+        th, td { border-color: var(--line); padding: 0.3em 0.6em; }
+        th { background: var(--fill); }
+        tfoot td { background: var(--fill2); }
+        img { max-height: 360px; border-radius: 6px; }
+        a, .tag { color: var(--accent); }
+        mark { background: rgba(255, 214, 10, 0.4); color: inherit; }
+        .columns { gap: 1.2em; }
+        """
+    }
 
     // MARK: - Blöcke
 
@@ -341,7 +382,7 @@ public enum NoteHTML {
 
 extension Vault {
     /// HTML-Seite einer Notiz mit Bildern und eingebetteten Datenbanken.
-    public func html(ofNote url: URL) throws -> String {
+    public func html(ofNote url: URL, screenFontSize: Double? = nil) throws -> String {
         let text = try readNote(at: url)
         return NoteHTML.page(
             title: Self.title(of: url),
@@ -363,7 +404,8 @@ extension Vault {
                 guard let dbURL = self.resolveDatabase(embed.database, from: url),
                       let database = try? self.readDatabase(at: dbURL) else { return nil }
                 return NoteHTML.databaseTable(database, view: embed.view, title: Self.title(of: dbURL))
-            }
+            },
+            screenFontSize: screenFontSize
         )
     }
 }

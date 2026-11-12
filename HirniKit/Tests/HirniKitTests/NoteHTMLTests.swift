@@ -74,4 +74,13 @@ struct NoteHTMLTests {
         #expect(html.contains("[Datenbank «Fehlt» nicht gefunden]"))
         #expect(!html.contains("hirni-db"))
     }
+
+    @Test func screenVersionHasOwnSizesAndDarkColors() {
+        let print = NoteHTML.page(title: "T", markdown: "Text")
+        let screen = NoteHTML.page(title: "T", markdown: "Text", screenFontSize: 17)
+        #expect(!print.contains("prefers-color-scheme"))
+        #expect(screen.contains("prefers-color-scheme: dark"))
+        #expect(screen.contains("font-size: 17.0px"))
+        #expect(screen.contains("<p>Text</p>"))
+    }
 }
