@@ -27,6 +27,20 @@ public struct SharedItem: Codable, Equatable, Sendable {
     }
 }
 
+extension SharedItem {
+    /// Titel und Text einer Notiz aus erkanntem Text: Der Titel ist die erste
+    /// Zeile; ist sie kurz genug, steht sie nicht nochmals im Text.
+    public static func recognizedNote(from text: String) -> (title: String, text: String) {
+        let title = suggestedTitle(text: text, url: nil)
+        var lines = text.components(separatedBy: "\n")
+        if lines.first?.trimmingCharacters(in: .whitespaces) == title {
+            lines.removeFirst()
+            while lines.first?.trimmingCharacters(in: .whitespaces).isEmpty == true { lines.removeFirst() }
+        }
+        return (title == "Geteilt" ? "Erkannter Text" : title, lines.joined(separator: "\n") + "\n")
+    }
+}
+
 extension Vault {
     /// Legt aus geteiltem Inhalt eine Notiz in der Inbox an: zuerst der Text,
     /// darunter die Anhänge (je auf eigener Zeile).

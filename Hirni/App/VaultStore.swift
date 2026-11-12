@@ -354,6 +354,34 @@ final class VaultStore {
 
     // MARK: - Notizen
 
+    /// Läuft gerade eine Texterkennung (siehe `newNote(recognizingTextIn:)`).
+    var isRecognizingText = false
+
+    /// Neue Notiz aus dem Text auf Fotos (eine Notiz für alle Bilder, in der
+    /// gewählten Reihenfolge). Der Titel ist die erste Zeile.
+    func newNote(recognizingTextIn images: [Data]) async {
+        guard !images.isEmpty else { return }
+        isRecognizingText = true
+        defer { isRecognizingText = false }
+        let text: String
+        do {
+            text = try await TextRecognizer.text(in: images)
+        } catch {
+            errorMessage = "Der Text liess sich nicht erkennen: \(error.localizedDescription)"
+            return
+        }
+        guard !text.isEmpty else {
+            errorMessage = images.count == 1 ? "Auf dem Bild wurde kein Text gefunden." : "Auf den Bildern wurde kein Text gefunden."
+            return
+        }
+        if sidebarSelection == .trash || sidebarSelection == .tasks || sidebarSelection == .help { sidebarSelection = .inbox }
+        let folder = currentFolderURL ?? vault.inboxURL
+        let note = SharedItem.recognizedNote(from: text)
+        guard let url = await perform({ try $0.createNote(in: folder, title: note.title, text: note.text) }) else { return }
+        await reload()
+        selectedNote = url
+    }
+
     /// Im Ordner «Vorlagen» entstehen neue Vorlagen, dort gibt es keine Auswahl.
     var offersTemplates: Bool {
         !templates.isEmpty && currentFolderURL?.standardizedFileURL != vault.templatesURL.standardizedFileURL

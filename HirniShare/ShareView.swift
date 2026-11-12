@@ -15,6 +15,18 @@ final class ShareModel {
     var isLoading = true
     var isSaving = false
     var error: String?
+    /// Geteilte Webseite (http/https).
+    private(set) var pageURL: URL?
+    /// «Ganze Seite» statt nur des Links; die Wahl bleibt gespeichert.
+    var importsPage = UserDefaults.standard.bool(forKey: "ganzeSeite") {
+        didSet {
+            UserDefaults.standard.set(importsPage, forKey: "ganzeSeite")
+            if importsPage { Task { await loadPage() } }
+        }
+    }
+    private(set) var pageText: String?
+    private(set) var isLoadingPage = false
+    private var suggestedTitle = ""
 
     init(context: NSExtensionContext?) {
         self.context = context
@@ -50,8 +62,36 @@ final class ShareModel {
         }
         text = texts.joined(separator: "\n\n")
         title = suggestedTitle ?? SharedItem.suggestedTitle(text: text, url: firstURL)
+        self.suggestedTitle = title
         if text.isEmpty, files.isEmpty { error = "Hirni kann mit diesem Inhalt nichts anfangen." }
+        if let firstURL, ["http", "https"].contains(firstURL.scheme?.lowercased()) { pageURL = firstURL }
         isLoading = false
+        if importsPage { await loadPage() }
+    }
+
+    /// Holt den Inhalt der Seite (einmal).
+    private func loadPage() async {
+        guard let pageURL, pageText == nil, !isLoadingPage else { return }
+        isLoadingPage = true
+        defer { isLoadingPage = false }
+        do {
+            let page = try await WebPageLoader.load(pageURL)
+            guard !page.markdown.isEmpty else {
+                error = "Auf der Seite wurde kein Text gefunden."
+                return
+            }
+            pageText = page.markdown
+            error = nil
+            if title == suggestedTitle, !page.title.isEmpty { title = page.title }
+        } catch {
+            self.error = "Die Seite liess sich nicht laden. Gesichert wird nur der Link."
+        }
+    }
+
+    /// Was in die Notiz kommt: der Link, bei «Ganze Seite» darunter der Inhalt.
+    var noteText: String {
+        guard importsPage, let pageText, let pageURL else { return text }
+        return "Quelle: " + pageURL.absoluteString + "\n\n" + pageText
     }
 
     private func loadURL(_ provider: NSItemProvider) async -> URL? {
@@ -86,7 +126,7 @@ final class ShareModel {
 
     func save() async {
         isSaving = true
-        let item = SharedItem(title: title, text: text)
+        let item = SharedItem(title: title, text: noteText)
         let files = files
         let result: String? = await Task.detached {
             do {
@@ -165,10 +205,26 @@ struct ShareView: View {
                     TextField("Titel", text: $model.title)
                         .labelsHidden()
                 }
-                if !model.text.isEmpty {
+                if model.pageURL != nil {
+                    Section {
+                        Picker("Übernehmen", selection: $model.importsPage) {
+                            Text("Link").tag(false)
+                            Text("Ganze Seite").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                    } footer: {
+                        Text("«Ganze Seite» übernimmt den Text der Seite mit Überschriften, Listen und Tabellen, ohne Bilder und Menüs.")
+                    }
+                }
+                if model.importsPage && model.isLoadingPage {
                     Section("Text") {
-                        Text(model.text)
-                            .lineLimit(5)
+                        ProgressView("Seite wird geladen …")
+                    }
+                } else if !model.noteText.isEmpty {
+                    Section("Text") {
+                        Text(model.noteText)
+                            .lineLimit(model.importsPage ? 10 : 5)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -195,6 +251,6 @@ struct ShareView: View {
 
     private var saveButton: some View {
         Button("Sichern") { Task { await model.save() } }
-            .disabled(model.isLoading || model.isSaving || (model.text.isEmpty && model.files.isEmpty))
+            .disabled(model.isLoading || model.isSaving || model.isLoadingPage || (model.text.isEmpty && model.files.isEmpty))
     }
 }

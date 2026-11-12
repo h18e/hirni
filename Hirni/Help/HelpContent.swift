@@ -48,6 +48,7 @@ extension HelpTopic {
             .init(title: "Notizen", items: [
                 "**Neue Notiz:** Stift oben rechts (Mac ⌘N). Gibt es Vorlagen, wählst du «Leere Notiz» oder eine Vorlage.",
                 "Anpinnen, Duplizieren, Verschieben und Löschen über das Kontextmenü in der Liste.",
+                "**Text erkennen:** Im Menü «Neue Notiz» (Stift) gibt es «Text scannen» (Kamera, iPhone), «Text aus Foto» (iPhone) bzw. «Text aus Bild …» (Mac). Hirni erkennt den Text auf dem Gerät, ohne Internet, und legt daraus eine neue Notiz an; die erste Zeile wird zum Titel. Mehrere Seiten oder Fotos ergeben eine Notiz.",
                 "**Sortieren:** Pfeile ↑↓ über der Liste: nach «Zuletzt geändert», «Erstellt» oder «Titel», jeweils auf- oder absteigend. Angepinnte Notizen bleiben oben, die Wahl gilt für alle Ordner.",
                 "Gelöschte Notizen landen in «Zuletzt gelöscht» und lassen sich dort wiederherstellen.",
             ]),
@@ -259,6 +260,7 @@ extension HelpTopic {
             ]),
             .init(title: "In Hirni teilen", items: [
                 "In Safari, Fotos, Mail usw. **Teilen → Hirni**: Links, Texte, Bilder (bis 10) und PDFs werden zu einer Notiz in der Inbox.",
+                "**Ganze Webseite:** Beim Teilen einer Webseite im Blatt «Ganze Seite» wählen. Hirni lädt die Seite und übernimmt ihren Hauptinhalt als Text (Überschriften, Listen, Tabellen, fett/kursiv), ohne Bilder, Menüs und Werbung. Oben steht die Quelle. Hirni merkt sich die Wahl. Seiten hinter einer Anmeldung lassen sich so nicht übernehmen.",
                 "Den Titel kannst du im Blatt noch ändern. Mac: Sichern mit der Eingabetaste.",
                 "Fehlt Hirni im Teilen-Menü am Mac: Systemeinstellungen → Allgemein → Anmeldeobjekte & Erweiterungen → Teilen.",
             ]),

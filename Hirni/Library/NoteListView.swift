@@ -1,3 +1,4 @@
+import PhotosUI
 import HirniKit
 import SwiftUI
 
@@ -8,6 +9,13 @@ struct NoteListView: View {
     #endif
     /// Notiz, für die gerade «Verschieben nach …» offen ist.
     @State private var moving: MovingItem?
+    /// Neue Notiz aus erkanntem Text: Scanner, Fotos (iPhone) bzw. Bilddateien (Mac).
+    @State private var scansText = false
+    @State private var picksTextPhotos = false
+    @State private var picksTextImages = false
+    #if os(iOS)
+    @State private var textPhotoItems: [PhotosPickerItem] = []
+    #endif
     @State private var asksSubfolderName = false
     @State private var subfolderName = ""
 
@@ -76,10 +84,10 @@ struct NoteListView: View {
                 }
             }
             ToolbarItem(placement: .listAction) {
-                if store.offersTemplates {
-                    Menu {
-                        Button("Leere Notiz", systemImage: "doc") { Task { await store.newNote() } }
-                            .keyboardShortcut("n")
+                Menu {
+                    Button("Leere Notiz", systemImage: "doc") { Task { await store.newNote() } }
+                        .keyboardShortcut("n")
+                    if store.offersTemplates {
                         Section("Vorlagen") {
                             ForEach(store.templates) { template in
                                 Button(template.name, systemImage: "doc.text") {
@@ -87,17 +95,57 @@ struct NoteListView: View {
                                 }
                             }
                         }
-                    } label: {
-                        Label("Neue Notiz", systemImage: "square.and.pencil")
                     }
-                } else {
-                    Button("Neue Notiz", systemImage: "square.and.pencil") {
-                        Task { await store.newNote() }
+                    Section("Text erkennen") {
+                        #if os(iOS)
+                        if DocumentScanner.isAvailable {
+                            Button("Text scannen", systemImage: "doc.viewfinder") { scansText = true }
+                        }
+                        Button("Text aus Foto", systemImage: "text.viewfinder") { picksTextPhotos = true }
+                        #else
+                        Button("Text aus Bild …", systemImage: "text.viewfinder") { picksTextImages = true }
+                        #endif
                     }
-                    .keyboardShortcut("n")
+                } label: {
+                    Label("Neue Notiz", systemImage: "square.and.pencil")
                 }
             }
         }
+        .overlay {
+            if store.isRecognizingText {
+                ProgressView("Text wird erkannt …")
+                    .padding(20)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+            }
+        }
+        #if os(iOS)
+        .photosPicker(isPresented: $picksTextPhotos, selection: $textPhotoItems, maxSelectionCount: 10, matching: .images)
+        .onChange(of: textPhotoItems) { _, items in
+            guard !items.isEmpty else { return }
+            textPhotoItems = []
+            Task {
+                var images: [Data] = []
+                for item in items {
+                    if let data = try? await item.loadTransferable(type: Data.self) { images.append(data) }
+                }
+                await store.newNote(recognizingTextIn: images)
+            }
+        }
+        .fullScreenCover(isPresented: $scansText) {
+            DocumentScanner { pages in Task { await store.newNote(recognizingTextIn: pages) } }
+                .ignoresSafeArea()
+        }
+        #else
+        .fileImporter(isPresented: $picksTextImages, allowedContentTypes: [.image], allowsMultipleSelection: true) { result in
+            guard case .success(let urls) = result else { return }
+            let images = urls.compactMap { url -> Data? in
+                let access = url.startAccessingSecurityScopedResource()
+                defer { if access { url.stopAccessingSecurityScopedResource() } }
+                return try? Data(contentsOf: url)
+            }
+            Task { await store.newNote(recognizingTextIn: images) }
+        }
+        #endif
         .refreshable { await store.reload() }
         .alert("Neuer Unterordner", isPresented: $asksSubfolderName) {
             TextField("Name", text: $subfolderName)
