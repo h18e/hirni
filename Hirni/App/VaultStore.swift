@@ -70,7 +70,8 @@ final class VaultStore {
             #else
             selectedNote = nil
             #endif
-            notes = []
+            // Gemerkte Liste sofort zeigen, die frische folgt.
+            notes = currentFolderURL.flatMap { snapshot?.notes(in: $0, vault: vault) }.map(noteSort.apply) ?? []
             Task { await reload() }
         }
     }
@@ -153,10 +154,21 @@ final class VaultStore {
     /// Sonst würde ein später Speichervorgang die Datei am alten Ort neu anlegen.
     @ObservationIgnored var openEditor: EditorHandle?
 
+    /// Lokale Vorschau der Ordner und Notizlisten (nur Hauptfenster), damit
+    /// beim Start sofort etwas da ist, auch wenn iCloud noch lädt.
+    private var snapshot: VaultSnapshot?
+    private static let snapshotURL = URL.applicationSupportDirectory.appending(path: "hirni-vorschau.json")
+
     /// - Parameter windowTabs: Eigenes Fenster mit diesen Tabs; sonst Hauptfenster.
     init(vault: Vault, windowTabs: [URL]? = nil) {
         self.vault = vault
         keepsTabs = windowTabs == nil
+        if keepsTabs {
+            let snapshot = VaultSnapshot.load(from: Self.snapshotURL)
+            self.snapshot = snapshot
+            folders = snapshot.folderNodes(in: vault)
+            notes = noteSort.apply(snapshot.notes(in: vault.inboxURL, vault: vault) ?? [])
+        }
         if let windowTabs {
             tabs = NoteTabs(urls: windowTabs, active: windowTabs.first)
         } else {
@@ -299,8 +311,27 @@ final class VaultStore {
         let vault = vault
         let folderURL = currentFolderURL
         let showsTrash = sidebarSelection == .trash
+        let selection = sidebarSelection
 
-        // Zuerst den Such-Index nachführen: Die Tag-Ansicht braucht ihn.
+        // Zuerst, was man sieht: Ordner und Notizliste. Das liest nur die
+        // Anfänge der Notizen und ist schnell da, auch wenn iCloud noch lädt.
+        let quick = await Task.detached {
+            (
+                folders: Result { try vault.folderTree() },
+                notes: Result { try folderURL.map { try vault.notes(in: $0) } ?? [] },
+                trash: Result { showsTrash ? try vault.trashEntries() : [] }
+            )
+        }.value
+        guard selection == sidebarSelection else { return }
+        if case .success(let folders) = quick.folders, folders != self.folders { self.folders = folders }
+        if case .success(let trash) = quick.trash { self.trash = trash }
+        if selection?.isTag != true, case .success(let notes) = quick.notes {
+            let sorted = noteSort.apply(notes)
+            if sorted != self.notes { self.notes = sorted }
+        }
+        rememberSnapshot(folders: quick.folders, notes: quick.notes, in: folderURL)
+
+        // Dann der Rest. Zuerst den Such-Index nachführen: Die Tag-Ansicht braucht ihn.
         if let index {
             do {
                 try await index.update(from: vault)
@@ -312,17 +343,12 @@ final class VaultStore {
 
         let result = await Task.detached {
             (
-                folders: Result { try vault.folderTree() },
-                notes: Result { try folderURL.map { try vault.notes(in: $0) } ?? [] },
-                trash: Result { showsTrash ? try vault.trashEntries() : [] },
                 templates: vault.templates(),
                 tasks: vault.allTasks(),
                 dueDates: vault.dueDates()
             )
         }.value
 
-        if case .success(let folders) = result.folders { self.folders = folders }
-        if case .success(let trash) = result.trash { self.trash = trash }
         if templates != result.templates { templates = result.templates }
         if tasks != result.tasks { tasks = result.tasks }
         if dueDates != result.dueDates { dueDates = result.dueDates }
@@ -333,15 +359,35 @@ final class VaultStore {
         #endif
         await scheduleReminders()
         Task { [vault] in await CalendarExporter.shared.sync(vault) }
-        switch result.notes {
-        case .success(let notes):
-            self.notes = noteSort.apply(sidebarSelection?.isTag == true ? await taggedNotes() : notes)
+        switch quick.notes {
+        case .success:
+            if selection?.isTag == true, selection == sidebarSelection {
+                let tagged = noteSort.apply(await taggedNotes())
+                if tagged != notes { notes = tagged }
+            }
         case .failure:
             // Der gewählte Ordner existiert nicht mehr (z. B. auf dem anderen
             // Gerät gelöscht oder umbenannt): zurück zur Inbox.
             if case .folder = sidebarSelection { sidebarSelection = .inbox }
         }
         revision += 1
+    }
+
+    /// Vorschau nachführen und lokal sichern (nur Hauptfenster).
+    private func rememberSnapshot(folders: Result<[FolderNode], Error>, notes: Result<[NoteSummary], Error>, in folder: URL?) {
+        guard var snapshot else { return }
+        let before = snapshot
+        if case .success(let folders) = folders { snapshot.record(folders: folders, in: vault) }
+        if let folder, case .success(let notes) = notes { snapshot.record(notes: notes, in: folder, vault: vault) }
+        guard snapshot != before else { return }
+        self.snapshot = snapshot
+        let url = Self.snapshotURL
+        Task {
+            let failure = await Task.detached(priority: .utility) { [snapshot] () -> String? in
+                do { try snapshot.save(to: url); return nil } catch { return String(describing: error) }
+            }.value
+            if let failure { vaultLog.error("Vorschau sichern: \(failure, privacy: .public)") }
+        }
     }
 
     private func taggedNotes() async -> [NoteSummary] {

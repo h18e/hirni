@@ -319,6 +319,8 @@ extension HelpTopic {
             .init(title: "Sync", items: [
                 "Hirni überwacht den iCloud-Ordner und zeigt Änderungen anderer Geräte sofort an.",
                 "Noch nicht geladene Dateien lädt Hirni beim Öffnen nach; die Seitenleiste zeigt, wie viele gerade laden.",
+                "Beim Start zeigt Hirni sofort den letzten Stand: Ordner und Notizlisten mit Titel und Vorschauzeile. Die frischen Daten aus iCloud folgen im Hintergrund.",
+                "Diese Vorschau liegt nur auf dem Gerät und ist klein: keine Notizinhalte, keine Bilder.",
             ]),
             .init(title: "Konflikte", items: [
                 "Ändert jemand anderes dieselbe Notiz, während du tippst, führt Hirni verschiedene Zeilen automatisch zusammen.",
