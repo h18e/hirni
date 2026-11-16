@@ -95,10 +95,16 @@ extension Vault {
     }
 
     /// Alle Vorlagen, alphabetisch. Datenbanken im Ordner zählen nicht.
+    /// Auch Vorlagen, die iCloud gerade nur in der Wolke hält («Speicher
+    /// optimieren»): Sie werden angefordert und spätestens beim Verwenden
+    /// geladen (koordiniertes Lesen wartet auf den Download).
     public func templates() -> [NoteTemplate] {
         ((try? entries(in: templatesURL)) ?? [])
-            .filter { !$0.isDirectory && $0.isDownloaded && Self.isNote(name: $0.name) }
-            .map { NoteTemplate(url: $0.url) }
+            .filter { !$0.isDirectory && Self.isNote(name: $0.name) }
+            .map { entry in
+                if !entry.isDownloaded { try? FileManager.default.startDownloadingUbiquitousItem(at: entry.url) }
+                return NoteTemplate(url: entry.url)
+            }
     }
 
     /// Neue Notiz aus einer Vorlage (ohne Rückfragen). Der Titel kommt vom

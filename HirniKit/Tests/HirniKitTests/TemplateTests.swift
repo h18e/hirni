@@ -26,6 +26,15 @@ struct TemplateTests {
         #expect(try test.vault.readNote(at: url) == "---\nquelle: x\n---\n## Besprechung 26.10.2026\n- [ ] ")
     }
 
+    /// iCloud hält eine Vorlage nur in der Wolke («Speicher optimieren»):
+    /// Sie gehört trotzdem ins Plus-Menü.
+    @Test func templatesStillInCloudAreOffered() throws {
+        let test = try TestVault()
+        try test.write("## {{titel}}", to: "Vorlagen/Protokoll.md")
+        try test.write("", to: "Vorlagen/.Einkauf.md.icloud")
+        #expect(test.vault.templates().map(\.name) == ["Einkauf", "Protokoll"])
+    }
+
     @Test func rowPageFromTemplate() throws {
         let test = try TestVault()
         try test.write("Ausgabe {{titel}}: {{Betrag CHF}}", to: "Vorlagen/Ausgabe.md")

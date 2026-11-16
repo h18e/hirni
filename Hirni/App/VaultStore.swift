@@ -319,9 +319,12 @@ final class VaultStore {
             (
                 folders: Result { try vault.folderTree() },
                 notes: Result { try folderURL.map { try vault.notes(in: $0) } ?? [] },
-                trash: Result { showsTrash ? try vault.trashEntries() : [] }
+                trash: Result { showsTrash ? try vault.trashEntries() : [] },
+                templates: vault.templates()
             )
         }.value
+        // Vorlagen gehören zum Plus-Menü: nicht erst nach dem Such-Index.
+        if templates != quick.templates { templates = quick.templates }
         guard selection == sidebarSelection else { return }
         if case .success(let folders) = quick.folders, folders != self.folders { self.folders = folders }
         if case .success(let trash) = quick.trash { self.trash = trash }
@@ -343,13 +346,11 @@ final class VaultStore {
 
         let result = await Task.detached {
             (
-                templates: vault.templates(),
                 tasks: vault.allTasks(),
                 dueDates: vault.dueDates()
             )
         }.value
 
-        if templates != result.templates { templates = result.templates }
         if tasks != result.tasks { tasks = result.tasks }
         if dueDates != result.dueDates { dueDates = result.dueDates }
         tabs.retain { FileManager.default.fileExists(atPath: $0.path(percentEncoded: false)) }
